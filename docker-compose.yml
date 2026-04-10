@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: elfie
+      POSTGRES_PASSWORD: elfie
+      POSTGRES_DB: elfie_labs
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      ELFIE_DATABASE_URL: postgresql+asyncpg://elfie:elfie@db:5432/elfie_labs
+      ELFIE_DATABASE_URL_SYNC: postgresql://elfie:elfie@db:5432/elfie_labs
+    depends_on:
+      - db
+    volumes:
+      - ./data:/app/data:ro
+      - ./artifacts:/app/artifacts
+
+volumes:
+  pgdata:

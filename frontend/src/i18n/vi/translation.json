@@ -1,0 +1,42 @@
+{
+  "upload": {
+    "title": "",
+    "primary_cta": "",
+    "secondary_cta": "",
+    "pdf_note": "",
+    "image_note": ""
+  },
+  "processing": {
+    "upload_received": "",
+    "checking_format": "",
+    "reading_rows": "",
+    "matching_values": "",
+    "building_summary": ""
+  },
+  "artifact": {
+    "support_fully": "",
+    "support_partial": "",
+    "support_cannot": "",
+    "needs_attention": "",
+    "reviewed_not_flagged": "",
+    "what_to_do_next": "",
+    "not_assessed": "",
+    "why_flagged": ""
+  },
+  "severity": {
+    "S0": "",
+    "S1": "",
+    "S2": "",
+    "S3": "",
+    "S4": "",
+    "SX": ""
+  },
+  "nextstep": {
+    "A0": "",
+    "A1": "",
+    "A2": "",
+    "A3": "",
+    "A4": "",
+    "AX": ""
+  }
+}

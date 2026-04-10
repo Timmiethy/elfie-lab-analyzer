@@ -1,0 +1,42 @@
+{
+  "upload": {
+    "title": "Upload your lab report",
+    "primary_cta": "Upload a PDF of your lab report",
+    "secondary_cta": "Add a photo or screenshot (beta, limited support)",
+    "pdf_note": "PDF reports work best in this proof.",
+    "image_note": "Photo and screenshot support is limited and may only produce a preview."
+  },
+  "processing": {
+    "upload_received": "Upload received",
+    "checking_format": "Checking file format",
+    "reading_rows": "Reading supported rows",
+    "matching_values": "Matching lab values",
+    "building_summary": "Building your summary"
+  },
+  "artifact": {
+    "support_fully": "Fully supported",
+    "support_partial": "Partially supported",
+    "support_cannot": "Could not assess fully",
+    "needs_attention": "Needs attention",
+    "reviewed_not_flagged": "Reviewed and not flagged",
+    "what_to_do_next": "What to do next",
+    "not_assessed": "What we did not assess",
+    "why_flagged": "Why this was flagged"
+  },
+  "severity": {
+    "S0": "No actionable finding",
+    "S1": "Review routinely",
+    "S2": "Discuss at next planned visit",
+    "S3": "Contact clinician soon",
+    "S4": "Urgent follow-up recommended",
+    "SX": "Cannot assess severity"
+  },
+  "nextstep": {
+    "A0": "No specific action beyond routine self-monitoring",
+    "A1": "Review at next planned visit",
+    "A2": "Schedule routine follow-up",
+    "A3": "Contact clinician soon",
+    "A4": "Seek urgent review",
+    "AX": "Cannot suggest a next step safely"
+  }
+}
