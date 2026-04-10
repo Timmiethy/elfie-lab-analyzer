@@ -1,0 +1,153 @@
+{
+  "version": "launch-scope-rules-v1",
+  "critical_value_source_signed_off": false,
+  "analytes": [
+    {
+      "canonical_label": "fasting glucose",
+      "codes": ["2345-7"],
+      "aliases": ["fasting glucose", "glucose fasting", "fasting blood glucose", "glucose"]
+    },
+    {
+      "canonical_label": "hba1c",
+      "codes": ["4548-4"],
+      "aliases": ["hba1c", "hemoglobin a1c", "a1c"]
+    },
+    {
+      "canonical_label": "creatinine",
+      "codes": ["2160-0"],
+      "aliases": ["creatinine", "serum creatinine", "blood creatinine"]
+    },
+    {
+      "canonical_label": "egfr",
+      "codes": ["62238-1"],
+      "aliases": ["egfr", "estimated glomerular filtration rate", "gfr"]
+    },
+    {
+      "canonical_label": "total cholesterol",
+      "codes": ["2093-3"],
+      "aliases": ["total cholesterol", "cholesterol total", "serum cholesterol"]
+    },
+    {
+      "canonical_label": "ldl-c",
+      "codes": ["13457-7"],
+      "aliases": ["ldl-c", "ldl cholesterol", "ldl", "low density lipoprotein cholesterol"]
+    },
+    {
+      "canonical_label": "hdl-c",
+      "codes": ["2085-9"],
+      "aliases": ["hdl-c", "hdl cholesterol", "hdl", "high density lipoprotein cholesterol"]
+    },
+    {
+      "canonical_label": "triglycerides",
+      "codes": ["2571-8"],
+      "aliases": ["triglycerides", "triglyceride", "triglyceride level"]
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "glucose_high_threshold",
+      "finding_prefix": "glucose_high",
+      "analyte_keys": ["fasting glucose"],
+      "comparison": "gte",
+      "thresholds": [
+        {"value": 100, "severity_class": "S1"},
+        {"value": 140, "severity_class": "S2"},
+        {"value": 200, "severity_class": "S3"},
+        {"value": 300, "severity_class": "S4"}
+      ],
+      "threshold_source": "local_policy:launch-scope-rules-v1:fasting_glucose",
+      "requires_overlay": [],
+      "explanatory_scaffold_id": "glucose_high_v1"
+    },
+    {
+      "rule_id": "hba1c_high_threshold",
+      "finding_prefix": "hba1c_high",
+      "analyte_keys": ["hba1c"],
+      "comparison": "gte",
+      "thresholds": [
+        {"value": 5.7, "severity_class": "S1"},
+        {"value": 6.5, "severity_class": "S2"},
+        {"value": 8.0, "severity_class": "S3"}
+      ],
+      "threshold_source": "local_policy:launch-scope-rules-v1:hba1c",
+      "requires_overlay": [],
+      "explanatory_scaffold_id": "hba1c_high_v1"
+    },
+    {
+      "rule_id": "total_cholesterol_high_threshold",
+      "finding_prefix": "total_cholesterol_high",
+      "analyte_keys": ["total cholesterol"],
+      "comparison": "gte",
+      "thresholds": [
+        {"value": 200, "severity_class": "S1"},
+        {"value": 240, "severity_class": "S2"}
+      ],
+      "threshold_source": "local_policy:launch-scope-rules-v1:total_cholesterol",
+      "requires_overlay": [],
+      "explanatory_scaffold_id": "total_cholesterol_high_v1"
+    },
+    {
+      "rule_id": "ldl_high_threshold",
+      "finding_prefix": "ldl_high",
+      "analyte_keys": ["ldl-c"],
+      "comparison": "gte",
+      "thresholds": [
+        {"value": 130, "severity_class": "S2"},
+        {"value": 160, "severity_class": "S3"},
+        {"value": 190, "severity_class": "S4"}
+      ],
+      "threshold_source": "local_policy:launch-scope-rules-v1:ldl_c",
+      "requires_overlay": [],
+      "explanatory_scaffold_id": "ldl_high_v1"
+    },
+    {
+      "rule_id": "hdl_low_threshold",
+      "finding_prefix": "hdl_low",
+      "analyte_keys": ["hdl-c"],
+      "comparison": "lte",
+      "thresholds": [],
+      "sex_thresholds": {
+        "female": [
+          {"value": 50, "severity_class": "S2"}
+        ],
+        "male": [
+          {"value": 40, "severity_class": "S2"}
+        ],
+        "default": [
+          {"value": 40, "severity_class": "S2"}
+        ]
+      },
+      "threshold_source": "local_policy:launch-scope-rules-v1:hdl_c",
+      "requires_overlay": [],
+      "explanatory_scaffold_id": "hdl_low_v1"
+    },
+    {
+      "rule_id": "triglycerides_high_threshold",
+      "finding_prefix": "triglycerides_high",
+      "analyte_keys": ["triglycerides"],
+      "comparison": "gte",
+      "thresholds": [
+        {"value": 150, "severity_class": "S1"},
+        {"value": 200, "severity_class": "S2"},
+        {"value": 500, "severity_class": "S4"}
+      ],
+      "threshold_source": "local_policy:launch-scope-rules-v1:triglycerides",
+      "requires_overlay": [],
+      "explanatory_scaffold_id": "triglycerides_high_v1"
+    },
+    {
+      "rule_id": "egfr_low_threshold",
+      "finding_prefix": "egfr_low",
+      "analyte_keys": ["egfr"],
+      "comparison": "lte",
+      "thresholds": [
+        {"value": 59, "severity_class": "S2"},
+        {"value": 29, "severity_class": "S3"},
+        {"value": 14, "severity_class": "S4"}
+      ],
+      "threshold_source": "local_policy:launch-scope-rules-v1:egfr",
+      "requires_overlay": ["age_years", "sex"],
+      "explanatory_scaffold_id": "egfr_low_v1"
+    }
+  ]
+}

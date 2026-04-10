@@ -23,6 +23,7 @@ Never try to cheat. If you don't know something, say you don't know. If you need
 - Write rules that prevent the same mistake from recurring.
 - Ruthlessly iterate on these lessons until the mistake rate drops.
 - Review lessons at session start when they are relevant to the project.
+- Treat `tasks/lessons.md` as a local workflow file and do not commit it.
 
 ### 4. Verification Before Done
 - Never mark a task complete without proving it works.
@@ -49,6 +50,7 @@ Never try to cheat. If you don't know something, say you don't know. If you need
 4. Explain changes at a high level during each step.
 5. Add a review/results section to `tasks/todo.md`.
 6. Update `tasks/lessons.md` after corrections.
+7. Treat everything under `tasks/` as local workflow scratch space and never commit it.
 
 ## Core Principles
 - Simplicity first: make every change as simple as possible and minimize code impact.

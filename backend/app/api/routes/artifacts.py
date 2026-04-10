@@ -1,6 +1,12 @@
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from sqlalchemy.exc import InterfaceError, OperationalError
+
+from app.db import TopLevelLifecycleStore
+from app.db.session import async_session_factory
+from app.services.observability import observability_metrics
+from app.workers.pipeline import get_job_run
 
 router = APIRouter()
 
@@ -8,10 +14,66 @@ router = APIRouter()
 @router.get("/{job_id}/patient")
 async def get_patient_artifact(job_id: UUID) -> dict:
     """Get the patient-facing lab understanding artifact."""
-    raise NotImplementedError
+    persisted = await _get_persisted_patient_artifact(str(job_id))
+    if persisted is not None:
+        return persisted
+
+    job = get_job_run(str(job_id))
+    if job is None:
+        raise HTTPException(status_code=404, detail="job_not_found")
+    return job["patient_artifact"]
 
 
 @router.get("/{job_id}/clinician")
 async def get_clinician_artifact(job_id: UUID) -> dict:
     """Get the clinician-share artifact."""
-    raise NotImplementedError
+    persisted = await _get_persisted_clinician_artifact(str(job_id))
+    if persisted is not None:
+        return persisted
+
+    job = get_job_run(str(job_id))
+    if job is None:
+        raise HTTPException(status_code=404, detail="job_not_found")
+    return job["clinician_artifact"]
+
+
+async def _get_persisted_patient_artifact(job_id: str) -> dict | None:
+    try:
+        async with async_session_factory() as session:
+            store = TopLevelLifecycleStore(session)
+            artifact = await store.get_patient_artifact(job_id)
+            if artifact is None:
+                return None
+            create_share_event = getattr(store, "create_share_event", None)
+            if callable(create_share_event):
+                await create_share_event(
+                    job_id=job_id,
+                    artifact_type="patient",
+                    share_method="view",
+                )
+            await session.commit()
+            return dict(artifact.content)
+    except (InterfaceError, OperationalError):
+        observability_metrics.record_persistence_fallback()
+        return None
+
+
+async def _get_persisted_clinician_artifact(job_id: str) -> dict | None:
+    try:
+        async with async_session_factory() as session:
+            store = TopLevelLifecycleStore(session)
+            artifact = await store.get_clinician_artifact(job_id)
+            if artifact is None:
+                return None
+            create_share_event = getattr(store, "create_share_event", None)
+            if callable(create_share_event):
+                await create_share_event(
+                    job_id=job_id,
+                    artifact_type="clinician",
+                    share_method="view",
+                )
+            await session.commit()
+            return dict(artifact.content)
+    except (InterfaceError, OperationalError):
+        observability_metrics.record_persistence_fallback()
+        return None

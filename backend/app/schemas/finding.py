@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.observation import CONTRACT_VERSION as OBSERVATION_CONTRACT_VERSION
+
 
 class SeverityClass(str, Enum):
     S0 = "S0"  # no actionable finding
@@ -25,6 +27,7 @@ class NextStepClass(str, Enum):
 
 
 class FindingSchema(BaseModel):
+    contract_version: str = OBSERVATION_CONTRACT_VERSION
     finding_id: str
     rule_id: str
     observation_ids: list[UUID]

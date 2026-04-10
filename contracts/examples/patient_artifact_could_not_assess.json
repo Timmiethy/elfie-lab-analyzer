@@ -1,0 +1,38 @@
+{
+  "contract_version": "observation-contract-v1",
+  "job_id": "11111111-1111-1111-1111-111111111122",
+  "support_banner": "could_not_assess",
+  "trust_status": "trusted",
+  "overall_severity": "SX",
+  "flagged_cards": [],
+  "reviewed_not_flagged": [],
+  "nextstep_title": "Next step could not be determined safely",
+  "nextstep_timing": "Not available",
+  "nextstep_reason": "The available information was insufficient to form a safe recommendation.",
+  "not_assessed": [
+    {
+      "raw_label": "CBC",
+      "reason": "no_extractable_text"
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "insufficient_text::row-001",
+      "rule_id": "insufficient_text_for_assessment",
+      "contract_version": "observation-contract-v1",
+      "observation_ids": [
+        "22222222-2222-2222-2222-222222222224"
+      ],
+      "threshold_source": "insufficient_text",
+      "severity_class": "SX",
+      "nextstep_class": "AX",
+      "suppression_conditions": {
+        "reason": "no_extractable_text"
+      },
+      "suppression_active": true,
+      "suppression_reason": "no_extractable_text",
+      "explanatory_scaffold_id": "no_assessment_possible_v1"
+    }
+  ],
+  "language_id": "en"
+}

@@ -6,6 +6,9 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
+CONTRACT_VERSION = "observation-contract-v1"
+
+
 class SupportState(str, Enum):
     SUPPORTED = "supported"
     UNSUPPORTED = "unsupported"
@@ -22,6 +25,7 @@ class MappingCandidateSchema(BaseModel):
 
 
 class ObservationSchema(BaseModel):
+    contract_version: str = CONTRACT_VERSION
     id: UUID
     document_id: UUID
     source_page: int

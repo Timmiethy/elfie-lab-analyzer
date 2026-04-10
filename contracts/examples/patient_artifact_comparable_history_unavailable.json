@@ -1,0 +1,47 @@
+{
+  "contract_version": "observation-contract-v1",
+  "job_id": "11111111-1111-1111-1111-111111111126",
+  "support_banner": "partially_supported",
+  "trust_status": "trusted",
+  "overall_severity": "S2",
+  "flagged_cards": [
+    {
+      "analyte_display": "Glucose",
+      "value": "180",
+      "unit": "mg/dL",
+      "finding_sentence": "Glucose is elevated, but there is no comparable history available for trend interpretation.",
+      "threshold_provenance": "adult_fasting_default_70_99",
+      "severity_chip": "S2"
+    }
+  ],
+  "reviewed_not_flagged": [],
+  "nextstep_title": "Schedule routine follow-up",
+  "nextstep_timing": "Within the next few weeks",
+  "nextstep_reason": "The current result is supported, but prior comparable history is unavailable.",
+  "not_assessed": [
+    {
+      "raw_label": "prior glucose trend",
+      "reason": "comparable_history_unavailable"
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "glucose_no_history::row-001",
+      "rule_id": "glucose_elevated_no_history",
+      "contract_version": "observation-contract-v1",
+      "observation_ids": [
+        "22222222-2222-2222-2222-222222222228"
+      ],
+      "threshold_source": "adult_fasting_default_70_99",
+      "severity_class": "S2",
+      "nextstep_class": "A2",
+      "suppression_conditions": {
+        "comparable_history": "unavailable"
+      },
+      "suppression_active": false,
+      "suppression_reason": null,
+      "explanatory_scaffold_id": "glucose_no_history_v1"
+    }
+  ],
+  "language_id": "en"
+}
