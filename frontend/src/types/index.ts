@@ -33,6 +33,32 @@ export interface UnsupportedItem {
   reason: string;
 }
 
+/** Mirrors backend FindingSchema (rule finding shape, app/schemas/finding.py). */
+export interface FindingSchema {
+  finding_id: string;
+  rule_id: string;
+  observation_ids: string[];
+  threshold_source: string;
+  severity_class: SeverityClass;
+  nextstep_class: NextStepClass;
+  suppression_conditions: Record<string, unknown> | null;
+  suppression_active: boolean;
+  suppression_reason: string | null;
+  explanatory_scaffold_id: string | null;
+}
+
+export interface ComparableHistoryEntry {
+  analyte_display: string;
+  current_value: string;
+  current_unit: string;
+  previous_value: string | null;
+  previous_unit: string | null;
+  previous_date: string | null;
+  direction: 'increased' | 'decreased' | 'similar' | 'trend_unavailable';
+  comparability_status: 'comparable' | 'not_comparable';
+  comparability_reason: string | null;
+}
+
 export interface PatientArtifact {
   job_id: string;
   support_banner: SupportBanner;
@@ -43,13 +69,20 @@ export interface PatientArtifact {
   nextstep_timing: string | null;
   nextstep_reason: string | null;
   not_assessed: UnsupportedItem[];
+  findings: FindingSchema[];
   language_id: string;
+  comparable_history: ComparableHistoryEntry[];
 }
 
+/** Mirrors backend ClinicianArtifactSchema (app/schemas/artifact.py). */
 export interface ClinicianArtifact {
   job_id: string;
   report_date: string;
+  top_findings?: FindingSchema[];
+  severity_classes?: SeverityClass[];
+  nextstep_classes?: NextStepClass[];
   support_coverage: string;
   not_assessed: UnsupportedItem[];
   provenance_link: string | null;
+  support_banner?: SupportBanner;
 }

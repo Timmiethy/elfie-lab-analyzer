@@ -1,42 +1,59 @@
 {
   "upload": {
-    "title": "",
-    "primary_cta": "",
-    "secondary_cta": "",
-    "pdf_note": "",
-    "image_note": ""
+    "title": "Tải lên báo cáo xét nghiệm của bạn",
+    "primary_cta": "Tải lên tệp PDF báo cáo xét nghiệm",
+    "secondary_cta": "Thêm ảnh chụp hoặc ảnh màn hình (beta, hỗ trợ hạn chế)",
+    "pdf_note": "Báo cáo PDF cho kết quả tốt nhất.",
+    "image_note": "Ảnh chụp và ảnh màn hình có hỗ trợ hạn chế và có thể chỉ cho bản xem trước."
   },
   "processing": {
-    "upload_received": "",
-    "checking_format": "",
-    "reading_rows": "",
-    "matching_values": "",
-    "building_summary": ""
+    "upload_received": "Đã nhận tệp tải lên",
+    "checking_format": "Kiểm tra định dạng tệp",
+    "reading_rows": "Đọc các dòng được hỗ trợ",
+    "matching_values": "Khớp giá trị xét nghiệm",
+    "building_summary": "Xây dựng bản tóm tắt"
   },
   "artifact": {
-    "support_fully": "",
-    "support_partial": "",
-    "support_cannot": "",
-    "needs_attention": "",
-    "reviewed_not_flagged": "",
-    "what_to_do_next": "",
-    "not_assessed": "",
-    "why_flagged": ""
+    "support_fully": "Được hỗ trợ đầy đủ",
+    "support_partial": "Được hỗ trợ một phần",
+    "support_cannot": "Không thể đánh giá đầy đủ",
+    "needs_attention": "Cần lưu ý",
+    "reviewed_not_flagged": "Đã xem xét và không đánh dấu",
+    "what_to_do_next": "Nên làm gì tiếp theo",
+    "not_assessed": "Những mục chưa được đánh giá",
+    "why_flagged": "Tại sao mục này bị đánh dấu"
   },
   "severity": {
-    "S0": "",
-    "S1": "",
-    "S2": "",
-    "S3": "",
-    "S4": "",
-    "SX": ""
+    "S0": "Không có phát hiện cần hành động",
+    "S1": "Xem xét theo định kỳ",
+    "S2": "Trao đổi tại lần khám tiếp theo",
+    "S3": "Liên hệ bác sĩ sớm",
+    "S4": "Khuyến nghị theo dõi khẩn",
+    "SX": "Không thể đánh giá mức độ nghiêm trọng"
   },
   "nextstep": {
-    "A0": "",
-    "A1": "",
-    "A2": "",
-    "A3": "",
-    "A4": "",
-    "AX": ""
+    "A0": "Không cần hành động cụ thể ngoài tự theo dõi thường quy",
+    "A1": "Xem xét tại lần khám theo kế hoạch tiếp theo",
+    "A2": "Lên lịch theo dõi thường quy",
+    "A3": "Liên hệ bác sĩ sớm",
+    "A4": "Tìm kiếm đánh giá khẩn cấp",
+    "AX": "Không thể đề xuất bước tiếp theo một cách an toàn"
+  },
+  "guided_ask": {
+    "title": "Câu hỏi hướng dẫn",
+    "subtitle": "Nhấn vào một câu hỏi để tìm hiểu thêm về kết quả xét nghiệm của bạn. Đây là tài liệu tham khảo tĩnh — không phải trò chuyện trực tiếp.",
+    "wellness_boundary": "Tính năng này chỉ cung cấp thông tin hỗ trợ sức khỏe tổng quát. Không chẩn đoán, điều trị hay thay thế tư vấn y tế chuyên nghiệp.",
+    "q_flagged": "Những gì bị đánh dấu trong kết quả của tôi?",
+    "a_flagged": "Các mục nằm ngoài khoảng tham chiếu của xét nghiệm sẽ được đánh dấu. Bản tóm tắt hiển thị giá trị, khoảng tham chiếu và mô tả đơn giản về phát hiện. Đây chỉ là ghi chú thông tin — không phải chẩn đoán.",
+    "q_why_flagged": "Tại sao mục này bị đánh dấu?",
+    "a_why_flagged": "Mỗi mục bị đánh dấu có ghi chú nguồn tham chiếu giải thích khoảng tham chiếu được dùng và cách giá trị của bạn so sánh. Các ngưỡng này đến từ nguồn xét nghiệm có cấu trúc, không phải dự đoán của mô hình.",
+    "q_what_next": "Tôi nên làm gì tiếp theo?",
+    "a_what_next": "Bản tóm tắt gán mức nghiêm trọng (S0–S4) và lớp bước tiếp theo (A0–A4) dựa trên quy tắc chính sách xác định. Ví dụ: S2/A2 gợi ý thảo luận tại lần khám theo kế hoạch tiếp theo. Đây là hướng dẫn sức khỏe tổng quát, không thay thế phán đoán của bác sĩ.",
+    "q_not_assessed": "Những gì chưa được đánh giá?",
+    "a_not_assessed": "Một số mục trong báo cáo xét nghiệm không thể ánh xạ đến tiêu chuẩn đã biết hoặc nằm ngoài phạm vi hỗ trợ. Các mục này được liệt kê ở cuối bản tóm tắt để không bị ẩn. Nếu mục nào quan trọng với bạn, hãy đề cập với bác sĩ.",
+    "q_what_test": "Xét nghiệm này thường đo lường gì?",
+    "a_what_test": "Mỗi xét nghiệm đo một chất phân tích cụ thể trong máu hoặc mẫu khác. Ví dụ: công thức máu toàn phần (CBC) kiểm tra hồng cầu, bạch cầu và tiểu cầu. Để biết chi tiết, hãy hỏi bác sĩ hoặc tham khảo phần tham chiếu trong báo cáo xét nghiệm.",
+    "blocked_title": "Tính năng này không thể làm gì",
+    "blocked_text": "Câu hỏi hướng dẫn không thể chẩn đoán bệnh, đề nghị thay đổi thuốc, phân loại triệu chứng, hoặc trả lời câu hỏi không dựa trên kết quả xét nghiệm có cấu trúc. Đối với những nhu cầu đó, vui lòng trao đổi với bác sĩ có giấy phép hành nghề."
   }
 }
