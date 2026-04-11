@@ -38,5 +38,22 @@
     "A3": "Contact clinician soon",
     "A4": "Seek urgent review",
     "AX": "Cannot suggest a next step safely"
+  },
+  "guided_ask": {
+    "title": "Guided questions",
+    "subtitle": "Tap a question to learn more about your lab results. This is a static reference — not a live chat.",
+    "wellness_boundary": "This feature provides wellness-support information only. It does not diagnose, treat, or replace professional medical advice.",
+    "q_flagged": "What was flagged in my results?",
+    "a_flagged": "Items that fall outside the reference range for this test are marked as flagged. The summary shows the value, the reference range, and a plain-language description of the finding. These are informational notes only — not a diagnosis.",
+    "q_why_flagged": "Why was this flagged?",
+    "a_why_flagged": "Each flagged item includes a threshold provenance note that explains which reference range was used and how the value compares to it. The thresholds come from structured lab sources, not from a model guess.",
+    "q_what_next": "What should I do next?",
+    "a_what_next": "The summary assigns a severity class (S0–S4) and a next-step class (A0–A4) based on deterministic policy rules. For example, S2/A2 suggests discussing the finding at your next planned visit. These suggestions are general wellness guidance and do not replace a clinician's judgment.",
+    "q_not_assessed": "What was not assessed?",
+    "a_not_assessed": "Some items on your lab report could not be mapped to a known standard or fell outside the supported scope. These items are listed at the bottom of your summary so nothing is silently hidden. If an item matters to you, bring it to your clinician's attention.",
+    "q_what_test": "What does this reviewed test usually measure?",
+    "a_what_test": "Each reviewed test measures a specific analyte in your blood or other sample. For example, a complete blood count (CBC) looks at red and white blood cells and platelets. For detailed explanations, ask your clinician or refer to your lab report's reference section.",
+    "blocked_title": "What this feature cannot do",
+    "blocked_text": "Guided ask cannot diagnose conditions, recommend medication changes, triage symptoms, or answer questions not grounded in your structured lab findings. For those needs, please speak with a licensed clinician."
   }
 }

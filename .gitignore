@@ -32,3 +32,11 @@ pgdata/
 # OS
 .DS_Store
 Thumbs.db
+
+#AI Agents
+.claw/*
+artifacts/*
+docs/orchestration/*    
+scripts/orchestration/*
+tasks/*
+.clawd-todos.json
