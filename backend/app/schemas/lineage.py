@@ -5,7 +5,11 @@ from uuid import UUID
 from pydantic import BaseModel
 
 
+CONTRACT_VERSION = "lineage-contract-v1"
+
+
 class LineageBundleSchema(BaseModel):
+    contract_version: str = CONTRACT_VERSION
     id: UUID
     job_id: UUID
     source_checksum: str

@@ -1,6 +1,14 @@
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+try:
+    from pydantic_settings import BaseSettings
+except ModuleNotFoundError:  # pragma: no cover - fallback for limited test envs
+    from pydantic import BaseModel
+
+    class BaseSettings(BaseModel):
+        """Lightweight fallback when pydantic-settings is unavailable."""
+
+        pass
 
 
 class Settings(BaseSettings):
@@ -24,16 +32,23 @@ class Settings(BaseSettings):
 
     # Terminology
     loinc_path: Path = Path("data/loinc")
+    terminology_snapshot_path: Path = Path("data/loinc")
     alias_tables_path: Path = Path("data/alias_tables")
     ucum_path: Path = Path("data/ucum")
 
     # Artifact storage
     artifact_store_path: Path = Path("artifacts")
+    upload_retention_days: int = 30
+    artifact_retention_days: int = 30
 
     # Policy versions
     rule_pack_version: str = "0.1.0"
     severity_policy_version: str = "0.1.0"
     nextstep_policy_version: str = "0.1.0"
+    critical_value_source_signed_off: bool = False
+
+    # Operational runtime
+    max_job_retries: int = 2
 
     # Image beta lane toggle
     image_beta_enabled: bool = False

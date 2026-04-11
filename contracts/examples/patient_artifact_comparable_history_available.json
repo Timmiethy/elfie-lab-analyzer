@@ -1,0 +1,55 @@
+{
+  "contract_version": "observation-contract-v1",
+  "job_id": "11111111-1111-1111-1111-111111111125",
+  "support_banner": "fully_supported",
+  "trust_status": "trusted",
+  "overall_severity": "S1",
+  "flagged_cards": [
+    {
+      "analyte_display": "Glucose trend",
+      "value": "96",
+      "unit": "mg/dL",
+      "finding_sentence": "Current glucose is in range and comparable history is available for trend review.",
+      "threshold_provenance": "adult_fasting_default_70_99",
+      "severity_chip": "S1"
+    }
+  ],
+  "reviewed_not_flagged": [
+    "prior_trend_reviewed"
+  ],
+  "nextstep_title": "Review at next planned visit",
+  "nextstep_timing": "At the next planned visit",
+  "nextstep_reason": "Comparable history is available, so this can be interpreted as a routine trend review.",
+  "not_assessed": [],
+  "findings": [
+    {
+      "finding_id": "glucose_trend::row-001",
+      "rule_id": "glucose_trend_review",
+      "contract_version": "observation-contract-v1",
+      "observation_ids": [
+        "22222222-2222-2222-2222-222222222227"
+      ],
+      "threshold_source": "adult_fasting_default_70_99",
+      "severity_class": "S1",
+      "nextstep_class": "A1",
+      "suppression_conditions": {
+        "comparable_history": "available"
+      },
+      "suppression_active": false,
+      "suppression_reason": null,
+      "explanatory_scaffold_id": "glucose_trend_v1"
+    }
+  ],
+  "language_id": "en",
+  "comparable_history": {
+    "analyte_display": "Glucose",
+    "current_value": "96",
+    "current_unit": "mg/dL",
+    "previous_value": "96",
+    "previous_unit": "mg/dL",
+    "current_date": "2026-04-10",
+    "previous_date": "2026-03-10",
+    "direction": "similar",
+    "comparability_status": "available"
+  }
+}

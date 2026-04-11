@@ -1,7 +1,7 @@
 """SQLAlchemy models for the 12 core tables (blueprint section 11.1)."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
@@ -10,6 +10,12 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 class Base(DeclarativeBase):
     pass
+
+
+def utc_now() -> datetime:
+    """Return a timezone-aware UTC timestamp for persisted records."""
+
+    return datetime.now(UTC)
 
 
 class Document(Base):
@@ -27,7 +33,7 @@ class Document(Base):
     language_id: Mapped[str | None] = mapped_column(String(8))
     region: Mapped[str | None] = mapped_column(String(8))
     storage_path: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class Job(Base):
@@ -45,8 +51,8 @@ class Job(Base):
     dead_letter: Mapped[bool] = mapped_column(default=False)
     operator_note: Mapped[str | None] = mapped_column(Text)
     region: Mapped[str | None] = mapped_column(String(8))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
 
 class ExtractedRow(Base):
@@ -65,7 +71,7 @@ class ExtractedRow(Base):
     raw_unit_string: Mapped[str | None] = mapped_column(String(64))
     raw_reference_range: Mapped[str | None] = mapped_column(String(128))
     extraction_confidence: Mapped[float | None] = mapped_column(Float)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class Observation(Base):
@@ -94,7 +100,7 @@ class Observation(Base):
     support_state: Mapped[str] = mapped_column(String(32), nullable=False)  # supported | unsupported | partial
     suppression_reasons: Mapped[list | None] = mapped_column(ARRAY(Text))
     lineage_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("lineage_runs.id"))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class MappingCandidate(Base):
@@ -127,7 +133,7 @@ class RuleEvent(Base):
     suppression_conditions: Mapped[dict | None] = mapped_column(JSON)
     severity_class_candidate: Mapped[str | None] = mapped_column(String(4))  # S0-S4, SX
     nextstep_class_candidate: Mapped[str | None] = mapped_column(String(4))  # A0-A4, AX
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class PolicyEvent(Base):
@@ -144,7 +150,7 @@ class PolicyEvent(Base):
     nextstep_policy_version: Mapped[str] = mapped_column(String(16), nullable=False)
     suppression_active: Mapped[bool] = mapped_column(default=False)
     suppression_reason: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class PatientArtifact(Base):
@@ -158,7 +164,7 @@ class PatientArtifact(Base):
     support_banner: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[dict] = mapped_column(JSON, nullable=False)
     template_version: Mapped[str] = mapped_column(String(16), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class ClinicianArtifact(Base):
@@ -170,7 +176,7 @@ class ClinicianArtifact(Base):
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), nullable=False)
     content: Mapped[dict] = mapped_column(JSON, nullable=False)
     template_version: Mapped[str] = mapped_column(String(16), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class LineageRun(Base):
@@ -192,7 +198,7 @@ class LineageRun(Base):
     template_version: Mapped[str] = mapped_column(String(32), nullable=False)
     model_version: Mapped[str | None] = mapped_column(String(64))
     build_commit: Mapped[str | None] = mapped_column(String(64))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class BenchmarkRun(Base):
@@ -204,7 +210,7 @@ class BenchmarkRun(Base):
     lineage_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("lineage_runs.id"), nullable=False)
     report_type: Mapped[str] = mapped_column(String(64), nullable=False)
     metrics: Mapped[dict] = mapped_column(JSON, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class ShareEvent(Base):
@@ -216,4 +222,4 @@ class ShareEvent(Base):
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), nullable=False)
     artifact_type: Mapped[str] = mapped_column(String(32), nullable=False)  # patient | clinician
     share_method: Mapped[str] = mapped_column(String(32), nullable=False)  # export | share | link
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

@@ -1,0 +1,69 @@
+{
+  "version": "launch-scope-analyte-aliases-v1",
+  "analytes": [
+    {
+      "canonical_label": "fasting glucose",
+      "candidate_display": "Fasting glucose [Mass/volume] in Serum or Plasma",
+      "codes": ["2345-7"],
+      "aliases": ["fasting glucose", "glucose fasting", "fasting blood glucose", "glucose"],
+      "panel_key": "glycemia",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hba1c",
+      "candidate_display": "Hemoglobin A1c/Hemoglobin.total in Blood",
+      "codes": ["4548-4"],
+      "aliases": ["hba1c", "hemoglobin a1c", "a1c"],
+      "panel_key": "glycemia",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "creatinine",
+      "candidate_display": "Creatinine [Mass/volume] in Serum or Plasma",
+      "codes": ["2160-0"],
+      "aliases": ["creatinine", "serum creatinine", "blood creatinine"],
+      "panel_key": "kidney",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "egfr",
+      "candidate_display": "Glomerular filtration rate/1.73 sq M.predicted",
+      "codes": ["62238-1"],
+      "aliases": ["egfr", "estimated glomerular filtration rate", "gfr"],
+      "panel_key": "kidney",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total cholesterol",
+      "candidate_display": "Cholesterol [Mass/volume] in Serum or Plasma",
+      "codes": ["2093-3"],
+      "aliases": ["total cholesterol", "cholesterol total", "serum cholesterol"],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ldl-c",
+      "candidate_display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+      "codes": ["13457-7"],
+      "aliases": ["ldl-c", "ldl cholesterol", "ldl", "low density lipoprotein cholesterol"],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hdl-c",
+      "candidate_display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+      "codes": ["2085-9"],
+      "aliases": ["hdl-c", "hdl cholesterol", "hdl", "high density lipoprotein cholesterol"],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "triglycerides",
+      "candidate_display": "Triglyceride [Mass/volume] in Serum or Plasma",
+      "codes": ["2571-8"],
+      "aliases": ["triglycerides", "triglyceride", "triglyceride level"],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    }
+  ]
+}

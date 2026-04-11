@@ -19,6 +19,9 @@ frontend/dist/
 # Environment
 .env
 
+# Local agent workflow scratch files
+tasks/
+
 # Data artifacts (LOINC not committed per license)
 data/loinc/*.csv
 data/loinc/*.zip

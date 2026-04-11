@@ -1,0 +1,20 @@
+{
+  "contract_version": "lineage-contract-v1",
+  "id": "33333333-3333-3333-3333-333333333333",
+  "job_id": "11111111-1111-1111-1111-111111111111",
+  "source_checksum": "sha256:8e3b0c4a4a2e1f0d4b63f0c5dbcc6a7b0b9f1a9d7fb53e8c6d8f6d1e9a0b4a12",
+  "parser_version": "parser-v0.1.0",
+  "ocr_version": null,
+  "terminology_release": "terminology-2026.04",
+  "mapping_threshold_config": {
+    "accept": 0.85,
+    "review": 0.6
+  },
+  "unit_engine_version": "ucum-v0.1.0",
+  "rule_pack_version": "rule-pack-v0.1.0",
+  "severity_policy_version": "severity-policy-v0.1.0",
+  "nextstep_policy_version": "nextstep-policy-v0.1.0",
+  "template_version": "artifact-template-v0.1.0",
+  "model_version": null,
+  "build_commit": "abcdef1234567890"
+}

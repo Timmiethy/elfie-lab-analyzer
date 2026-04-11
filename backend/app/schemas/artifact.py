@@ -1,10 +1,32 @@
 """Patient and clinician artifact schemas (blueprint sections 4.3, 4.6)."""
 
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel
 
 from app.schemas.finding import FindingSchema, NextStepClass, SeverityClass
+from app.schemas.observation import CONTRACT_VERSION as OBSERVATION_CONTRACT_VERSION
+
+
+class SupportBanner(StrEnum):
+    FULLY_SUPPORTED = "fully_supported"
+    PARTIALLY_SUPPORTED = "partially_supported"
+    COULD_NOT_ASSESS = "could_not_assess"
+
+
+class TrustStatus(StrEnum):
+    TRUSTED = "trusted"
+    NON_TRUSTED_BETA = "non_trusted_beta"
+
+
+class UnsupportedReason(StrEnum):
+    NO_EXTRACTABLE_TEXT = "no_extractable_text"
+    UNSUPPORTED_ANALYTE_FAMILY = "unsupported_analyte_family"
+    UNSUPPORTED_UNIT_OR_REFERENCE_RANGE = "unsupported_unit_or_reference_range"
+    THRESHOLD_CONFLICT = "threshold_conflict"
+    COMPARABLE_HISTORY_UNAVAILABLE = "comparable_history_unavailable"
+    INSUFFICIENT_SUPPORT = "insufficient_support"
 
 
 class FlaggedCard(BaseModel):
@@ -18,12 +40,38 @@ class FlaggedCard(BaseModel):
 
 class UnsupportedItem(BaseModel):
     raw_label: str
-    reason: str
+    reason: UnsupportedReason
+
+
+class ComparableHistoryStatus(StrEnum):
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+
+
+class ComparableHistoryDirection(StrEnum):
+    INCREASED = "increased"
+    DECREASED = "decreased"
+    SIMILAR = "similar"
+    TREND_UNAVAILABLE = "trend_unavailable"
+
+
+class ComparableHistoryCard(BaseModel):
+    analyte_display: str
+    current_value: str
+    current_unit: str
+    previous_value: str | None = None
+    previous_unit: str | None = None
+    current_date: str | None = None
+    previous_date: str | None = None
+    direction: ComparableHistoryDirection
+    comparability_status: ComparableHistoryStatus
 
 
 class PatientArtifactSchema(BaseModel):
+    contract_version: str = OBSERVATION_CONTRACT_VERSION
     job_id: UUID
-    support_banner: str  # fully_supported | partially_supported | could_not_assess
+    support_banner: SupportBanner
+    trust_status: TrustStatus
     overall_severity: SeverityClass
     flagged_cards: list[FlaggedCard] = []
     reviewed_not_flagged: list[str] = []
@@ -33,14 +81,18 @@ class PatientArtifactSchema(BaseModel):
     not_assessed: list[UnsupportedItem] = []
     findings: list[FindingSchema] = []
     language_id: str = "en"
+    explanation: dict | None = None
+    comparable_history: ComparableHistoryCard | None = None
 
 
 class ClinicianArtifactSchema(BaseModel):
+    contract_version: str = OBSERVATION_CONTRACT_VERSION
     job_id: UUID
     report_date: str
     top_findings: list[FindingSchema] = []
     severity_classes: list[SeverityClass] = []
     nextstep_classes: list[NextStepClass] = []
-    support_coverage: str
+    support_coverage: SupportBanner
+    trust_status: TrustStatus
     not_assessed: list[UnsupportedItem] = []
     provenance_link: str | None = None
