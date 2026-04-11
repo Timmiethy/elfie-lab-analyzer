@@ -123,6 +123,16 @@ def _build_finding(
     if rule["rule_id"] == "glucose_high_threshold" and raw_reference_range:
         threshold_source = f"reference_range:{raw_reference_range}"
 
+    policy_severity_candidate = _severity_for_rule(rule, observed_value, patient_context)
+    threshold_conflict = _build_threshold_conflict_finding(
+        rule=rule,
+        observation=observation,
+        observed_value=observed_value,
+        policy_severity_candidate=policy_severity_candidate,
+    )
+    if threshold_conflict is not None:
+        return threshold_conflict
+
     missing_overlay = [
         field
         for field in rule.get("requires_overlay", [])
@@ -135,7 +145,7 @@ def _build_finding(
         suppression_reason = "missing_demographics_overlay"
         suppression_active = True
     else:
-        severity_candidate = _severity_for_rule(rule, observed_value, patient_context)
+        severity_candidate = policy_severity_candidate
         if severity_candidate is None:
             return None
         nextstep_candidate = _NEXTSTEP_BY_SEVERITY[severity_candidate]
@@ -163,6 +173,48 @@ def _build_finding(
         "method_context": observation.get("method_context"),
         "severity_class_candidate": severity_candidate,
         "nextstep_class_candidate": nextstep_candidate,
+    }
+
+
+def _build_threshold_conflict_finding(
+    *,
+    rule: dict,
+    observation: dict,
+    observed_value: float,
+    policy_severity_candidate: str | None,
+) -> dict | None:
+    raw_reference_range = observation.get("raw_reference_range")
+    if raw_reference_range is None:
+        return None
+    if policy_severity_candidate is not None:
+        return None
+    if not _printed_range_flags_abnormal(rule, observed_value, str(raw_reference_range)):
+        return None
+
+    analyte_prefix = str(rule["finding_prefix"]).split("_high", 1)[0].split("_low", 1)[0]
+    row_hash = observation.get("row_hash") or str(observation.get("id"))
+    return {
+        "finding_id": f"{analyte_prefix}_threshold_conflict::{row_hash}",
+        "rule_id": f"{analyte_prefix}_threshold_conflict",
+        "observation_ids": _as_uuid_list(observation.get("id")),
+        "threshold_source": "conflicting_threshold_sources",
+        "severity_class": "SX",
+        "nextstep_class": "AX",
+        "suppression_conditions": {
+            "conflict": "printed_range_vs_policy",
+            "printed_range": raw_reference_range,
+            "policy_threshold": rule.get("threshold_source"),
+        },
+        "suppression_active": True,
+        "suppression_reason": "threshold_conflict",
+        "explanatory_scaffold_id": "threshold_conflict_v1",
+        "observed_value": observed_value,
+        "observed_unit": observation.get("canonical_unit") or observation.get("raw_unit_string"),
+        "reference_range": raw_reference_range,
+        "specimen_context": observation.get("specimen_context"),
+        "method_context": observation.get("method_context"),
+        "severity_class_candidate": "SX",
+        "nextstep_class_candidate": "AX",
     }
 
 
@@ -195,6 +247,54 @@ def _severity_for_rule(rule: dict, observed_value: float, patient_context: dict)
     return None
 
 
+def _printed_range_flags_abnormal(
+    rule: dict,
+    observed_value: float,
+    raw_reference_range: str,
+) -> bool:
+    reference_range = _parse_reference_range(raw_reference_range)
+    if reference_range is None:
+        return False
+
+    if rule["comparison"] == "gte":
+        high = reference_range.get("high")
+        return high is not None and observed_value > float(high)
+
+    if rule["comparison"] == "lte":
+        low = reference_range.get("low")
+        return low is not None and observed_value < float(low)
+
+    return False
+
+
+def _parse_reference_range(raw_reference_range: str) -> dict[str, float] | None:
+    text = _normalize_text(raw_reference_range)
+    if not text:
+        return None
+
+    if "-" in text:
+        lower_text, upper_text = [part.strip() for part in text.split("-", 1)]
+        lower = _coerce_float(lower_text)
+        upper = _coerce_float(upper_text)
+        if lower is None or upper is None:
+            return None
+        return {"low": lower, "high": upper}
+
+    if text.startswith(("<=", "≤", "<")):
+        high = _coerce_float(text.lstrip("<=≤ ").strip())
+        if high is None:
+            return None
+        return {"high": high}
+
+    if text.startswith((">=", "≥", ">")):
+        low = _coerce_float(text.lstrip(">=≥> ").strip())
+        if low is None:
+            return None
+        return {"low": low}
+
+    return None
+
+
 def _observation_analyte_key(observation: dict) -> str | None:
     metadata = _load_launch_scope_rules()["metadata"]
     labels = (
@@ -212,7 +312,9 @@ def _observation_analyte_key(observation: dict) -> str | None:
 
 @lru_cache(maxsize=1)
 def _load_launch_scope_rules() -> dict:
-    rules_path = Path(__file__).resolve().parents[4] / "data" / "policy_tables" / "launch_scope_rules.json"
+    rules_path = (
+        Path(__file__).resolve().parents[4] / "data" / "policy_tables" / "launch_scope_rules.json"
+    )
     payload = json.loads(rules_path.read_text(encoding="utf-8"))
 
     aliases_by_analyte: dict[str, set[str]] = {}

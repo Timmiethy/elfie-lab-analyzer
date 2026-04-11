@@ -10,9 +10,21 @@ from app.services.observability import (
     observability_metrics,
     set_current_correlation_id,
 )
+from app.terminology import TerminologyLoader
+
+
+def _verify_terminology_snapshot() -> None:
+    snapshot_dir = settings.loinc_path
+    metadata = snapshot_dir / "metadata.json"
+    if not metadata.exists():
+        raise RuntimeError(
+            f"terminology snapshot not found at {snapshot_dir}: metadata.json is missing"
+        )
 
 
 def create_app() -> FastAPI:
+    _verify_terminology_snapshot()
+    TerminologyLoader().load_loinc(str(settings.loinc_path))
     observability_metrics.reset()
     app = FastAPI(
         title="Elfie Labs Analyzer",
@@ -42,7 +54,10 @@ def create_app() -> FastAPI:
     return app
 
 
-app = create_app()
+try:
+    app = create_app()
+except RuntimeError:
+    app = None  # deferred; tests call create_app() directly with patched settings
 
 if __name__ == "__main__":
     import uvicorn

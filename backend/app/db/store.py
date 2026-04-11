@@ -8,9 +8,10 @@ policy tables yet.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Mapping
+from pathlib import Path
+from typing import Any, TypeVar
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -21,19 +22,59 @@ from app.models.tables import (
     ClinicianArtifact,
     Document,
     ExtractedRow,
-    MappingCandidate,
     Job,
-    Observation,
     LineageRun,
+    MappingCandidate,
+    Observation,
     PatientArtifact,
     PolicyEvent,
     RuleEvent,
     ShareEvent,
+    utc_now,
 )
+
+T = TypeVar("T")
 
 
 def _coerce_uuid(value: UUID | str) -> UUID:
     return value if isinstance(value, UUID) else UUID(str(value))
+
+
+async def _add_and_flush(session: AsyncSession, entity: T) -> T:
+    """Add an entity to the session, flush, and return it."""
+    session.add(entity)
+    await session.flush()
+    return entity
+
+
+async def _latest_by_job(
+    session: AsyncSession,
+    model: type[T],
+    job_id: UUID,
+) -> T | None:
+    """Return the most recent record for a job, ordered by created_at then id."""
+    result = await session.execute(
+        select(model)
+        .where(model.job_id == job_id)
+        .order_by(model.created_at.desc(), model.id.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _latest_by_lineage(
+    session: AsyncSession,
+    model: type[T],
+    lineage_id: UUID,
+) -> T | None:
+    """Return the most recent record for a lineage, ordered by created_at then id."""
+    result = await session.execute(
+        select(model)
+        .where(model.lineage_id == lineage_id)
+        .order_by(model.created_at.desc(), model.id.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 @dataclass(slots=True)
@@ -78,9 +119,7 @@ class TopLevelLifecycleStore:
             region=region,
             storage_path=storage_path,
         )
-        self.session.add(document)
-        await self.session.flush()
-        return document
+        return await _add_and_flush(self.session, document)
 
     async def create_job(
         self,
@@ -106,9 +145,7 @@ class TopLevelLifecycleStore:
             operator_note=operator_note,
             region=region,
         )
-        self.session.add(job)
-        await self.session.flush()
-        return job
+        return await _add_and_flush(self.session, job)
 
     async def get_job_by_idempotency_key(self, idempotency_key: str) -> Job | None:
         result = await self.session.execute(
@@ -142,7 +179,7 @@ class TopLevelLifecycleStore:
             raise LookupError("job_not_found")
 
         job.status = status
-        job.updated_at = datetime.utcnow()
+        job.updated_at = utc_now()
         if retry_count is not None:
             job.retry_count = retry_count
         if dead_letter is not None:
@@ -169,9 +206,7 @@ class TopLevelLifecycleStore:
             content=dict(content),
             template_version=template_version,
         )
-        self.session.add(artifact)
-        await self.session.flush()
-        return artifact
+        return await _add_and_flush(self.session, artifact)
 
     async def create_clinician_artifact(
         self,
@@ -185,9 +220,7 @@ class TopLevelLifecycleStore:
             content=dict(content),
             template_version=template_version,
         )
-        self.session.add(artifact)
-        await self.session.flush()
-        return artifact
+        return await _add_and_flush(self.session, artifact)
 
     async def create_lineage_run(
         self,
@@ -221,9 +254,7 @@ class TopLevelLifecycleStore:
             model_version=model_version,
             build_commit=build_commit,
         )
-        self.session.add(lineage_run)
-        await self.session.flush()
-        return lineage_run
+        return await _add_and_flush(self.session, lineage_run)
 
     async def create_benchmark_run(
         self,
@@ -237,9 +268,7 @@ class TopLevelLifecycleStore:
             report_type=report_type,
             metrics=dict(metrics),
         )
-        self.session.add(benchmark_run)
-        await self.session.flush()
-        return benchmark_run
+        return await _add_and_flush(self.session, benchmark_run)
 
     async def create_extracted_row(
         self,
@@ -269,9 +298,7 @@ class TopLevelLifecycleStore:
             raw_reference_range=raw_reference_range,
             extraction_confidence=extraction_confidence,
         )
-        self.session.add(extracted_row)
-        await self.session.flush()
-        return extracted_row
+        return await _add_and_flush(self.session, extracted_row)
 
     async def create_observation(
         self,
@@ -318,12 +345,12 @@ class TopLevelLifecycleStore:
             canonical_value=canonical_value,
             language_id=language_id,
             support_state=support_state,
-            suppression_reasons=list(suppression_reasons) if suppression_reasons is not None else None,
+            suppression_reasons=list(suppression_reasons)
+            if suppression_reasons is not None
+            else None,
             lineage_id=_coerce_uuid(lineage_id) if lineage_id is not None else None,
         )
-        self.session.add(observation)
-        await self.session.flush()
-        return observation
+        return await _add_and_flush(self.session, observation)
 
     async def create_mapping_candidate(
         self,
@@ -347,9 +374,7 @@ class TopLevelLifecycleStore:
             accepted=accepted,
             rejection_reason=rejection_reason,
         )
-        self.session.add(mapping_candidate)
-        await self.session.flush()
-        return mapping_candidate
+        return await _add_and_flush(self.session, mapping_candidate)
 
     async def create_rule_event(
         self,
@@ -372,18 +397,16 @@ class TopLevelLifecycleStore:
             rule_id=rule_id,
             finding_id=finding_id,
             threshold_source=threshold_source,
-            supporting_observation_ids=[
-                _coerce_uuid(value) for value in supporting_observation_ids
-            ]
+            supporting_observation_ids=[_coerce_uuid(value) for value in supporting_observation_ids]
             if supporting_observation_ids is not None
             else None,
-            suppression_conditions=dict(suppression_conditions) if suppression_conditions is not None else None,
+            suppression_conditions=dict(suppression_conditions)
+            if suppression_conditions is not None
+            else None,
             severity_class_candidate=severity_class_candidate,
             nextstep_class_candidate=nextstep_class_candidate,
         )
-        self.session.add(rule_event)
-        await self.session.flush()
-        return rule_event
+        return await _add_and_flush(self.session, rule_event)
 
     async def create_policy_event(
         self,
@@ -409,9 +432,7 @@ class TopLevelLifecycleStore:
             suppression_active=suppression_active,
             suppression_reason=suppression_reason,
         )
-        self.session.add(policy_event)
-        await self.session.flush()
-        return policy_event
+        return await _add_and_flush(self.session, policy_event)
 
     async def create_share_event(
         self,
@@ -425,9 +446,7 @@ class TopLevelLifecycleStore:
             artifact_type=artifact_type,
             share_method=share_method,
         )
-        self.session.add(share_event)
-        await self.session.flush()
-        return share_event
+        return await _add_and_flush(self.session, share_event)
 
     async def persist_top_level_bundle(
         self,
@@ -471,7 +490,9 @@ class TopLevelLifecycleStore:
                 **benchmark_run,
             )
         if patient_artifact is not None:
-            persisted_patient = await self.create_patient_artifact(job_id=job_uuid, **patient_artifact)
+            persisted_patient = await self.create_patient_artifact(
+                job_id=job_uuid, **patient_artifact
+            )
         if clinician_artifact is not None:
             persisted_clinician = await self.create_clinician_artifact(
                 job_id=job_uuid,
@@ -493,31 +514,13 @@ class TopLevelLifecycleStore:
         return await self.session.get(Document, _coerce_uuid(document_id))
 
     async def get_patient_artifact(self, job_id: UUID | str) -> PatientArtifact | None:
-        result = await self.session.execute(
-            select(PatientArtifact)
-            .where(PatientArtifact.job_id == _coerce_uuid(job_id))
-            .order_by(PatientArtifact.created_at.desc(), PatientArtifact.id.desc())
-            .limit(1)
-        )
-        return result.scalar_one_or_none()
+        return await _latest_by_job(self.session, PatientArtifact, _coerce_uuid(job_id))
 
     async def get_clinician_artifact(self, job_id: UUID | str) -> ClinicianArtifact | None:
-        result = await self.session.execute(
-            select(ClinicianArtifact)
-            .where(ClinicianArtifact.job_id == _coerce_uuid(job_id))
-            .order_by(ClinicianArtifact.created_at.desc(), ClinicianArtifact.id.desc())
-            .limit(1)
-        )
-        return result.scalar_one_or_none()
+        return await _latest_by_job(self.session, ClinicianArtifact, _coerce_uuid(job_id))
 
     async def get_latest_lineage_run(self, job_id: UUID | str) -> LineageRun | None:
-        result = await self.session.execute(
-            select(LineageRun)
-            .where(LineageRun.job_id == _coerce_uuid(job_id))
-            .order_by(LineageRun.created_at.desc(), LineageRun.id.desc())
-            .limit(1)
-        )
-        return result.scalar_one_or_none()
+        return await _latest_by_job(self.session, LineageRun, _coerce_uuid(job_id))
 
     async def count_lineage_runs(self, job_id: UUID | str) -> int:
         result = await self.session.execute(
@@ -527,11 +530,140 @@ class TopLevelLifecycleStore:
         )
         return int(result.scalar_one())
 
-    async def get_latest_benchmark_run(self, lineage_id: UUID | str) -> BenchmarkRun | None:
-        result = await self.session.execute(
-            select(BenchmarkRun)
-            .where(BenchmarkRun.lineage_id == _coerce_uuid(lineage_id))
-            .order_by(BenchmarkRun.created_at.desc(), BenchmarkRun.id.desc())
-            .limit(1)
+    async def list_recent_jobs(self, limit: int = 20) -> list[dict[str, Any]]:
+        patient_artifact_exists = (
+            select(PatientArtifact.id).where(PatientArtifact.job_id == Job.id).exists()
         )
-        return result.scalar_one_or_none()
+        clinician_artifact_exists = (
+            select(ClinicianArtifact.id).where(ClinicianArtifact.job_id == Job.id).exists()
+        )
+
+        result = await self.session.execute(
+            select(
+                Job,
+                patient_artifact_exists.label("has_patient_artifact"),
+                clinician_artifact_exists.label("has_clinician_artifact"),
+            )
+            .order_by(Job.updated_at.desc(), Job.created_at.desc(), Job.id.desc())
+            .limit(limit)
+        )
+
+        jobs: list[dict[str, Any]] = []
+        for job, has_patient_artifact, has_clinician_artifact in result.all():
+            jobs.append(
+                {
+                    "job_id": str(job.id),
+                    "status": job.status,
+                    "lane_type": job.lane_type,
+                    "retry_count": int(job.retry_count or 0),
+                    "dead_letter": bool(job.dead_letter),
+                    "created_at": job.created_at.isoformat()
+                    if job.created_at is not None
+                    else None,
+                    "updated_at": job.updated_at.isoformat()
+                    if job.updated_at is not None
+                    else None,
+                    "operator_note": job.operator_note,
+                    "has_patient_artifact": bool(has_patient_artifact),
+                    "has_clinician_artifact": bool(has_clinician_artifact),
+                }
+            )
+        return jobs
+
+    async def get_job_audit_data(self, job_id: UUID | str) -> dict[str, Any]:
+        job = await self.get_job(job_id)
+        if job is None:
+            raise LookupError("job_not_found")
+
+        lineage_runs_count = await self.count_lineage_runs(job_id)
+        latest_lineage = await self.get_latest_lineage_run(job_id)
+        latest_benchmark = None
+        if latest_lineage is not None:
+            benchmark = await self.get_latest_benchmark_run(latest_lineage.id)
+            if benchmark is not None:
+                latest_benchmark = {
+                    "id": str(benchmark.id),
+                    "lineage_id": str(benchmark.lineage_id),
+                    "report_type": benchmark.report_type,
+                    "metrics": dict(benchmark.metrics),
+                    "created_at": benchmark.created_at.isoformat()
+                    if benchmark.created_at is not None
+                    else None,
+                }
+
+        share_events_result = await self.session.execute(
+            select(ShareEvent)
+            .where(ShareEvent.job_id == _coerce_uuid(job_id))
+            .order_by(ShareEvent.created_at.desc(), ShareEvent.id.desc())
+        )
+        share_events = [
+            {
+                "id": str(event.id),
+                "job_id": str(event.job_id),
+                "artifact_type": event.artifact_type,
+                "share_method": event.share_method,
+                "created_at": event.created_at.isoformat()
+                if event.created_at is not None
+                else None,
+            }
+            for event in share_events_result.scalars().all()
+        ]
+
+        return {
+            "job_id": str(job.id),
+            "status": job.status,
+            "lane_type": job.lane_type,
+            "retry_count": int(job.retry_count or 0),
+            "dead_letter": bool(job.dead_letter),
+            "operator_note": job.operator_note,
+            "lineage_runs_count": lineage_runs_count,
+            "latest_lineage_run": None
+            if latest_lineage is None
+            else {"id": str(latest_lineage.id)},
+            "latest_benchmark": latest_benchmark,
+            "share_events": share_events,
+        }
+
+    async def get_retry_preview_data(
+        self,
+        job_id: UUID | str,
+        *,
+        max_retry_count: int,
+    ) -> dict[str, Any]:
+        job = await self.get_job(job_id)
+        if job is None:
+            raise LookupError("job_not_found")
+
+        document = await self.get_document(job.document_id)
+        document_present = document is not None and Path(document.storage_path).is_file()
+        dead_letter = bool(job.dead_letter)
+        retry_count = int(job.retry_count or 0)
+        retry_block_reason: str | None = None
+        retry_allowed = True
+
+        if not document_present:
+            retry_allowed = False
+            retry_block_reason = "document_missing"
+        elif dead_letter:
+            retry_allowed = False
+            retry_block_reason = "dead_lettered"
+        elif retry_count >= max_retry_count:
+            retry_allowed = False
+            retry_block_reason = "retry_limit_reached"
+
+        return {
+            "job_id": str(job.id),
+            "status": job.status,
+            "lane_type": job.lane_type,
+            "document_present": document_present,
+            "dead_letter": dead_letter,
+            "retry_count": retry_count,
+            "max_job_retries": max_retry_count,
+            "retry_allowed": retry_allowed,
+            "retry_block_reason": retry_block_reason,
+            "would_dead_letter_on_retry": retry_count + 1 >= max_retry_count,
+            "operator_note": job.operator_note,
+        }
+
+    async def get_latest_benchmark_run(self, lineage_id: UUID | str) -> BenchmarkRun | None:
+        return await _latest_by_lineage(self.session, BenchmarkRun, _coerce_uuid(lineage_id))

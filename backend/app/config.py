@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     # Terminology
     loinc_path: Path = Path("data/loinc")
+    terminology_snapshot_path: Path = Path("data/loinc")
     alias_tables_path: Path = Path("data/alias_tables")
     ucum_path: Path = Path("data/ucum")
 

@@ -40,5 +40,16 @@
       "explanatory_scaffold_id": "glucose_trend_v1"
     }
   ],
-  "language_id": "en"
+  "language_id": "en",
+  "comparable_history": {
+    "analyte_display": "Glucose",
+    "current_value": "96",
+    "current_unit": "mg/dL",
+    "previous_value": "96",
+    "previous_unit": "mg/dL",
+    "current_date": "2026-04-10",
+    "previous_date": "2026-03-10",
+    "direction": "similar",
+    "comparability_status": "available"
+  }
 }

@@ -22,7 +22,6 @@ from app.schemas.observation import ObservationSchema, SupportState
 from app.services.artifact_renderer import ArtifactRenderer
 from app.workers.pipeline import PipelineOrchestrator
 
-
 ROOT = Path(__file__).resolve().parents[3]
 EXAMPLES_DIR = ROOT / "contracts" / "examples"
 
@@ -73,6 +72,23 @@ def test_phase_11_contract_examples_include_image_beta_non_trusted_example() -> 
     assert patient.trust_status is TrustStatus.NON_TRUSTED_BETA
     assert patient.support_banner is SupportBanner.PARTIALLY_SUPPORTED
     assert patient.not_assessed
+
+
+def test_phase_11_comparable_history_examples_freeze_runtime_contract() -> None:
+    available = PatientArtifactSchema.model_validate(
+        _load_json("patient_artifact_comparable_history_available.json")
+    )
+    unavailable = PatientArtifactSchema.model_validate(
+        _load_json("patient_artifact_comparable_history_unavailable.json")
+    )
+
+    assert available.comparable_history is not None
+    assert available.comparable_history.comparability_status == "available"
+    assert available.comparable_history.direction == "similar"
+
+    assert unavailable.comparable_history is not None
+    assert unavailable.comparable_history.comparability_status == "unavailable"
+    assert unavailable.comparable_history.direction == "trend_unavailable"
 
 
 def test_phase_11_observation_and_finding_contracts_expose_versions() -> None:

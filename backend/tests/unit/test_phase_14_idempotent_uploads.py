@@ -128,11 +128,6 @@ def test_upload_route_reuses_existing_job_for_same_idempotency_key(
             calls["pipeline"] += 1
             return {"status": "completed"}
 
-    monkeypatch.setattr(
-        upload_route,
-        "async_session_factory",
-        lambda: _DummySessionContext(session),
-    )
     monkeypatch.setattr(upload_route, "TopLevelLifecycleStore", FakeStore)
     monkeypatch.setattr(upload_route, "PipelineOrchestrator", lambda: FakePipeline())
     monkeypatch.setattr(
@@ -147,7 +142,8 @@ def test_upload_route_reuses_existing_job_for_same_idempotency_key(
                 filename="report.pdf",
                 content_type="application/pdf",
                 payload=b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
-            )
+            ),
+            session_factory=lambda: _DummySessionContext(session),
         )
     )
 

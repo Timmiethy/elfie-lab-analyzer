@@ -2,22 +2,18 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.api.routes import artifacts as artifacts_routes
-from app.api.routes import health as health_routes
-from app.api.routes import jobs as jobs_routes
-from app.api.routes import upload as upload_routes
 from app.config import settings
-from app.main import create_app
 from app.models.tables import BenchmarkRun, Job
 from app.workers.pipeline import _JOB_RUNS
+from tests.integration.helpers import reset_integration_db
 
 pytestmark = pytest.mark.asyncio
 
@@ -71,7 +67,7 @@ def _build_text_pdf(lines: list[str], *, pages: int = 1) -> bytes:
     )
 
     buffer = BytesIO()
-    buffer.write(b"%PDF-1.4\n")
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
@@ -94,40 +90,12 @@ def _build_text_pdf(lines: list[str], *, pages: int = 1) -> bytes:
     return buffer.getvalue()
 
 
-@pytest_asyncio.fixture
-async def db_session_factory(monkeypatch: pytest.MonkeyPatch):
-    engine = create_async_engine(
-        settings.database_url,
-        echo=False,
-        poolclass=NullPool,
-    )
-    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    monkeypatch.setattr(upload_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(jobs_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(artifacts_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(health_routes, "async_session_factory", session_factory, raising=False)
-    try:
-        yield session_factory
-    finally:
-        await engine.dispose()
-
-
 @pytest_asyncio.fixture(autouse=True)
 async def integration_runtime_isolation(
     tmp_path: Path,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    async with db_session_factory() as session:
-        await session.execute(
-            text(
-                "TRUNCATE TABLE "
-                "share_events, benchmark_runs, lineage_runs, clinician_artifacts, "
-                "patient_artifacts, policy_events, rule_events, mapping_candidates, "
-                "observations, extracted_rows, jobs, documents "
-                "RESTART IDENTITY CASCADE"
-            )
-        )
-        await session.commit()
+    await reset_integration_db(db_session_factory)
 
     _JOB_RUNS.clear()
     original_artifact_store_path = settings.artifact_store_path
@@ -142,14 +110,6 @@ async def integration_runtime_isolation(
         settings.artifact_store_path = original_artifact_store_path
         settings.max_upload_size_mb = original_max_upload_size_mb
         settings.max_pdf_pages = original_max_pdf_pages
-
-
-@pytest_asyncio.fixture
-async def api_client() -> AsyncClient:
-    app = create_app()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
 
 
 async def _job_count(session_factory: async_sessionmaker[AsyncSession]) -> int:
@@ -178,7 +138,6 @@ async def _latest_benchmark(session_factory: async_sessionmaker[AsyncSession]) -
         return benchmark
 
 
-@pytest.mark.anyio
 async def test_phase_17_upload_size_limit_rejects_before_persistence(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -195,7 +154,6 @@ async def test_phase_17_upload_size_limit_rejects_before_persistence(
     assert await _job_count(db_session_factory) == 0
 
 
-@pytest.mark.anyio
 async def test_phase_17_pdf_page_limit_fails_safely_with_persisted_job(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -215,7 +173,6 @@ async def test_phase_17_pdf_page_limit_fails_safely_with_persisted_job(
     assert "page_count_limit_exceeded" in job.operator_note
 
 
-@pytest.mark.anyio
 async def test_phase_17_benchmark_records_timing_signals(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],

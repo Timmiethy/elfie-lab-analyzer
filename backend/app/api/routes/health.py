@@ -1,10 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import InterfaceError, OperationalError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.deps import get_session_factory
 from app.config import settings
-from app.db.session import async_session_factory
 from app.services.observability import observability_metrics
 from app.services.privacy import build_privacy_policy_payload
 
@@ -17,8 +18,10 @@ async def health_check() -> dict:
 
 
 @router.get("/health/ready")
-async def health_ready() -> JSONResponse:
-    db_reachable = await _check_database_reachable()
+async def health_ready(
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+) -> JSONResponse:
+    db_reachable = await _check_database_reachable(session_factory)
     artifact_store_writable = _check_artifact_store_writable()
     status = "ok" if db_reachable and artifact_store_writable else "degraded"
     payload = {
@@ -47,11 +50,13 @@ async def health_privacy() -> dict:
     )
 
 
-async def _check_database_reachable() -> bool:
+async def _check_database_reachable(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> bool:
     try:
-        async with async_session_factory() as session:
+        async with session_factory() as session:
             await session.execute(text("SELECT 1"))
-            return True
+        return True
     except (InterfaceError, OperationalError):
         return False
 

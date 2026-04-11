@@ -35,13 +35,13 @@ def test_pipeline_logs_failure_context_for_unsupported_lane(caplog) -> None:
             asyncio.run(
                 PipelineOrchestrator().run(
                     "phase-15-failure",
-                    lane_type="structured",
+                    lane_type="legacy_csv",
                 )
             )
 
     assert any(
         "pipeline_failed" in record.getMessage()
         and "phase-15-failure" in record.getMessage()
-        and "unsupported_lane:structured" in record.getMessage()
+        and "unsupported_lane:legacy_csv" in record.getMessage()
         for record in caplog.records
     )

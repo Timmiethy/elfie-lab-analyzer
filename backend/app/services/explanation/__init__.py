@@ -33,6 +33,8 @@ _LOCALIZED_COPY = {
         "nextstep_class": "next-step class",
         "threshold_source": "threshold source",
         "suppressed": "suppressed",
+        "unsupported_sentence": "Some items are not supported by the terminology tables and are shown separately for review.",
+        "threshold_provenance_sentence": "Each threshold comes from a recorded source that can be audited.",
     },
     "vi": {
         "headline": "Tóm tắt các phát hiện có cấu trúc",
@@ -52,6 +54,8 @@ _LOCALIZED_COPY = {
         "nextstep_class": "bước tiếp theo",
         "threshold_source": "nguồn ngưỡng",
         "suppressed": "bị ẩn",
+        "unsupported_sentence": "Một số mục không được hỗ trợ bởi bảng thuật ngữ và được hiển thị riêng để xem xét.",
+        "threshold_provenance_sentence": "Mỗi ngưỡng đến từ nguồn được ghi lại và có thể kiểm tra lại.",
     },
 }
 
@@ -129,6 +133,8 @@ class ExplanationAdapter:
                 "finding_bullets": [],
                 "paragraph": copy["empty_intro"],
                 "next_step_sentence": copy["empty_next_step"],
+                "unsupported_sentence": copy["unsupported_sentence"],
+                "threshold_provenance_sentence": copy["threshold_provenance_sentence"],
                 "disclaimer": self._join_disclaimer(copy, invalid_count),
                 "generation_source": "fallback",
             }
@@ -144,6 +150,8 @@ class ExplanationAdapter:
             "finding_bullets": bullets,
             "paragraph": paragraph,
             "next_step_sentence": next_step_sentence,
+            "unsupported_sentence": copy["unsupported_sentence"],
+            "threshold_provenance_sentence": copy["threshold_provenance_sentence"],
             "disclaimer": self._join_disclaimer(copy, invalid_count),
             "generation_source": "fallback",
         }

@@ -3,22 +3,18 @@ from __future__ import annotations
 from io import BytesIO
 from pathlib import Path
 from stat import S_IMODE
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.api.routes import artifacts as artifacts_routes
-from app.api.routes import health as health_routes
-from app.api.routes import jobs as jobs_routes
-from app.api.routes import upload as upload_routes
 from app.config import settings
-from app.main import create_app
 from app.models.tables import Document, Job, ShareEvent
 from app.workers.pipeline import _JOB_RUNS
+from tests.integration.helpers import reset_integration_db
 
 pytestmark = pytest.mark.asyncio
 
@@ -52,7 +48,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     objects.append(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     buffer = BytesIO()
-    buffer.write(b"%PDF-1.4\n")
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
@@ -75,40 +71,12 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     return buffer.getvalue()
 
 
-@pytest_asyncio.fixture
-async def db_session_factory(monkeypatch: pytest.MonkeyPatch):
-    engine = create_async_engine(
-        settings.database_url,
-        echo=False,
-        poolclass=NullPool,
-    )
-    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    monkeypatch.setattr(upload_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(jobs_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(artifacts_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(health_routes, "async_session_factory", session_factory, raising=False)
-    try:
-        yield session_factory
-    finally:
-        await engine.dispose()
-
-
 @pytest_asyncio.fixture(autouse=True)
 async def integration_runtime_isolation(
     tmp_path: Path,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    async with db_session_factory() as session:
-        await session.execute(
-            text(
-                "TRUNCATE TABLE "
-                "share_events, benchmark_runs, lineage_runs, clinician_artifacts, "
-                "patient_artifacts, policy_events, rule_events, mapping_candidates, "
-                "observations, extracted_rows, jobs, documents "
-                "RESTART IDENTITY CASCADE"
-            )
-        )
-        await session.commit()
+    await reset_integration_db(db_session_factory)
 
     _JOB_RUNS.clear()
     original_artifact_store_path = settings.artifact_store_path
@@ -125,14 +93,6 @@ async def integration_runtime_isolation(
             settings.upload_retention_days = original_upload_retention_days
         if hasattr(settings, "artifact_retention_days"):
             settings.artifact_retention_days = original_artifact_retention_days
-
-
-@pytest_asyncio.fixture
-async def api_client() -> AsyncClient:
-    app = create_app()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
 
 
 async def _latest_job_and_document(
@@ -157,7 +117,6 @@ async def _share_events(
         return list(result.scalars())
 
 
-@pytest.mark.anyio
 async def test_phase_16_upload_storage_is_private_and_artifact_access_is_audited(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -188,7 +147,6 @@ async def test_phase_16_upload_storage_is_private_and_artifact_access_is_audited
     assert all(event.share_method == "view" for event in events)
 
 
-@pytest.mark.anyio
 async def test_phase_16_privacy_policy_endpoint_exposes_retention_and_sanitization(
     api_client: AsyncClient,
 ) -> None:

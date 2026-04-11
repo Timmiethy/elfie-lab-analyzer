@@ -2,21 +2,18 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from pydantic import ValidationError
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import func, select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.api.routes import artifacts as artifacts_routes
-from app.api.routes import jobs as jobs_routes
-from app.api.routes import upload as upload_routes
+from app.api.deps import get_session_factory
 from app.config import settings
-from app.main import create_app
 from app.models.tables import (
     BenchmarkRun,
     ClinicianArtifact,
@@ -32,6 +29,7 @@ from app.models.tables import (
 )
 from app.schemas.artifact import ClinicianArtifactSchema, PatientArtifactSchema
 from app.workers.pipeline import _JOB_RUNS
+from tests.integration.helpers import reset_integration_db
 
 pytestmark = pytest.mark.asyncio
 
@@ -65,7 +63,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     objects.append(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     buffer = BytesIO()
-    buffer.write(b"%PDF-1.4\n")
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
@@ -99,39 +97,12 @@ class _FailingSessionFactory:
         return False
 
 
-@pytest_asyncio.fixture
-async def db_session_factory(monkeypatch: pytest.MonkeyPatch):
-    engine = create_async_engine(
-        settings.database_url,
-        echo=False,
-        poolclass=NullPool,
-    )
-    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    monkeypatch.setattr(upload_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(jobs_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(artifacts_routes, "async_session_factory", session_factory)
-    try:
-        yield session_factory
-    finally:
-        await engine.dispose()
-
-
 @pytest_asyncio.fixture(autouse=True)
 async def integration_runtime_isolation(
     tmp_path: Path,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    async with db_session_factory() as session:
-        await session.execute(
-            text(
-                "TRUNCATE TABLE "
-                "share_events, benchmark_runs, lineage_runs, clinician_artifacts, "
-                "patient_artifacts, policy_events, rule_events, mapping_candidates, "
-                "observations, extracted_rows, jobs, documents "
-                "RESTART IDENTITY CASCADE"
-            )
-        )
-        await session.commit()
+    await reset_integration_db(db_session_factory)
 
     _JOB_RUNS.clear()
     original_artifact_store_path = settings.artifact_store_path
@@ -142,13 +113,6 @@ async def integration_runtime_isolation(
     finally:
         _JOB_RUNS.clear()
         settings.artifact_store_path = original_artifact_store_path
-
-@pytest_asyncio.fixture
-async def api_client() -> AsyncClient:
-    app = create_app()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
 
 
 async def _table_count(
@@ -169,7 +133,18 @@ async def _latest_job(session_factory: async_sessionmaker[AsyncSession]) -> Job:
         return job
 
 
-@pytest.mark.anyio
+async def _job_by_id(
+    session_factory: async_sessionmaker[AsyncSession],
+    job_id: str,
+) -> Job:
+    async with session_factory() as session:
+        result = await session.execute(select(Job).where(Job.id == job_id))
+        job = result.scalar_one_or_none()
+        if job is None:
+            raise AssertionError("expected a persisted job row")
+        return job
+
+
 async def test_phase_12_db_backed_upload_happy_path_persists_and_serves_artifacts(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -214,20 +189,46 @@ async def test_phase_12_db_backed_upload_happy_path_persists_and_serves_artifact
     assert str(clinician_artifact.job_id) == job_id
     assert patient_artifact.support_banner == "fully_supported"
 
-    assert await _table_count(db_session_factory, Document) == 1
-    assert await _table_count(db_session_factory, Job) == 1
-    assert await _table_count(db_session_factory, PatientArtifact) == 1
-    assert await _table_count(db_session_factory, ClinicianArtifact) == 1
-    assert await _table_count(db_session_factory, LineageRun) == 1
-    assert await _table_count(db_session_factory, BenchmarkRun) == 1
-    assert await _table_count(db_session_factory, ExtractedRow) == 2
-    assert await _table_count(db_session_factory, Observation) == 2
-    assert await _table_count(db_session_factory, MappingCandidate) >= 2
-    assert await _table_count(db_session_factory, RuleEvent) >= 1
-    assert await _table_count(db_session_factory, PolicyEvent) >= 1
+    persisted_job = await _job_by_id(db_session_factory, job_id)
+    async with db_session_factory() as session:
+        persisted_document = await session.get(Document, persisted_job.document_id)
+        assert persisted_document is not None
+        assert (
+            await session.execute(select(func.count()).select_from(PatientArtifact).where(PatientArtifact.job_id == job_id))
+        ).scalar_one() == 1
+        assert (
+            await session.execute(select(func.count()).select_from(ClinicianArtifact).where(ClinicianArtifact.job_id == job_id))
+        ).scalar_one() == 1
+        assert (
+            await session.execute(select(func.count()).select_from(LineageRun).where(LineageRun.job_id == job_id))
+        ).scalar_one() == 1
+        lineage_result = await session.execute(select(LineageRun.id).where(LineageRun.job_id == job_id).limit(1))
+        lineage_id = lineage_result.scalar_one()
+        assert (
+            await session.execute(select(func.count()).select_from(BenchmarkRun).where(BenchmarkRun.lineage_id == lineage_id))
+        ).scalar_one() == 1
+        assert (
+            await session.execute(select(func.count()).select_from(ExtractedRow).where(ExtractedRow.job_id == job_id))
+        ).scalar_one() == 2
+        assert (
+            await session.execute(select(func.count()).select_from(Observation).where(Observation.job_id == job_id))
+        ).scalar_one() == 2
+        assert (
+            await session.execute(
+                select(func.count())
+                .select_from(MappingCandidate)
+                .join(Observation, MappingCandidate.observation_id == Observation.id)
+                .where(Observation.job_id == job_id)
+            )
+        ).scalar_one() >= 2
+        assert (
+            await session.execute(select(func.count()).select_from(RuleEvent).where(RuleEvent.job_id == job_id))
+        ).scalar_one() >= 1
+        assert (
+            await session.execute(select(func.count()).select_from(PolicyEvent).where(PolicyEvent.job_id == job_id))
+        ).scalar_one() >= 1
 
 
-@pytest.mark.anyio
 async def test_phase_12_partial_support_pdf_is_exposed_as_partial_job(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -250,11 +251,10 @@ async def test_phase_12_partial_support_pdf_is_exposed_as_partial_job(
     patient_artifact = PatientArtifactSchema.model_validate(patient_response.json())
     assert patient_artifact.support_banner == "partially_supported"
 
-    latest_job = await _latest_job(db_session_factory)
-    assert latest_job.status == "partial"
+    persisted_job = await _job_by_id(db_session_factory, job_id)
+    assert persisted_job.status == "partial"
 
 
-@pytest.mark.anyio
 async def test_phase_12_unsupported_mime_is_rejected_before_persistence(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -272,7 +272,6 @@ async def test_phase_12_unsupported_mime_is_rejected_before_persistence(
     assert await _table_count(db_session_factory, Job) == 0
 
 
-@pytest.mark.anyio
 async def test_phase_12_image_beta_failure_is_safe_and_persisted(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -296,7 +295,6 @@ async def test_phase_12_image_beta_failure_is_safe_and_persisted(
     assert await _table_count(db_session_factory, ClinicianArtifact) == 0
 
 
-@pytest.mark.anyio
 async def test_phase_12_no_text_pdf_fails_safely_and_keeps_auditable_job(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -318,16 +316,15 @@ async def test_phase_12_no_text_pdf_fails_safely_and_keeps_auditable_job(
     assert "unsupported_pdf" in latest_job.operator_note
 
 
-@pytest.mark.anyio
 async def test_phase_12_persistence_unavailable_falls_back_to_in_memory_runtime(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     failing_factory = _FailingSessionFactory()
-    monkeypatch.setattr(upload_routes, "async_session_factory", failing_factory)
-    monkeypatch.setattr(jobs_routes, "async_session_factory", failing_factory)
-    monkeypatch.setattr(artifacts_routes, "async_session_factory", failing_factory)
+
+    app = api_client._transport.app
+    monkeypatch.setitem(app.dependency_overrides, get_session_factory, lambda: failing_factory)
 
     pdf_bytes = _build_text_pdf(["Glucose 180 mg/dL", "HbA1c 6.8 %"])
 

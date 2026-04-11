@@ -1,6 +1,6 @@
 """Patient and clinician artifact schemas (blueprint sections 4.3, 4.6)."""
 
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -9,18 +9,18 @@ from app.schemas.finding import FindingSchema, NextStepClass, SeverityClass
 from app.schemas.observation import CONTRACT_VERSION as OBSERVATION_CONTRACT_VERSION
 
 
-class SupportBanner(str, Enum):
+class SupportBanner(StrEnum):
     FULLY_SUPPORTED = "fully_supported"
     PARTIALLY_SUPPORTED = "partially_supported"
     COULD_NOT_ASSESS = "could_not_assess"
 
 
-class TrustStatus(str, Enum):
+class TrustStatus(StrEnum):
     TRUSTED = "trusted"
     NON_TRUSTED_BETA = "non_trusted_beta"
 
 
-class UnsupportedReason(str, Enum):
+class UnsupportedReason(StrEnum):
     NO_EXTRACTABLE_TEXT = "no_extractable_text"
     UNSUPPORTED_ANALYTE_FAMILY = "unsupported_analyte_family"
     UNSUPPORTED_UNIT_OR_REFERENCE_RANGE = "unsupported_unit_or_reference_range"
@@ -43,6 +43,30 @@ class UnsupportedItem(BaseModel):
     reason: UnsupportedReason
 
 
+class ComparableHistoryStatus(StrEnum):
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+
+
+class ComparableHistoryDirection(StrEnum):
+    INCREASED = "increased"
+    DECREASED = "decreased"
+    SIMILAR = "similar"
+    TREND_UNAVAILABLE = "trend_unavailable"
+
+
+class ComparableHistoryCard(BaseModel):
+    analyte_display: str
+    current_value: str
+    current_unit: str
+    previous_value: str | None = None
+    previous_unit: str | None = None
+    current_date: str | None = None
+    previous_date: str | None = None
+    direction: ComparableHistoryDirection
+    comparability_status: ComparableHistoryStatus
+
+
 class PatientArtifactSchema(BaseModel):
     contract_version: str = OBSERVATION_CONTRACT_VERSION
     job_id: UUID
@@ -57,6 +81,8 @@ class PatientArtifactSchema(BaseModel):
     not_assessed: list[UnsupportedItem] = []
     findings: list[FindingSchema] = []
     language_id: str = "en"
+    explanation: dict | None = None
+    comparable_history: ComparableHistoryCard | None = None
 
 
 class ClinicianArtifactSchema(BaseModel):

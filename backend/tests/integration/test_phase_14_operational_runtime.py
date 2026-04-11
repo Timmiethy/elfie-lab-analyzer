@@ -2,21 +2,18 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.api.routes import artifacts as artifacts_routes
-from app.api.routes import jobs as jobs_routes
-from app.api.routes import upload as upload_routes
 from app.config import settings
-from app.main import create_app
 from app.models.tables import Document, Job, LineageRun
 from app.workers.pipeline import _JOB_RUNS
+from tests.integration.helpers import reset_integration_db
 
 pytestmark = pytest.mark.asyncio
 
@@ -50,7 +47,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     objects.append(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     buffer = BytesIO()
-    buffer.write(b"%PDF-1.4\n")
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
@@ -73,39 +70,12 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     return buffer.getvalue()
 
 
-@pytest_asyncio.fixture
-async def db_session_factory(monkeypatch: pytest.MonkeyPatch):
-    engine = create_async_engine(
-        settings.database_url,
-        echo=False,
-        poolclass=NullPool,
-    )
-    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    monkeypatch.setattr(upload_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(jobs_routes, "async_session_factory", session_factory)
-    monkeypatch.setattr(artifacts_routes, "async_session_factory", session_factory)
-    try:
-        yield session_factory
-    finally:
-        await engine.dispose()
-
-
 @pytest_asyncio.fixture(autouse=True)
 async def integration_runtime_isolation(
     tmp_path: Path,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    async with db_session_factory() as session:
-        await session.execute(
-            text(
-                "TRUNCATE TABLE "
-                "share_events, benchmark_runs, lineage_runs, clinician_artifacts, "
-                "patient_artifacts, policy_events, rule_events, mapping_candidates, "
-                "observations, extracted_rows, jobs, documents "
-                "RESTART IDENTITY CASCADE"
-            )
-        )
-        await session.commit()
+    await reset_integration_db(db_session_factory)
 
     _JOB_RUNS.clear()
     original_artifact_store_path = settings.artifact_store_path
@@ -119,14 +89,6 @@ async def integration_runtime_isolation(
         _JOB_RUNS.clear()
         settings.artifact_store_path = original_artifact_store_path
         settings.max_job_retries = original_max_job_retries
-
-
-@pytest_asyncio.fixture
-async def api_client() -> AsyncClient:
-    app = create_app()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
 
 
 async def _latest_job(session_factory: async_sessionmaker[AsyncSession]) -> Job:
@@ -162,7 +124,6 @@ async def _lineage_count_for_job(
         return len(list(result.scalars()))
 
 
-@pytest.mark.anyio
 async def test_phase_14_retry_reprocesses_persisted_document_and_records_history(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
@@ -203,7 +164,6 @@ async def test_phase_14_retry_reprocesses_persisted_document_and_records_history
     assert artifact_response.status_code == 200, artifact_response.text
 
 
-@pytest.mark.anyio
 async def test_phase_14_retry_dead_letters_job_after_max_attempts(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],

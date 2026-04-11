@@ -19,11 +19,13 @@ Steps:
 
 from __future__ import annotations
 
+import json
 import logging
-from time import perf_counter
+from datetime import UTC, datetime
+from enum import StrEnum
 from hashlib import sha256
-from enum import Enum
-from uuid import UUID, NAMESPACE_URL, uuid5
+from time import perf_counter
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,6 +35,8 @@ from app.schemas.artifact import SupportBanner, TrustStatus
 from app.services.analyte_resolver import AnalyteResolver
 from app.services.artifact_renderer import ArtifactRenderer
 from app.services.benchmark import BenchmarkRecorder
+from app.services.comparable_history import ComparableHistoryService
+from app.services.explanation import ExplanationAdapter
 from app.services.extraction_qa import ExtractionQA
 from app.services.lineage import LineageLogger
 from app.services.nextstep_policy import NextStepPolicyEngine
@@ -40,17 +44,36 @@ from app.services.observation_builder import ObservationBuilder
 from app.services.ocr import OcrAdapter
 from app.services.panel_reconstructor import PanelReconstructor
 from app.services.parser import TrustedPdfParser
+from app.services.proof_pack import proof_pack_route, write_proof_pack
 from app.services.rule_engine import RuleEngine
 from app.services.severity_policy import SeverityPolicyEngine
 from app.services.ucum import UcumEngine
-
+from app.terminology import get_loaded_snapshot_metadata
 
 _JOB_RUNS: dict[str, dict] = {}
 _LOGGER = logging.getLogger(__name__)
-_SUPPORTED_LANES = {"trusted_pdf", "image_beta"}
+_SUPPORTED_LANES = {"trusted_pdf", "image_beta", "structured"}
+
+_PARSER_VERSION_TRUSTED = "trusted-pdf-v1"
+_PARSER_VERSION_IMAGE_BETA = "image-beta-bypass"
+_OCR_VERSION_IMAGE_BETA = "beta-adapter-v1"
+_TERMINOLOGY_RELEASE_DEFAULT = "seeded-demo-2026-04-10"
+_MAPPING_THRESHOLD_DEFAULT = {"default": 0.9}
+_UNIT_ENGINE_VERSION = "ucum-v1"
+_RULE_PACK_VERSION = "rules-v1"
+_SEVERITY_POLICY_VERSION = "severity-v1"
+_NEXTSTEP_POLICY_VERSION = "nextstep-v1"
+_TEMPLATE_VERSION = "templates-v1"
+_BUILD_COMMIT_DEFAULT = "local-dev"
+_REPORT_TYPE = "truth_engine_seeded_pipeline"
+_PROOF_CORPUS_ID = "seeded-launch-corpus-v1"
+_DEFAULT_AGE_YEARS = 42
+_DEFAULT_SEX = "female"
+_DEFAULT_LANGUAGE_ID = "en"
+_DEFAULT_REPORT_DATE = "2026-04-10"
 
 
-class PipelineStep(str, Enum):
+class PipelineStep(StrEnum):
     PREFLIGHT = "preflight"
     LANE_SELECTION = "lane_selection"
     EXTRACTION = "extraction"
@@ -65,6 +88,161 @@ class PipelineStep(str, Enum):
     PATIENT_ARTIFACT = "patient_artifact"
     CLINICIAN_ARTIFACT = "clinician_artifact"
     LINEAGE_PERSIST = "lineage_persist"
+
+
+def _build_patient_context(job_id: str, *, detected_language_id: str | None = None) -> dict:
+    return {
+        "patient_id": str(uuid5(NAMESPACE_URL, f"patient:{job_id}")),
+        "age_years": _DEFAULT_AGE_YEARS,
+        "sex": _DEFAULT_SEX,
+        "language_id": detected_language_id or _DEFAULT_LANGUAGE_ID,
+    }
+
+
+def _build_render_context(
+    job_uuid: UUID,
+    language_id: str,
+    observations: list[dict],
+    lane_type: str,
+    findings: list[dict],
+    comparable_history: dict | None,
+) -> dict:
+    return {
+        "job_id": job_uuid,
+        "language_id": language_id,
+        "support_banner": SupportBanner(
+            _support_banner_from_runtime(observations, findings, comparable_history)
+        ),
+        "trust_status": (
+            TrustStatus.NON_TRUSTED_BETA if lane_type == "image_beta" else TrustStatus.TRUSTED
+        ),
+        "report_date": _DEFAULT_REPORT_DATE,
+        "comparable_history": comparable_history,
+    }
+
+
+def _build_lineage_payload(
+    job_id: str,
+    *,
+    source_checksum: str | None,
+    lane_type: str,
+    terminology_release: str,
+) -> dict:
+    return {
+        "source_checksum": source_checksum or f"source:{job_id}",
+        "parser_version": (
+            _PARSER_VERSION_TRUSTED if lane_type == "trusted_pdf" else _PARSER_VERSION_IMAGE_BETA
+        ),
+        "ocr_version": _OCR_VERSION_IMAGE_BETA if lane_type == "image_beta" else None,
+        "terminology_release": terminology_release,
+        "mapping_threshold_config": _MAPPING_THRESHOLD_DEFAULT,
+        "unit_engine_version": _UNIT_ENGINE_VERSION,
+        "rule_pack_version": _RULE_PACK_VERSION,
+        "severity_policy_version": _SEVERITY_POLICY_VERSION,
+        "nextstep_policy_version": _NEXTSTEP_POLICY_VERSION,
+        "template_version": _TEMPLATE_VERSION,
+        "model_version": None,
+        "build_commit": _BUILD_COMMIT_DEFAULT,
+    }
+
+
+def _build_persistence_payloads(
+    patient_artifact: dict,
+    clinician_artifact: dict,
+    lineage: dict,
+    benchmark: dict,
+    status: str,
+) -> dict:
+    return {
+        "patient_artifact": {
+            "language_id": patient_artifact["language_id"],
+            "support_banner": patient_artifact["support_banner"],
+            "content": _json_safe(patient_artifact),
+            "template_version": _TEMPLATE_VERSION,
+        },
+        "clinician_artifact": {
+            "content": _json_safe(clinician_artifact),
+            "template_version": _TEMPLATE_VERSION,
+        },
+        "lineage_run": {
+            "source_checksum": lineage["source_checksum"],
+            "parser_version": lineage["parser_version"],
+            "ocr_version": lineage["ocr_version"],
+            "terminology_release": lineage["terminology_release"],
+            "mapping_threshold_config": lineage["mapping_threshold_config"],
+            "unit_engine_version": lineage["unit_engine_version"],
+            "rule_pack_version": lineage["rule_pack_version"],
+            "severity_policy_version": lineage["severity_policy_version"],
+            "nextstep_policy_version": lineage["nextstep_policy_version"],
+            "template_version": lineage["template_version"],
+            "model_version": lineage["model_version"],
+            "build_commit": lineage["build_commit"],
+        },
+        "benchmark_run": {
+            "report_type": benchmark["report_type"],
+            "metrics": benchmark["metrics"],
+        },
+        "status": status,
+    }
+
+
+def _assemble_result(
+    job_id: str,
+    lane_type: str,
+    qa_result: dict,
+    observations: list[dict],
+    panels: list[dict],
+    findings: list[dict],
+    patient_artifact: dict,
+    clinician_artifact: dict,
+    lineage: dict,
+    benchmark: dict,
+) -> dict:
+    return {
+        "job_id": job_id,
+        "status": (
+            "completed"
+            if qa_result["passed"] and patient_artifact["support_banner"] == "fully_supported"
+            else "partial"
+        ),
+        "lane_type": lane_type,
+        "qa": qa_result,
+        "observations": observations,
+        "panels": panels,
+        "findings": findings,
+        "patient_artifact": patient_artifact,
+        "clinician_artifact": clinician_artifact,
+        "lineage": lineage,
+        "benchmark": benchmark,
+    }
+
+
+def _build_proof_pack(
+    *,
+    benchmark_recorder: BenchmarkRecorder,
+    job_uuid: UUID,
+    benchmark: dict,
+    lineage: dict,
+    lane_type: str,
+    language_id: str,
+) -> dict:
+    return benchmark_recorder.build_proof_pack(
+        benchmark=benchmark,
+        lineage=lineage,
+        artifact_refs={
+            "patient_artifact": f"/api/artifacts/{job_uuid}/patient",
+            "clinician_artifact": f"/api/artifacts/{job_uuid}/clinician",
+            "job_status": f"/api/jobs/{job_uuid}",
+            "proof_pack": proof_pack_route(job_uuid),
+        },
+        report_metadata={
+            "build_commit": lineage.get("build_commit") or _BUILD_COMMIT_DEFAULT,
+            "corpus_id": _PROOF_CORPUS_ID,
+            "lane_id": lane_type,
+            "language_id": language_id,
+            "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        },
+    )
 
 
 class PipelineOrchestrator:
@@ -82,20 +260,17 @@ class PipelineOrchestrator:
     ) -> dict:
         job_uuid = _job_uuid(job_id)
         document_uuid = (
-            document_id if isinstance(document_id, UUID) else UUID(str(document_id))
-        ) if document_id is not None else job_uuid
+            (document_id if isinstance(document_id, UUID) else UUID(str(document_id)))
+            if document_id is not None
+            else job_uuid
+        )
         selected_lane = lane_type or "trusted_pdf"
         _LOGGER.info(
             "pipeline_start job_id=%s lane=%s",
             job_id,
             selected_lane,
         )
-        patient_context = {
-            "patient_id": str(uuid5(NAMESPACE_URL, f"patient:{job_id}")),
-            "age_years": 42,
-            "sex": "female",
-            "language_id": "en",
-        }
+        patient_context = _build_patient_context(job_id)
 
         extraction_qa = ExtractionQA()
         observation_builder = ObservationBuilder()
@@ -108,6 +283,7 @@ class PipelineOrchestrator:
         artifact_renderer = ArtifactRenderer()
         lineage_logger = LineageLogger()
         benchmark_recorder = BenchmarkRecorder()
+        comparable_history_service = ComparableHistoryService(db_session)
         processing_start = perf_counter()
 
         try:
@@ -118,6 +294,7 @@ class PipelineOrchestrator:
                 file_bytes=file_bytes,
                 lane_type=selected_lane,
             )
+            _apply_detected_language(extracted_rows, patient_context)
             extraction_ms = int((perf_counter() - extraction_start) * 1000)
             qa_result = extraction_qa.validate(extracted_rows)
             observations = observation_builder.build(qa_result["clean_rows"])
@@ -130,41 +307,52 @@ class PipelineOrchestrator:
             findings = rule_engine.evaluate(normalized_observations, patient_context)
             findings = severity_policy.assign(findings, patient_context)
             findings = nextstep_policy.assign(findings, patient_context)
-
-            render_context = {
-                "job_id": job_uuid,
-                "language_id": patient_context["language_id"],
-                "support_banner": SupportBanner(_support_banner(normalized_observations)),
-                "trust_status": (
-                    TrustStatus.NON_TRUSTED_BETA
-                    if selected_lane == "image_beta"
-                    else TrustStatus.TRUSTED
-                ),
-                "report_date": "2026-04-10",
-            }
-            patient_artifact = artifact_renderer.render_patient(findings, render_context)
-            clinician_artifact = artifact_renderer.render_clinician(findings, render_context)
-            lineage = lineage_logger.record(
-                str(job_uuid),
-                {
-                    "source_checksum": source_checksum or f"source:{job_id}",
-                    "parser_version": "trusted-pdf-v1" if selected_lane == "trusted_pdf" else "image-beta-bypass",
-                    "ocr_version": "beta-adapter-v1" if selected_lane == "image_beta" else None,
-                    "terminology_release": "seeded-demo-2026-04-10",
-                    "mapping_threshold_config": {"default": 0.9},
-                    "unit_engine_version": "ucum-v1",
-                    "rule_pack_version": "rules-v1",
-                    "severity_policy_version": "severity-v1",
-                    "nextstep_policy_version": "nextstep-v1",
-                    "template_version": "templates-v1",
-                    "model_version": None,
-                    "build_commit": "local-dev",
-                },
+            comparable_history = await comparable_history_service.build_for_artifact(
+                job_id=job_uuid,
+                observations=normalized_observations,
+                report_date=_DEFAULT_REPORT_DATE,
             )
+
+            render_context = _build_render_context(
+                job_uuid,
+                patient_context["language_id"],
+                normalized_observations,
+                selected_lane,
+                findings,
+                comparable_history,
+            )
+            patient_artifact = artifact_renderer.render_patient(
+                findings,
+                render_context,
+                observations=normalized_observations,
+            )
+            explanation_payload = await ExplanationAdapter().generate(
+                findings,
+                patient_context["language_id"],
+            )
+            patient_artifact["explanation"] = explanation_payload
+            clinician_artifact = artifact_renderer.render_clinician(
+                findings,
+                render_context,
+                observations=normalized_observations,
+            )
+            snapshot_metadata = get_loaded_snapshot_metadata()
+            terminology_release = (
+                snapshot_metadata.get("release", _TERMINOLOGY_RELEASE_DEFAULT)
+                if snapshot_metadata
+                else _TERMINOLOGY_RELEASE_DEFAULT
+            )
+            lineage_payload = _build_lineage_payload(
+                job_id,
+                source_checksum=source_checksum,
+                lane_type=selected_lane,
+                terminology_release=terminology_release,
+            )
+            lineage = lineage_logger.record(str(job_uuid), lineage_payload)
             processing_ms = int((perf_counter() - processing_start) * 1000)
             benchmark = benchmark_recorder.record(
                 lineage_id=str(lineage["id"]),
-                report_type="truth_engine_seeded_pipeline",
+                report_type=_REPORT_TYPE,
                 metrics={
                     "extracted_rows": len(extracted_rows),
                     "clean_rows": len(qa_result["clean_rows"]),
@@ -174,29 +362,40 @@ class PipelineOrchestrator:
                     "processing_ms": processing_ms,
                 },
             )
+            proof_pack = _build_proof_pack(
+                benchmark_recorder=benchmark_recorder,
+                job_uuid=job_uuid,
+                benchmark=benchmark,
+                lineage=lineage,
+                lane_type=selected_lane,
+                language_id=patient_context["language_id"],
+            )
+            write_proof_pack(job_uuid, proof_pack)
 
-            result = {
-                "job_id": job_id,
-                "status": (
-                    "completed"
-                    if qa_result["passed"] and _support_banner(normalized_observations) == "fully_supported"
-                    else "partial"
-                ),
-                "lane_type": selected_lane,
-                "qa": qa_result,
-                "observations": normalized_observations,
-                "panels": panels,
-                "findings": findings,
-                "patient_artifact": patient_artifact,
-                "clinician_artifact": clinician_artifact,
-                "lineage": lineage,
-                "benchmark": benchmark,
-            }
+            result = _assemble_result(
+                job_id,
+                selected_lane,
+                qa_result,
+                normalized_observations,
+                panels,
+                findings,
+                patient_artifact,
+                clinician_artifact,
+                lineage,
+                benchmark,
+            )
+            result["proof_pack_ref"] = proof_pack_route(job_uuid)
+            result["proof_pack"] = proof_pack
 
             if db_session is not None:
                 store = TopLevelLifecycleStore(db_session)
-                persisted_patient_artifact = _json_safe(patient_artifact)
-                persisted_clinician_artifact = _json_safe(clinician_artifact)
+                persistence = _build_persistence_payloads(
+                    patient_artifact,
+                    clinician_artifact,
+                    lineage,
+                    benchmark,
+                    result["status"],
+                )
                 persisted_rows = await _persist_row_level_entities(
                     store,
                     job_uuid=job_uuid,
@@ -207,35 +406,11 @@ class PipelineOrchestrator:
                 )
                 await store.persist_top_level_bundle(
                     job_id=job_uuid,
-                    status=result["status"],
-                    patient_artifact={
-                        "language_id": patient_artifact["language_id"],
-                        "support_banner": patient_artifact["support_banner"],
-                        "content": persisted_patient_artifact,
-                        "template_version": "templates-v1",
-                    },
-                    clinician_artifact={
-                        "content": persisted_clinician_artifact,
-                        "template_version": "templates-v1",
-                    },
-                    lineage_run={
-                        "source_checksum": lineage["source_checksum"],
-                        "parser_version": lineage["parser_version"],
-                        "ocr_version": lineage["ocr_version"],
-                        "terminology_release": lineage["terminology_release"],
-                        "mapping_threshold_config": lineage["mapping_threshold_config"],
-                        "unit_engine_version": lineage["unit_engine_version"],
-                        "rule_pack_version": lineage["rule_pack_version"],
-                        "severity_policy_version": lineage["severity_policy_version"],
-                        "nextstep_policy_version": lineage["nextstep_policy_version"],
-                        "template_version": lineage["template_version"],
-                        "model_version": lineage["model_version"],
-                        "build_commit": lineage["build_commit"],
-                    },
-                    benchmark_run={
-                        "report_type": benchmark["report_type"],
-                        "metrics": benchmark["metrics"],
-                    },
+                    status=persistence["status"],
+                    patient_artifact=persistence["patient_artifact"],
+                    clinician_artifact=persistence["clinician_artifact"],
+                    lineage_run=persistence["lineage_run"],
+                    benchmark_run=persistence["benchmark_run"],
                 )
                 result["row_level_persistence"] = persisted_rows
 
@@ -313,8 +488,22 @@ async def _extract_rows(
     file_bytes: bytes | None,
     lane_type: str,
 ) -> list[dict]:
+    _validate_lane(lane_type)
+
+    if lane_type == "structured":
+        if file_bytes is None:
+            return _seed_extracted_rows(job_uuid)
+        structured_input = json.loads(file_bytes.decode("utf-8"))
+        observations = structured_input.get("observations", [])
+        return [
+            {
+                **obs,
+                "document_id": job_uuid,
+            }
+            for obs in observations
+        ]
+
     if file_bytes is None:
-        _validate_lane(lane_type)
         return _seed_extracted_rows(job_uuid)
 
     if lane_type == "trusted_pdf":
@@ -441,8 +630,8 @@ async def _persist_row_level_entities(
             rule_event_id=persisted_rule_event.id,
             severity_class=_enum_value(finding.get("severity_class")),
             nextstep_class=_enum_value(finding.get("nextstep_class")),
-            severity_policy_version="severity-v1",
-            nextstep_policy_version="nextstep-v1",
+            severity_policy_version=_SEVERITY_POLICY_VERSION,
+            nextstep_policy_version=_NEXTSTEP_POLICY_VERSION,
             suppression_active=bool(finding.get("suppression_active", False)),
             suppression_reason=finding.get("suppression_reason"),
         )
@@ -537,12 +726,40 @@ def _normalize_observations(
 
 
 def _support_banner(observations: list[dict]) -> str:
-    support_states = {str(observation.get("support_state") or "").lower() for observation in observations}
+    support_states = {
+        str(observation.get("support_state") or "").lower() for observation in observations
+    }
     if support_states == {"supported"}:
         return "fully_supported"
     if "supported" in support_states:
         return "partially_supported"
     return "could_not_assess"
+
+
+def _support_banner_from_runtime(
+    observations: list[dict],
+    findings: list[dict],
+    comparable_history: dict | None,
+) -> str:
+    baseline = _support_banner(observations)
+    threshold_conflicts = [
+        finding
+        for finding in findings
+        if str(finding.get("suppression_reason") or "") == "threshold_conflict"
+    ]
+    if threshold_conflicts:
+        actionable_findings = [
+            finding
+            for finding in findings
+            if not finding.get("suppression_active")
+            and str(finding.get("severity_class") or "") not in {"S0", "SX"}
+        ]
+        if actionable_findings:
+            baseline = "partially_supported"
+        else:
+            baseline = "could_not_assess"
+
+    return baseline
 
 
 def _is_launch_scope_kidney_unit(raw_unit_string: object) -> bool:
@@ -552,3 +769,17 @@ def _is_launch_scope_kidney_unit(raw_unit_string: object) -> bool:
         "ml/min/1.73 m^2",
         "ml/min/1.73 m²",
     }
+
+
+def _apply_detected_language(extracted_rows: list[dict], patient_context: dict) -> None:
+    language_counts: dict[str, int] = {}
+    for row in extracted_rows:
+        lang = str(row.get("language_id") or "en").strip().lower()
+        if not lang:
+            lang = "en"
+        primary = lang.split("-", 1)[0]
+        language_counts[primary] = language_counts.get(primary, 0) + 1
+
+    if language_counts:
+        detected = max(language_counts, key=language_counts.get)
+        patient_context["language_id"] = detected

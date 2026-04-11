@@ -130,11 +130,6 @@ def test_upload_route_uses_persisted_job_path_when_db_session_is_available(
             calls["pipeline"] = {"job_id": job_id, **kwargs}
             return {"status": "completed"}
 
-    monkeypatch.setattr(
-        upload_route,
-        "async_session_factory",
-        lambda: _DummySessionContext(session),
-    )
     monkeypatch.setattr(upload_route, "TopLevelLifecycleStore", FakeStore)
     monkeypatch.setattr(upload_route, "PipelineOrchestrator", lambda: FakePipeline())
     monkeypatch.setattr(
@@ -149,7 +144,8 @@ def test_upload_route_uses_persisted_job_path_when_db_session_is_available(
                 filename="report.pdf",
                 content_type="application/pdf",
                 payload=b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
-            )
+            ),
+            session_factory=lambda: _DummySessionContext(session),
         )
     )
 
@@ -180,11 +176,6 @@ def test_jobs_route_prefers_persisted_job_records_over_in_memory_fallback(monkey
             assert incoming_job_id == str(job_id)
             return SimpleNamespace(id=uuid4())
 
-    monkeypatch.setattr(
-        jobs_route,
-        "async_session_factory",
-        lambda: _DummySessionContext(_DummySession()),
-    )
     monkeypatch.setattr(jobs_route, "TopLevelLifecycleStore", FakeStore)
     monkeypatch.setattr(
         jobs_route,
@@ -192,7 +183,12 @@ def test_jobs_route_prefers_persisted_job_records_over_in_memory_fallback(monkey
         lambda _job_id: {"status": "memory-only", "lane_type": "image_beta"},
     )
 
-    payload = asyncio.run(jobs_route.get_job(job_id))
+    payload = asyncio.run(
+        jobs_route.get_job(
+            job_id,
+            session_factory=lambda: _DummySessionContext(_DummySession()),
+        )
+    )
 
     assert payload["job_id"] == str(job_id)
     assert payload["status"] == "completed"
@@ -217,11 +213,6 @@ def test_artifacts_route_prefers_persisted_artifacts_over_in_memory_fallback(mon
             assert incoming_job_id == str(job_id)
             return SimpleNamespace(content=clinician_artifact)
 
-    monkeypatch.setattr(
-        artifacts_route,
-        "async_session_factory",
-        lambda: _DummySessionContext(_DummySession()),
-    )
     monkeypatch.setattr(artifacts_route, "TopLevelLifecycleStore", FakeStore)
     monkeypatch.setattr(
         artifacts_route,
@@ -232,8 +223,18 @@ def test_artifacts_route_prefers_persisted_artifacts_over_in_memory_fallback(mon
         },
     )
 
-    patient_payload = asyncio.run(artifacts_route.get_patient_artifact(job_id))
-    clinician_payload = asyncio.run(artifacts_route.get_clinician_artifact(job_id))
+    patient_payload = asyncio.run(
+        artifacts_route.get_patient_artifact(
+            job_id,
+            session_factory=lambda: _DummySessionContext(_DummySession()),
+        )
+    )
+    clinician_payload = asyncio.run(
+        artifacts_route.get_clinician_artifact(
+            job_id,
+            session_factory=lambda: _DummySessionContext(_DummySession()),
+        )
+    )
 
     assert patient_payload == patient_artifact
     assert clinician_payload == clinician_artifact

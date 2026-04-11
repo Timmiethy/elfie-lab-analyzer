@@ -7,7 +7,6 @@ from uuid import UUID
 from app.schemas.artifact import SupportBanner, TrustStatus
 from app.schemas.finding import FindingSchema, NextStepClass, SeverityClass
 
-
 _SEVERITY_ORDER = {
     SeverityClass.S0: 0,
     SeverityClass.S1: 1,
@@ -19,11 +18,23 @@ _SEVERITY_ORDER = {
 
 _NEXTSTEP_COPY = {
     NextStepClass.A0: ("Routine self-monitoring", "No immediate action is needed."),
-    NextStepClass.A1: ("Review at next planned visit", "Keep the finding on the next routine review."),
-    NextStepClass.A2: ("Schedule routine follow-up", "Arrange a follow-up appointment at a convenient time."),
-    NextStepClass.A3: ("Contact clinician soon", "The finding warrants timely clinical follow-up."),
+    NextStepClass.A1: (
+        "Review at next planned visit",
+        "Keep the finding on the next routine review.",
+    ),
+    NextStepClass.A2: (
+        "Schedule routine follow-up",
+        "Arrange a follow-up appointment at a convenient time.",
+    ),
+    NextStepClass.A3: (
+        "Contact clinician soon",
+        "The finding warrants timely clinical follow-up.",
+    ),
     NextStepClass.A4: ("Seek urgent review", "The finding needs urgent attention."),
-    NextStepClass.AX: ("Next step could not be determined safely", "The artifact should not overstate a recommendation."),
+    NextStepClass.AX: (
+        "Next step could not be determined safely",
+        "The artifact should not overstate a recommendation.",
+    ),
 }
 
 _NEXTSTEP_ORDER = {
@@ -59,13 +70,19 @@ def _severity_rank(severity: SeverityClass) -> int:
 def _highest_severity(findings: list[dict]) -> SeverityClass:
     if not findings:
         return SeverityClass.S0
-    return max((SeverityClass(finding["severity_class"]) for finding in findings), key=_severity_rank)
+    return max(
+        (SeverityClass(finding["severity_class"]) for finding in findings),
+        key=_severity_rank,
+    )
 
 
 def _highest_nextstep(findings: list[dict]) -> NextStepClass:
     if not findings:
         return NextStepClass.A0
-    return max((NextStepClass(finding["nextstep_class"]) for finding in findings), key=lambda value: _NEXTSTEP_ORDER[value])
+    return max(
+        (NextStepClass(finding["nextstep_class"]) for finding in findings),
+        key=lambda value: _NEXTSTEP_ORDER[value],
+    )
 
 
 def _make_flagged_cards(findings: list[dict], context: dict) -> list[dict]:
@@ -74,7 +91,9 @@ def _make_flagged_cards(findings: list[dict], context: dict) -> list[dict]:
         severity = SeverityClass(finding["severity_class"])
         if finding.get("suppression_active") or severity == SeverityClass.S0:
             continue
-        display = finding.get("explanatory_scaffold_id") or finding["rule_id"].replace("_", " ").title()
+        display = (
+            finding.get("explanatory_scaffold_id") or finding["rule_id"].replace("_", " ").title()
+        )
         cards.append(
             {
                 "analyte_display": context.get("analyte_display", display),
@@ -91,17 +110,67 @@ def _make_flagged_cards(findings: list[dict], context: dict) -> list[dict]:
     return cards
 
 
-def _make_not_assessed(findings: list[dict]) -> list[dict]:
+def _make_not_assessed(findings: list[dict], observations: list[dict] | None = None) -> list[dict]:
     items: list[dict] = []
+    finding_obs_ids: set[str] = set()
     for finding in findings:
-        if finding.get("suppression_active") or SeverityClass(finding["severity_class"]) == SeverityClass.SX:
+        if finding.get("suppression_active") or (
+            SeverityClass(finding["severity_class"]) == SeverityClass.SX
+        ):
             items.append(
                 {
                     "raw_label": finding["rule_id"],
                     "reason": finding.get("suppression_reason") or "insufficient_support",
                 }
             )
+        for obs_id in finding.get("observation_ids", []):
+            finding_obs_ids.add(str(obs_id))
+
+    if observations:
+        for observation in observations:
+            support_state = observation.get("support_state")
+            if hasattr(support_state, "value"):
+                support_state = support_state.value
+            if str(support_state or "").lower() != "supported":
+                obs_id = str(observation.get("id", ""))
+                if obs_id not in finding_obs_ids:
+                    items.append(
+                        {
+                            "raw_label": observation.get("raw_analyte_label", "unknown"),
+                            "reason": "insufficient_support",
+                        }
+                    )
     return items
+
+
+def _apply_comparable_history_not_assessed(
+    items: list[dict],
+    comparable_history: dict | None,
+) -> list[dict]:
+    if comparable_history is None:
+        return items
+    if comparable_history.get("comparability_status") != "unavailable":
+        return items
+
+    raw_label = f"prior {_normalize_comparable_history_label(comparable_history)} trend"
+    if any(
+        item.get("reason") == "comparable_history_unavailable"
+        and item.get("raw_label") == raw_label
+        for item in items
+    ):
+        return items
+
+    return [
+        *items,
+        {
+            "raw_label": raw_label,
+            "reason": "comparable_history_unavailable",
+        },
+    ]
+
+
+def _normalize_comparable_history_label(comparable_history: dict) -> str:
+    return str(comparable_history.get("analyte_display") or "unknown analyte").strip().lower()
 
 
 class ArtifactRenderer:
@@ -110,20 +179,34 @@ class ArtifactRenderer:
     Both derived from the same structured findings packet.
     """
 
-    def render_patient(self, findings: list[dict], context: dict) -> dict:
+    def render_patient(
+        self,
+        findings: list[dict],
+        context: dict,
+        observations: list[dict] | None = None,
+    ) -> dict:
         normalized_findings = _normalize_findings(findings)
         highest_severity = _highest_severity(normalized_findings)
         highest_nextstep = _highest_nextstep(normalized_findings)
         nextstep_title, nextstep_reason = _NEXTSTEP_COPY[highest_nextstep]
+        comparable_history = context.get("comparable_history")
+        not_assessed = _apply_comparable_history_not_assessed(
+            _make_not_assessed(normalized_findings, observations),
+            comparable_history,
+        )
 
         return {
             "job_id": _coerce_uuid(context["job_id"]),
-            "support_banner": _coerce_support_banner(context.get("support_banner", SupportBanner.FULLY_SUPPORTED)),
+            "support_banner": _coerce_support_banner(
+                context.get("support_banner", SupportBanner.FULLY_SUPPORTED)
+            ),
             "trust_status": _coerce_trust_status(context.get("trust_status", TrustStatus.TRUSTED)),
             "overall_severity": highest_severity,
             "flagged_cards": _make_flagged_cards(normalized_findings, context),
             "reviewed_not_flagged": [
-                finding["rule_id"] for finding in normalized_findings if SeverityClass(finding["severity_class"]) == SeverityClass.S0
+                finding["rule_id"]
+                for finding in normalized_findings
+                if SeverityClass(finding["severity_class"]) == SeverityClass.S0
             ],
             "nextstep_title": nextstep_title,
             "nextstep_timing": context.get("nextstep_timing")
@@ -136,12 +219,18 @@ class ArtifactRenderer:
                 NextStepClass.AX: "Not available",
             }[highest_nextstep],
             "nextstep_reason": context.get("nextstep_reason") or nextstep_reason,
-            "not_assessed": _make_not_assessed(normalized_findings),
+            "not_assessed": not_assessed,
             "findings": normalized_findings,
             "language_id": context.get("language_id", "en"),
+            "comparable_history": comparable_history,
         }
 
-    def render_clinician(self, findings: list[dict], context: dict) -> dict:
+    def render_clinician(
+        self,
+        findings: list[dict],
+        context: dict,
+        observations: list[dict] | None = None,
+    ) -> dict:
         normalized_findings = _normalize_findings(findings)
         severity_classes = sorted(
             {SeverityClass(finding["severity_class"]) for finding in normalized_findings},
@@ -159,8 +248,10 @@ class ArtifactRenderer:
             "top_findings": normalized_findings,
             "severity_classes": severity_classes,
             "nextstep_classes": nextstep_classes,
-            "support_coverage": _coerce_support_banner(context.get("support_banner", SupportBanner.FULLY_SUPPORTED)),
+            "support_coverage": _coerce_support_banner(
+                context.get("support_banner", SupportBanner.FULLY_SUPPORTED)
+            ),
             "trust_status": _coerce_trust_status(context.get("trust_status", TrustStatus.TRUSTED)),
-            "not_assessed": _make_not_assessed(normalized_findings),
+            "not_assessed": _make_not_assessed(normalized_findings, observations),
             "provenance_link": context.get("provenance_link"),
         }

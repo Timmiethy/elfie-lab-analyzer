@@ -120,11 +120,6 @@ def test_upload_route_sanitizes_processing_errors_but_keeps_operator_note(
         async def run(self, *args, **kwargs):
             raise ValueError("internal failure: /tmp/private/report.pdf")
 
-    monkeypatch.setattr(
-        upload_route,
-        "async_session_factory",
-        lambda: _DummySessionContext(session),
-    )
     monkeypatch.setattr(upload_route, "TopLevelLifecycleStore", FakeStore)
     monkeypatch.setattr(upload_route, "PipelineOrchestrator", lambda: FakePipeline())
     monkeypatch.setattr(
@@ -140,7 +135,8 @@ def test_upload_route_sanitizes_processing_errors_but_keeps_operator_note(
                     filename="report.pdf",
                     content_type="application/pdf",
                     payload=b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
-                )
+                ),
+                session_factory=lambda: _DummySessionContext(session),
             )
         )
 

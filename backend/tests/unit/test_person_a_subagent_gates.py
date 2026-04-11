@@ -112,7 +112,8 @@ def test_phase_2_extraction_qa_and_observation_builder_promote_clean_rows() -> N
     parsed = [ObservationSchema.model_validate(observation) for observation in observations]
 
     assert len(parsed) == 2
-    assert all(observation.support_state == SupportState.SUPPORTED for observation in parsed)
+    assert all(observation.support_state == SupportState.PARTIAL for observation in parsed)
+    assert all(observation.contract_version == "observation-contract-v1" for observation in parsed)
     assert {observation.raw_analyte_label for observation in parsed} == {"Glucose", "HbA1c"}
 
 

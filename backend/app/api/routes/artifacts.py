@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import InterfaceError, OperationalError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.deps import get_session_factory
 from app.db import TopLevelLifecycleStore
-from app.db.session import async_session_factory
 from app.services.observability import observability_metrics
 from app.workers.pipeline import get_job_run
 
@@ -12,9 +13,12 @@ router = APIRouter()
 
 
 @router.get("/{job_id}/patient")
-async def get_patient_artifact(job_id: UUID) -> dict:
+async def get_patient_artifact(
+    job_id: UUID,
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+) -> dict:
     """Get the patient-facing lab understanding artifact."""
-    persisted = await _get_persisted_patient_artifact(str(job_id))
+    persisted = await _get_persisted_patient_artifact(str(job_id), session_factory)
     if persisted is not None:
         return persisted
 
@@ -25,9 +29,12 @@ async def get_patient_artifact(job_id: UUID) -> dict:
 
 
 @router.get("/{job_id}/clinician")
-async def get_clinician_artifact(job_id: UUID) -> dict:
+async def get_clinician_artifact(
+    job_id: UUID,
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+) -> dict:
     """Get the clinician-share artifact."""
-    persisted = await _get_persisted_clinician_artifact(str(job_id))
+    persisted = await _get_persisted_clinician_artifact(str(job_id), session_factory)
     if persisted is not None:
         return persisted
 
@@ -37,9 +44,12 @@ async def get_clinician_artifact(job_id: UUID) -> dict:
     return job["clinician_artifact"]
 
 
-async def _get_persisted_patient_artifact(job_id: str) -> dict | None:
+async def _get_persisted_patient_artifact(
+    job_id: str,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> dict | None:
     try:
-        async with async_session_factory() as session:
+        async with session_factory() as session:
             store = TopLevelLifecycleStore(session)
             artifact = await store.get_patient_artifact(job_id)
             if artifact is None:
@@ -58,9 +68,12 @@ async def _get_persisted_patient_artifact(job_id: str) -> dict | None:
         return None
 
 
-async def _get_persisted_clinician_artifact(job_id: str) -> dict | None:
+async def _get_persisted_clinician_artifact(
+    job_id: str,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> dict | None:
     try:
-        async with async_session_factory() as session:
+        async with session_factory() as session:
             store = TopLevelLifecycleStore(session)
             artifact = await store.get_clinician_artifact(job_id)
             if artifact is None:

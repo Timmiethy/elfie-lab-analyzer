@@ -26,6 +26,7 @@ class InputGateway:
         ".bmp": {"image/bmp"},
         ".tif": {"image/tiff"},
         ".tiff": {"image/tiff"},
+        ".json": {"application/json", "application/fhir+json"},
     }
 
     _MIME_ALIASES = {
@@ -52,7 +53,12 @@ class InputGateway:
                 f"{extension}:{normalized_mime_type or 'missing'}"
             )
 
-        lane_type = "trusted_pdf" if extension == ".pdf" else "image_beta"
+        if extension == ".json":
+            lane_type = "structured"
+        elif extension == ".pdf":
+            lane_type = "trusted_pdf"
+        else:
+            lane_type = "image_beta"
         checksum = sha256(file_bytes).hexdigest()
 
         return {
