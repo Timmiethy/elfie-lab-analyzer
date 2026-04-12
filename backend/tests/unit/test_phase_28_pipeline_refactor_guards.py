@@ -4,6 +4,7 @@ import asyncio
 from types import SimpleNamespace
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
+from app.api.routes.jobs import _status_step_from_status
 from app.schemas.artifact import ClinicianArtifactSchema, PatientArtifactSchema, TrustStatus
 from app.workers import pipeline as pipeline_module
 
@@ -141,3 +142,35 @@ def test_phase_28_pipeline_persistence_bundle_stays_json_safe(monkeypatch) -> No
     assert patient_payload["support_banner"] == "fully_supported"
     assert clinician_payload["job_id"] == expected_job_id
     assert clinician_payload["trust_status"] == "trusted"
+
+
+def test_phase_28_job_status_step_mapping_preserves_terminal_states() -> None:
+    assert _status_step_from_status("completed") == "lineage_persist"
+    assert _status_step_from_status("partial") == "lineage_persist"
+    assert _status_step_from_status("failed") == "failed"
+    assert _status_step_from_status("dead_lettered") == "dead_lettered"
+
+
+def test_phase_28_proof_pack_refs_include_clinician_pdf(monkeypatch) -> None:
+    async def fake_parse(self, file_bytes: bytes, *, max_pages: int | None = None) -> list[dict]:
+        return [_supported_row(document_id=uuid4())]
+
+    monkeypatch.setattr("app.workers.pipeline.TrustedPdfParser.parse", fake_parse)
+    monkeypatch.setattr(
+        pipeline_module,
+        "get_loaded_snapshot_metadata",
+        lambda: {"release": "loinc-phase-28"},
+    )
+
+    result = asyncio.run(
+        pipeline_module.PipelineOrchestrator().run(
+            "phase-28-proof-pack-refs",
+            file_bytes=b"%PDF-1.4 fake",
+            lane_type="trusted_pdf",
+            source_checksum="sha256:phase-28-proof-pack-refs",
+        )
+    )
+
+    clinician_pdf_ref = result["clinician_pdf_ref"]
+    assert clinician_pdf_ref.endswith("/clinician/pdf")
+    assert result["proof_pack"]["artifact_refs"]["clinician_pdf"] == clinician_pdf_ref

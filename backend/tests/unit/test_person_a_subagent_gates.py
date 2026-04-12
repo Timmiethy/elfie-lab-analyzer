@@ -28,6 +28,7 @@ from app.services.rule_engine import RuleEngine
 from app.services.severity_policy import SeverityPolicyEngine
 from app.services.ucum import UcumEngine
 from app.workers.pipeline import PipelineOrchestrator
+from tests.support.pdf_builder import build_text_pdf
 
 
 def _sample_extracted_rows() -> list[dict]:
@@ -72,7 +73,7 @@ def test_phase_1_input_gateway_classifies_supported_pdf() -> None:
 
     result = asyncio.run(
         gateway.classify(
-            file_bytes=b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
+            file_bytes=build_text_pdf(["Glucose 180 mg/dL"]),
             filename="baseline-labs.pdf",
             mime_type="application/pdf",
         )
@@ -113,7 +114,7 @@ def test_phase_2_extraction_qa_and_observation_builder_promote_clean_rows() -> N
 
     assert len(parsed) == 2
     assert all(observation.support_state == SupportState.PARTIAL for observation in parsed)
-    assert all(observation.contract_version == "observation-contract-v1" for observation in parsed)
+    assert all(observation.contract_version == "observation-contract-v2" for observation in parsed)
     assert {observation.raw_analyte_label for observation in parsed} == {"Glucose", "HbA1c"}
 
 

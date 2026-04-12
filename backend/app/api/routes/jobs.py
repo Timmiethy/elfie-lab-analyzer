@@ -8,9 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.api.deps import get_db, get_session_factory
 from app.config import settings
 from app.db import TopLevelLifecycleStore
+from app.services.clinician_pdf import clinician_pdf_path, clinician_pdf_route
 from app.services.observability import observability_metrics
 from app.services.proof_pack import proof_pack_route, read_proof_pack
-from app.workers.pipeline import PipelineOrchestrator, get_job_run
+from app.workers.pipeline import PipelineOrchestrator, PipelineStep, get_job_run
 
 router = APIRouter()
 _PROCESSING_FAILED_DETAIL = "processing_failed"
@@ -46,6 +47,8 @@ async def get_job_audit(
             proof_pack = read_proof_pack(job_id)
             payload["proof_pack_available"] = proof_pack is not None
             payload["proof_pack_ref"] = proof_pack_route(job_id) if proof_pack is not None else None
+            payload["clinician_pdf_ref"] = clinician_pdf_route(job_id)
+            payload["clinician_pdf_available"] = clinician_pdf_path(job_id).exists()
             return payload
         except LookupError:
             raise HTTPException(status_code=404, detail="job_not_found")
@@ -192,6 +195,7 @@ async def get_job_status(
     return {
         "job_id": str(job_id),
         "status": job["status"],
+        "step": job.get("step") or _status_step_from_status(job["status"]),
         "lane_type": job.get("lane_type"),
     }
 
@@ -236,6 +240,7 @@ async def _get_persisted_job_status(
             return {
                 "job_id": str(job.id),
                 "status": job.status,
+                "step": _status_step_from_status(job.status),
                 "lane_type": job.lane_type,
             }
     except (InterfaceError, OperationalError):
@@ -248,6 +253,7 @@ def _job_payload_from_model(*, job_id: str, job, lineage_count: int, lineage) ->
     return {
         "job_id": job_id,
         "status": job.status,
+        "step": _status_step_from_status(job.status),
         "lane_type": job.lane_type,
         "qa": None,
         "findings": [],
@@ -266,6 +272,7 @@ def _runtime_job_payload(*, job_id: str, job: dict) -> dict:
     return {
         "job_id": job_id,
         "status": job["status"],
+        "step": job.get("step") or _status_step_from_status(job["status"]),
         "lane_type": job.get("lane_type"),
         "qa": job.get("qa"),
         "findings": job.get("findings", []),
@@ -276,6 +283,16 @@ def _runtime_job_payload(*, job_id: str, job: dict) -> dict:
         "operator_note": job.get("operator_note"),
         "lineage_runs_count": int(job.get("lineage_runs_count", 1 if lineage else 0)),
     }
+
+
+def _status_step_from_status(status: str) -> str:
+    if status in {"completed", "partial"}:
+        return PipelineStep.LINEAGE_PERSIST.value
+    if status == "pending":
+        return PipelineStep.PREFLIGHT.value
+    if status in {"failed", "dead_lettered"}:
+        return status
+    return str(status)
 
 
 async def _update_job_status_in_fresh_session(

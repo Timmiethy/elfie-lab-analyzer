@@ -43,3 +43,4 @@ docs/orchestration/*
 scripts/orchestration/*
 tasks/*
 .clawd-todos.json
+pdfs_by_difficulty/*

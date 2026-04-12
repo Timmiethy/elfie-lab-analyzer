@@ -1,11 +1,11 @@
 {
-  "version": "launch-scope-analyte-aliases-v1",
+  "version": "launch-scope-analyte-aliases-v2",
   "analytes": [
     {
       "canonical_label": "fasting glucose",
       "candidate_display": "Fasting glucose [Mass/volume] in Serum or Plasma",
       "codes": ["2345-7"],
-      "aliases": ["fasting glucose", "glucose fasting", "fasting blood glucose", "glucose"],
+      "aliases": ["fasting glucose", "glucose fasting", "fasting blood glucose", "fasting plasma glucose", "glucose"],
       "panel_key": "glycemia",
       "threshold_used": 0.9
     },
@@ -13,7 +13,7 @@
       "canonical_label": "hba1c",
       "candidate_display": "Hemoglobin A1c/Hemoglobin.total in Blood",
       "codes": ["4548-4"],
-      "aliases": ["hba1c", "hemoglobin a1c", "a1c"],
+      "aliases": ["hba1c", "hemoglobin a1c", "a1c", "glycosylated hemoglobin"],
       "panel_key": "glycemia",
       "threshold_used": 0.9
     },
@@ -21,7 +21,7 @@
       "canonical_label": "creatinine",
       "candidate_display": "Creatinine [Mass/volume] in Serum or Plasma",
       "codes": ["2160-0"],
-      "aliases": ["creatinine", "serum creatinine", "blood creatinine"],
+      "aliases": ["creatinine", "serum creatinine", "blood creatinine", "creatinine serum"],
       "panel_key": "kidney",
       "threshold_used": 0.9
     },
@@ -29,7 +29,82 @@
       "canonical_label": "egfr",
       "candidate_display": "Glomerular filtration rate/1.73 sq M.predicted",
       "codes": ["62238-1"],
-      "aliases": ["egfr", "estimated glomerular filtration rate", "gfr"],
+      "aliases": [
+        "egfr", "estimated glomerular filtration rate", "gfr", "egfr (ckd-epi)", "egfr calculated",
+        "egfr non-afr. american", "egfr african american", "egfr anon-afr. american", "egfr non african american"
+      ],
+      "panel_key": "kidney",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "sodium",
+      "candidate_display": "Sodium [Moles/volume] in Serum or Plasma",
+      "codes": ["2951-2"],
+      "aliases": ["sodium", "serum sodium", "blood sodium", "na", "na+"],
+      "panel_key": "electrolyte",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "potassium",
+      "candidate_display": "Potassium [Moles/volume] in Serum or Plasma",
+      "codes": ["2823-3"],
+      "aliases": ["potassium", "serum potassium", "blood potassium", "k", "k+"],
+      "panel_key": "electrolyte",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "chloride",
+      "candidate_display": "Chloride [Moles/volume] in Serum or Plasma",
+      "codes": ["2075-0"],
+      "aliases": ["chloride", "serum chloride", "blood chloride", "cl", "cl-"],
+      "panel_key": "electrolyte",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "urea",
+      "candidate_display": "Urea [Moles/volume] in Serum or Plasma",
+      "codes": ["14937-7"],
+      "aliases": ["urea", "blood urea", "serum urea", "bun", "blood urea nitrogen"],
+      "panel_key": "kidney",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "uric acid",
+      "candidate_display": "Urate [Moles/volume] in Serum or Plasma",
+      "codes": ["3084-1"],
+      "aliases": ["uric acid", "urate", "serum uric acid"],
+      "panel_key": "kidney",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ast",
+      "candidate_display": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "codes": ["1920-8"],
+      "aliases": ["ast", "ast (with plp)", "aspartate aminotransferase", "sgot", "ast p", "ast m"],
+      "panel_key": "liver",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "alt",
+      "candidate_display": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+      "codes": ["1742-6"],
+      "aliases": ["alt", "alt (with plp)", "alanine aminotransferase", "sgpt", "alt p", "alt m"],
+      "panel_key": "liver",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "urine albumin",
+      "candidate_display": "Albumin [Mass/volume] in Urine",
+      "codes": ["14957-5"],
+      "aliases": ["urine albumin", "albumin urine", "urinary albumin", "microalbumin"],
+      "panel_key": "kidney",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "urine creatinine",
+      "candidate_display": "Creatinine [Moles/volume] in Urine",
+      "codes": ["2161-8"],
+      "aliases": ["urine creatinine", "creatinine urine", "urinary creatinine"],
       "panel_key": "kidney",
       "threshold_used": 0.9
     },
@@ -37,7 +112,7 @@
       "canonical_label": "total cholesterol",
       "candidate_display": "Cholesterol [Mass/volume] in Serum or Plasma",
       "codes": ["2093-3"],
-      "aliases": ["total cholesterol", "cholesterol total", "serum cholesterol"],
+      "aliases": ["total cholesterol", "cholesterol total", "serum cholesterol", "cholesterol"],
       "panel_key": "lipid",
       "threshold_used": 0.9
     },
@@ -45,7 +120,14 @@
       "canonical_label": "ldl-c",
       "candidate_display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
       "codes": ["13457-7"],
-      "aliases": ["ldl-c", "ldl cholesterol", "ldl", "low density lipoprotein cholesterol"],
+      "aliases": [
+        "ldl-c", "ldl cholesterol", "ldl", "low density lipoprotein cholesterol", "ldl cholesterol calculated",
+        "ldl calculated", "ldl-c calculated", "cholesterol in ldl", "cholesterol in ldl calculated",
+        "ldl-c (calculated)", "ldl-c(calc)", "ldl calc",
+        "ldl-c calculated", "ldl calculated", "calc ldl", "calculated ldl-c",
+        "cholesterol, ldl, calculated", "cholesterol ldl calc",
+        "ldl (calc)", "ldl-c (calc)", "ldl (calculated)"
+      ],
       "panel_key": "lipid",
       "threshold_used": 0.9
     },
@@ -53,7 +135,10 @@
       "canonical_label": "hdl-c",
       "candidate_display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
       "codes": ["2085-9"],
-      "aliases": ["hdl-c", "hdl cholesterol", "hdl", "high density lipoprotein cholesterol"],
+      "aliases": [
+        "hdl-c", "hdl cholesterol", "hdl", "high density lipoprotein cholesterol",
+        "cholesterol in hdl", "hdl-c (calculated)", "hdl calc", "cholesterol, hdl"
+      ],
       "panel_key": "lipid",
       "threshold_used": 0.9
     },
@@ -61,8 +146,409 @@
       "canonical_label": "triglycerides",
       "candidate_display": "Triglyceride [Mass/volume] in Serum or Plasma",
       "codes": ["2571-8"],
-      "aliases": ["triglycerides", "triglyceride", "triglyceride level"],
+      "aliases": ["triglycerides", "triglyceride", "triglyceride level", "trig"],
       "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "non-hdl cholesterol",
+      "candidate_display": "Cholesterol in LDL+VLDL [Mass/volume] in Serum or Plasma by calculation",
+      "codes": ["71856-9"],
+      "aliases": [
+        "non-hdl cholesterol", "non hdl cholesterol", "nonhdl", "non-hdl", "non hdl",
+        "non-hdl-c", "nonhdl-c", "cholesterol non-hdl",
+        "non-hdl cholesterol", "non-hdl-c", "nonhdlc", "non-hdl",
+        "cholesterol, non-hdl", "non hdl cholesterol", "nonhdl"
+      ],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "vldl cholesterol",
+      "candidate_display": "Cholesterol in VLDL [Mass/volume] in Serum or Plasma by calculation",
+      "codes": ["30452-3"],
+      "aliases": ["vldl", "vldl cholesterol", "vldl-c", "cholesterol vldl"],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "cholesterol hdl ratio",
+      "candidate_display": "Cholesterol/HDL-C ratio",
+      "codes": ["14933-6"],
+      "aliases": [
+        "total cholesterol/hdl ratio", "cholesterol hdl ratio",
+        "total cholesterol to hdl ratio", "chol/hdl ratio",
+        "total chol/hdl", "cholesterol/hdl", "t-chol/hdl", "chol/hdlc ratio",
+        "cholesterol total/hdl-c ratio"
+      ],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "cholesterol ldl ratio",
+      "candidate_display": "Cholesterol/LDL-C ratio",
+      "codes": ["17385-6"],
+      "aliases": [
+        "total cholesterol/ldl ratio", "cholesterol ldl ratio",
+        "chol/ldl ratio", "cholesterol/ldl", "t-chol/ldl"
+      ],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "wbc",
+      "candidate_display": "Leukocytes [#/volume] in Blood by Automated count",
+      "codes": ["6690-2"],
+      "aliases": [
+        "wbc", "white blood cell count", "white blood cells", "leukocytes",
+        "leukocyte count", "wbcs", "white cell count", "white cells",
+        "wbc count", "leukocyte"
+      ],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "rbc",
+      "candidate_display": "Erythrocytes [#/volume] in Blood by Automated count",
+      "codes": ["789-8"],
+      "aliases": [
+        "rbc", "red blood cell count", "red blood cells",
+        "red cell count", "erythrocyte count", "erythrocytes"
+      ],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hemoglobin",
+      "candidate_display": "Hemoglobin [Mass/volume] in Blood",
+      "codes": ["718-7"],
+      "aliases": ["hemoglobin", "hgb", "hb", "haemoglobin"],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hematocrit",
+      "candidate_display": "Hematocrit [Volume Fraction] of Blood by Automated count",
+      "codes": ["4544-3"],
+      "aliases": ["hematocrit", "hct", "hct %", "hematocrit %", "haematocrit"],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "platelet count",
+      "candidate_display": "Platelets [#/volume] in Blood by Automated count",
+      "codes": ["777-3"],
+      "aliases": [
+        "platelet count", "platelets", "plt", "platelet",
+        "plt count", "thrombocyte count", "thrombocytes"
+      ],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mcv",
+      "candidate_display": "Erythrocyte mean corpuscular volume [Entitic volume] by Automated count",
+      "codes": ["787-2"],
+      "aliases": ["mcv", "mean corpuscular volume", "mean cell volume"],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mch",
+      "candidate_display": "Erythrocyte mean corpuscular hemoglobin [Entitic mass] by Automated count",
+      "codes": ["785-6"],
+      "aliases": ["mch", "mean corpuscular hemoglobin", "mean cell hemoglobin", "mean corpuscular haemoglobin"],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mchc",
+      "candidate_display": "Erythrocyte mean corpuscular hemoglobin concentration [Mass/volume] by Automated count",
+      "codes": ["786-4"],
+      "aliases": ["mchc", "mean corpuscular hemoglobin concentration", "mean cell hemoglobin concentration"],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "rdw",
+      "candidate_display": "Erythrocyte distribution width [Entitic volume] by Automated count",
+      "codes": ["788-0"],
+      "aliases": ["rdw", "red cell distribution width", "rdw-cv", "red distribution width", "rdw sd", "red blood cell distribution width"],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mpv",
+      "candidate_display": "Platelet mean volume [Entitic volume] in Blood by Automated count",
+      "codes": ["32623-1"],
+      "aliases": ["mpv", "mean platelet volume", "mean plt volume"],
+      "panel_key": "cbc",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "neutrophils",
+      "candidate_display": "Neutrophils [#/volume] in Blood by Automated count",
+      "codes": ["751-8"],
+      "aliases": [
+        "neutrophils", "neutrophil count", "segs", "polys",
+        "polymorphonuclear cells", "pmn", "neuts",
+        "neut", "neut %", "neutrophils percent", "neutrophil percent", "neutrophile", "neutrophils #",
+        "neutrophils absolute", "absolute neutrophils"
+      ],
+      "panel_key": "cbc_diff",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total lymphocyte count",
+      "candidate_display": "Lymphocytes [#/volume] in Blood by Automated count",
+      "codes": ["736-9"],
+      "aliases": [
+        "lymphocytes", "lymphocyte count", "lymphs",
+        "total lymphocyte count", "absolute lymphocytes", "lymph",
+        "lymph %", "lymphocytes percent", "lymphocyte percent", "lymphocytes #",
+        "lymphs absolute", "lymphocytes absolute"
+      ],
+      "panel_key": "cbc_diff",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "monocytes",
+      "candidate_display": "Monocytes [#/volume] in Blood by Automated count",
+      "codes": ["5905-5"],
+      "aliases": [
+        "monocytes", "monocyte count", "mono",
+        "mono %", "monocytes percent", "monocyte percent", "monocytes #",
+        "monocytes absolute", "absolute monocytes", "monocytes(absolute"
+      ],
+      "panel_key": "cbc_diff",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "eosinophils",
+      "candidate_display": "Eosinophils [#/volume] in Blood by Automated count",
+      "codes": ["713-8"],
+      "aliases": [
+        "eosinophils", "eosinophil count", "eos",
+        "eos %", "eosinophils percent", "eosinophil percent", "eosinophil", "eosinophils #",
+        "eos absolute", "eosinophils absolute", "absolute eosinophils"
+      ],
+      "panel_key": "cbc_diff",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "basophils",
+      "candidate_display": "Basophils [#/volume] in Blood by Automated count",
+      "codes": ["706-2"],
+      "aliases": [
+        "basophils", "basophil count", "baso",
+        "baso %", "basophils percent", "basophil percent", "basophil", "basophils #", "basos",
+        "baso absolute", "basophils absolute", "absolute basophils", "basophils p"
+      ],
+      "panel_key": "cbc_diff",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "cd4 cells",
+      "candidate_display": "CD4-positive T cells [#/volume] in Blood",
+      "codes": ["24467-3"],
+      "aliases": [
+        "cd4", "cd4 cells", "cd4 count", "t4 cells",
+        "cd4 t cells", "cd4+ t cells", "helper t cells",
+        "cd4+ t-lymphocytes", "cd4+ t-cells", "cd4 positive",
+        "cd4 positive t cells", "cd4 percent", "cd4%",
+        "cd4-positive t cells", "t-helper cells",
+        "absolute cd 4 helper", "% cd 4 pos. lymph.", "cd4 pos. lymph."
+      ],
+      "panel_key": "immunology",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "cd8 cells",
+      "candidate_display": "CD8-positive T cells [#/volume] in Blood",
+      "codes": ["14135-7"],
+      "aliases": [
+        "cd8", "cd8 cells", "cd8 count", "t8 cells",
+        "cd8 t cells", "cd8+ t cells", "suppressor t cells",
+        "cd8+ t-lymphocytes", "cd8+ t-cells", "cd8 positive",
+        "cd8 positive t cells", "cd8 percent", "cd8%",
+        "cd8-positive t cells", "t-suppressor cells",
+        "abs. cd 8 suppressor", "% cd 8 pos. lymph.", "cd8 pos. lymph."
+      ],
+      "panel_key": "immunology",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "cd4/cd8 ratio",
+      "candidate_display": "CD4-positive T cells/CD8-positive T cells [Ratio] in Blood",
+      "codes": ["8123-2"],
+      "aliases": [
+        "cd4/cd8 ratio", "cd4 cd8 ratio", "t4/t8 ratio",
+        "cd4 to cd8 ratio", "cd4:cd8", "t helper/suppressor ratio"
+      ],
+      "panel_key": "immunology",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total bilirubin",
+      "candidate_display": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+      "codes": ["1975-2"],
+      "aliases": ["total bilirubin", "bilirubin total", "bilirubin"],
+      "panel_key": "liver",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "alkaline phosphatase",
+      "candidate_display": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+      "codes": ["6768-6"],
+      "aliases": ["alkaline phosphatase", "alp", "alk phos", "alkaline phosphatase total"],
+      "panel_key": "liver",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total protein",
+      "candidate_display": "Protein [Mass/volume] in Serum or Plasma",
+      "codes": ["2885-2"],
+      "aliases": ["total protein", "protein total", "protein"],
+      "panel_key": "chemistry",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "albumin",
+      "candidate_display": "Albumin [Mass/volume] in Serum or Plasma",
+      "codes": ["1751-7"],
+      "aliases": ["albumin", "serum albumin"],
+      "panel_key": "chemistry",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "globulin",
+      "candidate_display": "Globulin [Mass/volume] in Serum or Plasma by calculation",
+      "codes": ["2884-5"],
+      "aliases": ["globulin", "serum globulin", "globulin calculated"],
+      "panel_key": "chemistry",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "a/g ratio",
+      "candidate_display": "Albumin/Globulin [Ratio] in Serum or Plasma by calculation",
+      "codes": ["1753-3"],
+      "aliases": ["a/g ratio", "albumin/globulin ratio", "a/g", "albumin globulin ratio"],
+      "panel_key": "chemistry",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "calcium",
+      "candidate_display": "Calcium [Mass/volume] in Serum or Plasma",
+      "codes": ["17861-6"],
+      "aliases": ["calcium", "serum calcium", "blood calcium", "ca"],
+      "panel_key": "chemistry",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "carbon dioxide",
+      "candidate_display": "Carbon dioxide, total [Moles/volume] in Serum or Plasma",
+      "codes": ["2028-9"],
+      "aliases": ["carbon dioxide", "co2", "bicarbonate", "total co2", "tco2"],
+      "panel_key": "electrolyte",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "urea nitrogen",
+      "candidate_display": "Urea nitrogen [Mass/volume] in Serum or Plasma",
+      "codes": ["3094-0"],
+      "aliases": ["urea nitrogen", "urea nitrogen bun", "bun", "blood urea nitrogen"],
+      "panel_key": "kidney",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "tsh",
+      "candidate_display": "Thyrotropin [Units/volume] in Serum or Plasma",
+      "codes": ["3016-3"],
+      "aliases": ["tsh", "thyroid stimulating hormone", "thyrotropin"],
+      "panel_key": "thyroid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total thyroxine",
+      "candidate_display": "Thyroxine (T4) [Mass/volume] in Serum or Plasma",
+      "codes": ["3026-2"],
+      "aliases": ["total thyroxine", "t4 thyroxine total", "t4 total", "thyroxine total"],
+      "panel_key": "thyroid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "free t4 index",
+      "candidate_display": "Free thyroxine index in Serum or Plasma",
+      "codes": ["32215-6"],
+      "aliases": ["free t4 index", "free t4 index t7", "free thyroxine index", "fti", "fti t7"],
+      "panel_key": "thyroid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "vitamin d 25-oh total",
+      "candidate_display": "Vitamin D 25-hydroxy [Mass/volume] in Serum or Plasma",
+      "codes": ["62292-8"],
+      "aliases": ["vitamin d 25-oh total", "vitamin d,25-oh,total,ia", "25-hydroxy vitamin d", "vitamin d total"],
+      "panel_key": "vitamin",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "c-reactive protein",
+      "candidate_display": "C reactive protein [Mass/volume] in Serum or Plasma",
+      "codes": ["1988-5"],
+      "aliases": ["c-reactive protein", "c reactive protein", "crp"],
+      "panel_key": "inflammation",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "t3 uptake",
+      "candidate_display": "Triiodothyronine uptake [Ratio] in Serum or Plasma",
+      "codes": ["3050-6"],
+      "aliases": ["t3 uptake", "t3 resin uptake"],
+      "panel_key": "thyroid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "specific gravity",
+      "candidate_display": "Specific gravity of Urine",
+      "codes": ["5811-5"],
+      "aliases": ["specific gravity", "urine specific gravity"],
+      "panel_key": "urinalysis",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ph",
+      "candidate_display": "pH of Urine by Test strip",
+      "codes": ["5803-2"],
+      "aliases": ["ph", "urine ph"],
+      "panel_key": "urinalysis",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "immature granulocytes",
+      "candidate_display": "Immature granulocytes/100 leukocytes in Blood",
+      "codes": ["38518-7"],
+      "aliases": ["immature granulocytes", "immature grans abs", "immature grans", "immature granulocytes absolute"],
+      "panel_key": "cbc_diff",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "sed rate",
+      "candidate_display": "Erythrocyte sedimentation rate",
+      "codes": ["4537-7"],
+      "aliases": [
+        "sed rate", "sed rate by modified westergren", "erythrocyte sedimentation rate",
+        "esr", "westergren"
+      ],
+      "panel_key": "inflammation",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "magnesium",
+      "candidate_display": "Magnesium [Mass/volume] in Serum or Plasma",
+      "codes": ["19125-0"],
+      "aliases": ["magnesium", "magnesium rbmc", "mg"],
+      "panel_key": "chemistry",
       "threshold_used": 0.9
     }
   ]

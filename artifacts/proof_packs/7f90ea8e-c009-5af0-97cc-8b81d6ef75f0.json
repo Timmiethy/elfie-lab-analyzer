@@ -1,16 +1,21 @@
 {
   "artifact_refs": {
     "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+    "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
     "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
     "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
     "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
   },
   "benchmark_contract_version": "benchmark-contract-v1",
-  "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+  "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
   "contract_version": "benchmark-proof-pack-v1",
+  "family_benchmarks": {},
   "lineage": {
+    "adapter_version": "family-adapter-v1",
     "build_commit": "local-dev",
-    "id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+    "family_adapter_version": "family-adapter-v1",
+    "formula_version": "formula-v1",
+    "id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
     "job_id": "7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
     "mapping_threshold_config": {
       "default": 0.9
@@ -19,6 +24,8 @@
     "nextstep_policy_version": "nextstep-v1",
     "ocr_version": "beta-adapter-v1",
     "parser_version": "image-beta-bypass",
+    "row_assembly_version": "row-assembly-v1",
+    "row_type_rule_set_version": "row-type-rules-v1",
     "rule_pack_version": "rules-v1",
     "severity_policy_version": "severity-v1",
     "source_checksum": "sha256:image-beta",
@@ -26,14 +33,14 @@
     "terminology_release": "loinc-test-fixture",
     "unit_engine_version": "ucum-v1"
   },
-  "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+  "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
   "metrics": {
     "clean_rows": 1,
     "extracted_rows": 1,
     "extraction_ms": 0,
     "findings": 1,
     "panels": 1,
-    "processing_ms": 0
+    "processing_ms": 3
   },
   "regression_tags": [],
   "report_type": "truth_engine_seeded_pipeline",
@@ -41,21 +48,24 @@
     "ablation_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -67,26 +77,29 @@
         "report_type": "truth_engine_seeded_pipeline"
       },
       "report_name": "ablation_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     },
     "clinician_scan_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -97,26 +110,29 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "clinician_scan_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     },
     "coverage_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -133,26 +149,29 @@
         "regressed_metrics": []
       },
       "report_name": "coverage_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     },
     "explanation_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -164,26 +183,29 @@
         "template_version": "templates-v1"
       },
       "report_name": "explanation_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     },
     "mapping_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -200,30 +222,33 @@
           "extraction_ms": 0,
           "findings": 1,
           "panels": 1,
-          "processing_ms": 0
+          "processing_ms": 3
         }
       },
       "report_name": "mapping_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     },
     "parser_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -234,30 +259,33 @@
         "regression_tags": [],
         "timing": {
           "extraction_ms": 0,
-          "processing_ms": 0
+          "processing_ms": 3
         }
       },
       "report_name": "parser_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     },
     "partial_support_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -271,26 +299,29 @@
         }
       },
       "report_name": "partial_support_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     },
     "patient_comprehension_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -301,26 +332,29 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "patient_comprehension_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     },
     "policy_report.json": {
       "artifact_refs": {
         "clinician_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician",
+        "clinician_pdf": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/clinician/pdf",
         "job_status": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0",
         "patient_artifact": "/api/artifacts/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/patient",
         "proof_pack": "/api/jobs/7f90ea8e-c009-5af0-97cc-8b81d6ef75f0/proof-pack"
       },
-      "benchmark_id": "442e327a-01a5-576a-b417-fe2995c1f6cc",
+      "benchmark_id": "a63ae050-b38b-5957-bf2c-b162acaf5334",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
       "language_id": "en",
-      "lineage_id": "358bfd7f-6b5b-5301-ab2b-2f02c3b5a526",
+      "lineage_id": "f3b02261-0cd0-514d-b388-e06fe01cd391",
       "lineage_version_ids": {
+        "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": "beta-adapter-v1",
         "parser_version": "image-beta-bypass",
+        "row_assembly_version": "row-assembly-v1",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -334,11 +368,12 @@
         "severity_policy_version": "severity-v1"
       },
       "report_name": "policy_report.json",
-      "timestamp": "2026-04-11T12:43:28.340581Z"
+      "timestamp": "2026-04-12T10:55:34.907775Z"
     }
   },
   "summary": {
     "baseline_checks": {},
+    "family_benchmarks": {},
     "metrics": {
       "clean_rows": 1,
       "extracted_rows": 1,
@@ -349,7 +384,9 @@
     "regression_tags": [],
     "timing": {
       "extraction_ms": 0,
-      "processing_ms": 0
-    }
-  }
+      "processing_ms": 3
+    },
+    "trace_refs": {}
+  },
+  "trace_refs": {}
 }

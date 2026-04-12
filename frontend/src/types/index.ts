@@ -4,6 +4,7 @@ export type SeverityClass = 'S0' | 'S1' | 'S2' | 'S3' | 'S4' | 'SX';
 export type NextStepClass = 'A0' | 'A1' | 'A2' | 'A3' | 'A4' | 'AX';
 export type SupportState = 'supported' | 'unsupported' | 'partial';
 export type SupportBanner = 'fully_supported' | 'partially_supported' | 'could_not_assess';
+export type TrustStatus = 'trusted' | 'non_trusted_beta';
 export type LaneType = 'trusted_pdf' | 'image_beta' | 'structured';
 
 export interface UploadResponse {
@@ -16,7 +17,8 @@ export interface UploadResponse {
 export interface JobStatus {
   job_id: string;
   status: string;
-  step: string;
+  step?: string | null;
+  lane_type?: LaneType;
 }
 
 export interface FlaggedCard {
@@ -47,21 +49,23 @@ export interface FindingSchema {
   explanatory_scaffold_id: string | null;
 }
 
-export interface ComparableHistoryEntry {
+export interface ComparableHistory {
   analyte_display: string;
   current_value: string;
   current_unit: string;
+  current_date: string | null;
   previous_value: string | null;
   previous_unit: string | null;
   previous_date: string | null;
   direction: 'increased' | 'decreased' | 'similar' | 'trend_unavailable';
-  comparability_status: 'comparable' | 'not_comparable';
-  comparability_reason: string | null;
+  comparability_status: 'available' | 'unavailable';
+  comparability_reason?: string | null;
 }
 
 export interface PatientArtifact {
   job_id: string;
   support_banner: SupportBanner;
+  trust_status: TrustStatus;
   overall_severity: SeverityClass;
   flagged_cards: FlaggedCard[];
   reviewed_not_flagged: string[];
@@ -71,17 +75,18 @@ export interface PatientArtifact {
   not_assessed: UnsupportedItem[];
   findings: FindingSchema[];
   language_id: string;
-  comparable_history: ComparableHistoryEntry[];
+  comparable_history: ComparableHistory | null;
 }
 
 /** Mirrors backend ClinicianArtifactSchema (app/schemas/artifact.py). */
 export interface ClinicianArtifact {
   job_id: string;
   report_date: string;
-  top_findings?: FindingSchema[];
-  severity_classes?: SeverityClass[];
-  nextstep_classes?: NextStepClass[];
-  support_coverage: string;
+  top_findings: FindingSchema[];
+  severity_classes: SeverityClass[];
+  nextstep_classes: NextStepClass[];
+  support_coverage: SupportBanner;
+  trust_status: TrustStatus;
   not_assessed: UnsupportedItem[];
   provenance_link: string | null;
   support_banner?: SupportBanner;

@@ -110,6 +110,8 @@ async def test_phase_31_persisted_runtime_exposes_machine_readable_proof_pack(
     audit_payload = audit_response.json()
     assert audit_payload["proof_pack_available"] is True
     assert audit_payload["proof_pack_ref"]
+    assert audit_payload["clinician_pdf_ref"] == f"/api/artifacts/{job_id}/clinician/pdf"
+    assert audit_payload["clinician_pdf_available"] is True
 
     proof_pack_response = await api_client.get(f"/api/jobs/{job_id}/proof-pack")
 
@@ -120,6 +122,7 @@ async def test_phase_31_persisted_runtime_exposes_machine_readable_proof_pack(
     assert proof_pack["lineage"]["terminology_release"]
     assert proof_pack["artifact_refs"]["patient_artifact"] == f"/api/artifacts/{job_id}/patient"
     assert proof_pack["artifact_refs"]["clinician_artifact"] == f"/api/artifacts/{job_id}/clinician"
+    assert proof_pack["artifact_refs"]["clinician_pdf"] == f"/api/artifacts/{job_id}/clinician/pdf"
     assert set(proof_pack["reports"]) == {
         "parser_report.json",
         "mapping_report.json",
@@ -142,3 +145,9 @@ async def test_phase_31_persisted_runtime_exposes_machine_readable_proof_pack(
         parser_report["lineage_version_ids"]["terminology_release"]
         == proof_pack["lineage"]["terminology_release"]
     )
+
+    pdf_response = await api_client.get(f"/api/artifacts/{job_id}/clinician/pdf")
+    assert pdf_response.status_code == 200, pdf_response.text
+    assert pdf_response.headers["content-type"].startswith("application/pdf")
+    assert pdf_response.content.startswith(b"%PDF-")
+    assert b"Clinician Smoke Report" in pdf_response.content

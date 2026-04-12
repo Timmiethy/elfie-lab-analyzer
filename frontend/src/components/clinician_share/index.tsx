@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getClinicianArtifact } from '../../services/api';
+import { getClinicianArtifact, getClinicianPdf } from '../../services/api';
 import type {
   ClinicianArtifact,
   NextStepClass,
   PatientArtifact,
   SeverityClass,
   SupportBanner,
+  TrustStatus,
 } from '../../types';
 import {
   PageChrome,
@@ -40,7 +41,7 @@ const NEXTSTEP_META: Record<
   AX: { label: 'Cannot suggest a next step safely', color: '#4B5563', bg: '#F3F4F6' },
 };
 
-const SUPPORT_BANNER_META: Record<
+const SUPPORT_COVERAGE_META: Record<
   SupportBanner,
   {
     label: string;
@@ -62,6 +63,22 @@ const SUPPORT_BANNER_META: Record<
     label: 'Could not assess fully',
     tone: 'neutral',
     color: '#4B5563',
+  },
+};
+
+const TRUST_STATUS_META: Record<
+  TrustStatus,
+  { label: string; tone: 'trusted' | 'beta'; color: string }
+> = {
+  trusted: {
+    label: 'Trusted PDF lane',
+    tone: 'trusted',
+    color: STITCH_COLORS.trustedText,
+  },
+  non_trusted_beta: {
+    label: 'Non-trusted beta lane',
+    tone: 'beta',
+    color: STITCH_COLORS.betaText,
   },
 };
 
@@ -88,6 +105,14 @@ function formatRuleId(ruleId: string): string {
   return ruleId
     .replace(/[-_]/g, ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatSupportCoverage(supportCoverage: SupportBanner): string {
+  return SUPPORT_COVERAGE_META[supportCoverage].label;
+}
+
+function formatTrustStatus(trustStatus: TrustStatus): string {
+  return TRUST_STATUS_META[trustStatus].label;
 }
 
 function canShare(): boolean {
@@ -133,7 +158,8 @@ function buildSummaryText(
   const lines: string[] = [
     'Clinician Summary',
     `Report date: ${artifact.report_date}`,
-    `Support coverage: ${artifact.support_coverage}`,
+    `Support coverage: ${formatSupportCoverage(artifact.support_coverage)}`,
+    `Trust status: ${formatTrustStatus(artifact.trust_status)}`,
     '',
   ];
 
@@ -178,6 +204,9 @@ export default function ClinicianShare({
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   );
+  const [pdfStatus, setPdfStatus] = useState<
+    'idle' | 'downloading' | 'downloaded' | 'failed'
+  >('idle');
 
   useEffect(() => {
     if (previewArtifact) {
@@ -232,10 +261,12 @@ export default function ClinicianShare({
     };
   }, [jobId, previewArtifact]);
 
-  const effectiveSupportBanner = artifact?.support_banner ?? supportBanner;
-  const supportMeta = effectiveSupportBanner
-    ? SUPPORT_BANNER_META[effectiveSupportBanner]
+  const effectiveSupportCoverage =
+    artifact?.support_coverage ?? supportBanner ?? artifact?.support_banner;
+  const supportMeta = effectiveSupportCoverage
+    ? SUPPORT_COVERAGE_META[effectiveSupportCoverage]
     : null;
+  const trustMeta = artifact ? TRUST_STATUS_META[artifact.trust_status] : null;
 
   const displayFindings = useMemo(
     () => (artifact ? buildDisplayFindings(artifact, patientArtifact) : []),
@@ -272,6 +303,38 @@ export default function ClinicianShare({
       // Share sheet cancellation is a valid no-op.
     }
   }, [artifact, displayFindings]);
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!jobId || !artifact) {
+      return;
+    }
+
+    setPdfStatus('downloading');
+
+    try {
+      const response = await getClinicianPdf(jobId);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to download clinician PDF (status ${response.status}).`,
+        );
+      }
+
+      const blob = await response.blob();
+      const pdfUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = pdfUrl;
+      anchor.download = `clinician-summary-${jobId}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 1000);
+      setPdfStatus('downloaded');
+      window.setTimeout(() => setPdfStatus('idle'), 2200);
+    } catch {
+      setPdfStatus('failed');
+      window.setTimeout(() => setPdfStatus('idle'), 2200);
+    }
+  }, [artifact, jobId]);
 
   const handleExportSummary = useCallback(() => {
     window.print();
@@ -364,7 +427,19 @@ export default function ClinicianShare({
             color: STITCH_COLORS.textSecondary,
           }}
         >
-          {artifact.support_coverage}
+          {formatSupportCoverage(artifact.support_coverage)}
+        </p>
+
+        <p
+          style={{
+            margin: '0.35rem 0 0',
+            fontSize: '0.74rem',
+            lineHeight: 1.45,
+            color: trustMeta?.color ?? STITCH_COLORS.textMuted,
+            fontWeight: 700,
+          }}
+        >
+          {trustMeta?.label ?? 'Trusted PDF lane'}
         </p>
 
         <p
@@ -682,8 +757,19 @@ export default function ClinicianShare({
                   ? 'Summary copied'
                   : copyStatus === 'failed'
                     ? 'Copy failed'
-                    : 'Copy summary'}
+                  : 'Copy summary'}
               </PrimaryButton>
+            )}
+            {jobId && (
+              <SecondaryButton onClick={() => void handleDownloadPdf()}>
+                {pdfStatus === 'downloading'
+                  ? 'Downloading PDF\u2026'
+                  : pdfStatus === 'downloaded'
+                    ? 'PDF downloaded'
+                    : pdfStatus === 'failed'
+                      ? 'Download failed'
+                      : 'Download clinician PDF'}
+              </SecondaryButton>
             )}
             <SecondaryButton onClick={handleExportSummary}>
               Export summary

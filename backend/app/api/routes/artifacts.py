@@ -1,11 +1,13 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.deps import get_session_factory
 from app.db import TopLevelLifecycleStore
+from app.services.clinician_pdf import ensure_clinician_pdf
 from app.services.observability import observability_metrics
 from app.workers.pipeline import get_job_run
 
@@ -42,6 +44,19 @@ async def get_clinician_artifact(
     if job is None:
         raise HTTPException(status_code=404, detail="job_not_found")
     return job["clinician_artifact"]
+
+
+@router.get("/{job_id}/clinician/pdf")
+async def get_clinician_pdf(job_id: UUID) -> Response:
+    """Get the rendered clinician-share PDF artifact."""
+
+    job = get_job_run(str(job_id))
+    clinician_artifact = None if job is None else job.get("clinician_artifact")
+    pdf_path = ensure_clinician_pdf(job_id, clinician_artifact)
+    if pdf_path is None or not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="clinician_pdf_not_found")
+
+    return Response(content=pdf_path.read_bytes(), media_type="application/pdf")
 
 
 async def _get_persisted_patient_artifact(

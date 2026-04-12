@@ -1,100 +1,84 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+`AGENTS.md` is the canonical instruction file for this repository. Read it first. If this file and `AGENTS.md` ever disagree, `AGENTS.md` wins.
 
-## Project Overview
+## Default Role
+Unless a task brief says otherwise, you are an `OpenClaw` worker inside a `Codex-led` orchestration system for `D:\elfie-lab-analyzer`.
 
-Elfie Labs Analyzer — a patient-facing lab report understanding feature for Elfie Health Report. Users upload lab PDFs/images, the backend extracts observations, maps analytes to LOINC codes, applies clinical rules, and renders patient-friendly and clinician-share artifacts. Uses Qwen LLM for explanations and OCR (image beta lane).
+Default control model:
 
-## Commands
+- `Codex` plans, scopes, reviews, and integrates
+- `OpenClaw` performs bounded coding or debugging work
+- `Person A` is the human supervisor and truth-engine steward
 
-### Backend (FastAPI + Python 3.11) — from `backend/`
+You are not the global planner. You are the bounded worker.
 
-```bash
-pip install -e ".[dev]"           # Install with dev dependencies
-pip install -e ".[dev,image-beta]" # Include OCR extras (doctr, surya)
-uvicorn app.main:app --reload     # Dev server on :8000
-pytest                            # Run all tests
-pytest tests/unit/                # Unit tests only
-pytest tests/integration/         # Integration tests only
-pytest -x -k "test_name"         # Run single test
-ruff check .                     # Lint
-ruff format .                    # Format
-mypy .                           # Type checking
-alembic upgrade head             # Run migrations
-alembic revision --autogenerate -m "description"  # Create migration
+## Mandatory Read Order
+Before changing code:
+
+1. `AGENTS.md`
+2. `tasks/lessons.md`
+3. `tasks/todo.md`
+4. your assigned brief under `tasks/briefs/*.md`
+5. `contracts/README.md` and relevant `contracts/examples/*` if payloads are involved
+6. the relevant sections of:
+   - `labs_analyzer_v10_source_of_truth.md`
+   - `labs_analyzer_v10_parallel_distribution_rewritten.md`
+   - `labs_analyzer_v10_tests_guardrails.md`
+7. the code you will edit
+
+## Hard Rules
+1. Do not widen scope beyond the brief.
+2. Do not silently change contracts.
+3. Do not hide unsupported, partial-support, or not-assessed content.
+4. Do not blur trusted PDF and image-beta trust levels.
+5. Do not use an LLM to invent medical meaning, diagnosis, severity, or next-step logic.
+6. Stop and hand back to Codex if the task needs files outside the assigned scope.
+7. Report verification honestly. If you did not run it, say so.
+
+## Track Model
+Every task brief should declare one track:
+
+- `truth-engine`
+- `patient-surface`
+- `shared-contract`
+- `orchestration`
+
+Stay inside that track unless the brief explicitly allows otherwise.
+
+## Required Handoff Format
+Return exactly these sections:
+
+1. `Summary`
+2. `Files changed`
+3. `Verification`
+4. `Open questions or risks`
+
+## Useful OpenClaw Commands
+Machine-local install:
+
+- root: `D:\clawcode\claw-code`
+- binary: `D:\clawcode\claw-code\rust\target\debug\claw.exe`
+
+Useful commands:
+
+```powershell
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' doctor
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' status
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' sandbox
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' system-prompt --cwd 'D:\elfie-lab-analyzer' --date 2026-04-11
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' --resume latest /status /diff
 ```
 
-### Frontend (Vite + React 19 + TypeScript) — from `frontend/`
+The default deterministic worker launch path for this repo is the PowerShell wrapper:
 
-```bash
-npm install
-npm run dev       # Dev server on :5173
-npm run build     # Type-check + production build
-npm run lint      # ESLint
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Start-OpenClawWorker.ps1 -TaskFile .\tasks\briefs\<task>.md -ClawRoot 'D:\clawcode\claw-code'
 ```
 
-### Docker (full stack)
+## Verification Expectations
+Use the verification commands assigned in the brief. If the brief is missing them, default to:
 
-```bash
-docker compose up        # Postgres :5432 + backend :8000
-```
-
-### Environment
-
-Copy `.env.example` to `.env`. All env vars use `ELFIE_` prefix (handled by pydantic-settings in `app/config.py`). Key vars: `ELFIE_DATABASE_URL`, `ELFIE_QWEN_API_KEY`, `ELFIE_IMAGE_BETA_ENABLED`.
-
-## Architecture
-
-### Processing Pipeline (`backend/app/workers/pipeline.py`)
-
-The core flow is a 14-step pipeline orchestrated by `PipelineOrchestrator`:
-
-1. **Preflight** — classify input (PDF vs image)
-2. **Lane selection** — trusted PDF lane or image beta lane
-3. **Extraction** — parse lab values from document (`services/parser/`, `services/ocr/`)
-4. **Extraction QA** — validate extraction quality (`services/extraction_qa/`)
-5. **Observation build** — create provisional observations (`services/observation_builder/`)
-6. **Analyte mapping** — map raw labels to LOINC codes with abstention (`services/analyte_resolver/`)
-7. **UCUM conversion** — normalize units (`services/ucum/`)
-8. **Panel reconstruction** — group related tests (`services/panel_reconstructor/`)
-9. **Rule evaluation** — fire deterministic clinical rules (`services/rule_engine/`)
-10. **Severity assignment** — S0-S4/SX classification (`services/severity_policy/`)
-11. **Next-step assignment** — A0-A4/AX action classes (`services/nextstep_policy/`)
-12. **Patient artifact** — render patient-facing output (`services/artifact_renderer/`)
-13. **Clinician artifact** — render clinician-share output
-14. **Lineage persist** — store full reproducibility metadata (`services/lineage/`)
-
-### Database (Postgres 16, SQLAlchemy 2.0 async)
-
-12 core tables in `backend/app/models/tables.py`: `documents` → `jobs` → `extracted_rows` → `observations` → `mapping_candidates`, `rule_events` → `policy_events`, `patient_artifacts`, `clinician_artifacts`, `lineage_runs`, `benchmark_runs`, `share_events`. Migrations via Alembic.
-
-### API Routes (`backend/app/api/routes/`)
-
-All routes prefixed with `/api`:
-- `/api/health` — health check
-- `/api/upload` — file upload (PDF/image)
-- `/api/jobs` — job status and management
-- `/api/artifacts` — retrieve rendered artifacts
-
-### LLM Integration
-
-Uses Qwen models via OpenAI-compatible API (`openai` SDK pointing at `ELFIE_QWEN_BASE_URL`). `qwen-plus` for text explanation, `qwen-vl-max` for vision/OCR in image beta lane. Service in `services/explanation/`.
-
-### Terminology Data (`data/`)
-
-- `data/loinc/` — LOINC terminology files for analyte mapping
-- `data/alias_tables/` — lab-specific name aliases
-- `data/ucum/` — UCUM unit conversion tables
-
-Import script: `scripts/import_loinc.py`
-
-### Frontend
-
-React 19 + TypeScript + Vite. Components organized by feature: `upload/`, `processing/`, `patient_artifact/`, `history_card/`, `guided_ask/`, `clinician_share/`. i18n support for English and Vietnamese (`src/i18n/`). API client in `src/services/api.ts`.
-
-## Design Docs
-
-- `labs_analyzer_v10_source_of_truth.md` — full blueprint specification (sections referenced throughout code)
-- `labs_analyzer_v10_tests_guardrails.md` — test strategy and guardrails
-- `labs_analyzer_v10_parallel_distribution_rewritten.md` — parallel processing design
+- patient-surface: `npm run lint`, `npm run build`
+- truth-engine: `python -m pytest`, `python -m ruff check .`, `python -m mypy .`
+- orchestration: `powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Invoke-ProjectVerification.ps1 -Scope orchestration -ClawRoot 'D:\clawcode\claw-code'`

@@ -8,8 +8,8 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from pydantic import ValidationError
+from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.deps import get_session_factory
@@ -35,7 +35,10 @@ pytestmark = pytest.mark.asyncio
 
 
 def _build_text_pdf(lines: list[str]) -> bytes:
-    escaped_lines = [line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in lines]
+    escaped_lines = [
+        line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        for line in lines
+    ]
     content_lines = ["BT", "/F1 12 Tf", "72 720 Td"]
     for index, line in enumerate(escaped_lines):
         if index:
@@ -55,7 +58,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     )
     objects.append(
         b"4 0 obj\n"
-        + f"<< /Length {len(stream)} >>\n".encode("utf-8")
+        + f"<< /Length {len(stream)} >>\n".encode()
         + b"stream\n"
         + stream
         + b"\nendstream\nendobj\n"
@@ -63,17 +66,17 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     objects.append(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     buffer = BytesIO()
-    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode())
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
         buffer.write(obj)
 
     xref_offset = buffer.tell()
-    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode("utf-8"))
+    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode())
     buffer.write(b"0000000000 65535 f \n")
     for offset in offsets[1:]:
-        buffer.write(f"{offset:010d} 00000 n \n".encode("utf-8"))
+        buffer.write(f"{offset:010d} 00000 n \n".encode())
     buffer.write(
         (
             "trailer\n"
@@ -81,13 +84,13 @@ def _build_text_pdf(lines: list[str]) -> bytes:
             "startxref\n"
             f"{xref_offset}\n"
             "%%EOF\n"
-        ).encode("utf-8")
+        ).encode()
     )
     return buffer.getvalue()
 
 
 class _FailingSessionFactory:
-    def __call__(self) -> "_FailingSessionFactory":
+    def __call__(self) -> _FailingSessionFactory:
         return self
 
     async def __aenter__(self):
@@ -126,7 +129,9 @@ async def _table_count(
 
 async def _latest_job(session_factory: async_sessionmaker[AsyncSession]) -> Job:
     async with session_factory() as session:
-        result = await session.execute(select(Job).order_by(Job.created_at.desc(), Job.id.desc()).limit(1))
+        result = await session.execute(
+            select(Job).order_by(Job.created_at.desc(), Job.id.desc()).limit(1)
+        )
         job = result.scalar_one_or_none()
         if job is None:
             raise AssertionError("expected a persisted job row")
@@ -165,7 +170,9 @@ async def test_phase_12_db_backed_upload_happy_path_persists_and_serves_artifact
 
     status_response = await api_client.get(f"/api/jobs/{job_id}/status")
     assert status_response.status_code == 200, status_response.text
-    assert status_response.json()["status"] == "completed"
+    status_payload = status_response.json()
+    assert status_payload["status"] == "completed"
+    assert status_payload["step"] == "lineage_persist"
 
     job_response = await api_client.get(f"/api/jobs/{job_id}")
     assert job_response.status_code == 200, job_response.text
@@ -194,24 +201,44 @@ async def test_phase_12_db_backed_upload_happy_path_persists_and_serves_artifact
         persisted_document = await session.get(Document, persisted_job.document_id)
         assert persisted_document is not None
         assert (
-            await session.execute(select(func.count()).select_from(PatientArtifact).where(PatientArtifact.job_id == job_id))
+            await session.execute(
+                select(func.count())
+                .select_from(PatientArtifact)
+                .where(PatientArtifact.job_id == job_id)
+            )
         ).scalar_one() == 1
         assert (
-            await session.execute(select(func.count()).select_from(ClinicianArtifact).where(ClinicianArtifact.job_id == job_id))
+            await session.execute(
+                select(func.count())
+                .select_from(ClinicianArtifact)
+                .where(ClinicianArtifact.job_id == job_id)
+            )
         ).scalar_one() == 1
         assert (
-            await session.execute(select(func.count()).select_from(LineageRun).where(LineageRun.job_id == job_id))
+            await session.execute(
+                select(func.count()).select_from(LineageRun).where(LineageRun.job_id == job_id)
+            )
         ).scalar_one() == 1
-        lineage_result = await session.execute(select(LineageRun.id).where(LineageRun.job_id == job_id).limit(1))
+        lineage_result = await session.execute(
+            select(LineageRun.id).where(LineageRun.job_id == job_id).limit(1)
+        )
         lineage_id = lineage_result.scalar_one()
         assert (
-            await session.execute(select(func.count()).select_from(BenchmarkRun).where(BenchmarkRun.lineage_id == lineage_id))
+            await session.execute(
+                select(func.count())
+                .select_from(BenchmarkRun)
+                .where(BenchmarkRun.lineage_id == lineage_id)
+            )
         ).scalar_one() == 1
         assert (
-            await session.execute(select(func.count()).select_from(ExtractedRow).where(ExtractedRow.job_id == job_id))
+            await session.execute(
+                select(func.count()).select_from(ExtractedRow).where(ExtractedRow.job_id == job_id)
+            )
         ).scalar_one() == 2
         assert (
-            await session.execute(select(func.count()).select_from(Observation).where(Observation.job_id == job_id))
+            await session.execute(
+                select(func.count()).select_from(Observation).where(Observation.job_id == job_id)
+            )
         ).scalar_one() == 2
         assert (
             await session.execute(
@@ -222,10 +249,14 @@ async def test_phase_12_db_backed_upload_happy_path_persists_and_serves_artifact
             )
         ).scalar_one() >= 2
         assert (
-            await session.execute(select(func.count()).select_from(RuleEvent).where(RuleEvent.job_id == job_id))
+            await session.execute(
+                select(func.count()).select_from(RuleEvent).where(RuleEvent.job_id == job_id)
+            )
         ).scalar_one() >= 1
         assert (
-            await session.execute(select(func.count()).select_from(PolicyEvent).where(PolicyEvent.job_id == job_id))
+            await session.execute(
+                select(func.count()).select_from(PolicyEvent).where(PolicyEvent.job_id == job_id)
+            )
         ).scalar_one() >= 1
 
 
@@ -245,6 +276,12 @@ async def test_phase_12_partial_support_pdf_is_exposed_as_partial_job(
     assert upload_payload["status"] == "partial"
 
     job_id = upload_payload["job_id"]
+    status_response = await api_client.get(f"/api/jobs/{job_id}/status")
+    assert status_response.status_code == 200, status_response.text
+    status_payload = status_response.json()
+    assert status_payload["status"] == "partial"
+    assert status_payload["step"] == "lineage_persist"
+
     patient_response = await api_client.get(f"/api/artifacts/{job_id}/patient")
     assert patient_response.status_code == 200, patient_response.text
 
@@ -281,16 +318,10 @@ async def test_phase_12_image_beta_failure_is_safe_and_persisted(
         files={"file": ("beta-input.png", b"not-a-real-image", "image/png")},
     )
 
-    assert upload_response.status_code == 422
-    assert upload_response.json()["detail"] == "processing_failed"
-
-    latest_job = await _latest_job(db_session_factory)
-    assert latest_job.lane_type == "image_beta"
-    assert latest_job.status == "failed"
-    assert latest_job.operator_note is not None
-    assert "image_beta_disabled" in latest_job.operator_note
-    assert await _table_count(db_session_factory, Document) == 1
-    assert await _table_count(db_session_factory, Job) == 1
+    assert upload_response.status_code == 400
+    assert upload_response.json()["detail"] == "blocked_image_beta_disabled"
+    assert await _table_count(db_session_factory, Document) == 0
+    assert await _table_count(db_session_factory, Job) == 0
     assert await _table_count(db_session_factory, PatientArtifact) == 0
     assert await _table_count(db_session_factory, ClinicianArtifact) == 0
 
@@ -315,6 +346,12 @@ async def test_phase_12_no_text_pdf_fails_safely_and_keeps_auditable_job(
     assert latest_job.operator_note is not None
     assert "unsupported_pdf" in latest_job.operator_note
 
+    status_response = await api_client.get(f"/api/jobs/{latest_job.id}/status")
+    assert status_response.status_code == 200, status_response.text
+    status_payload = status_response.json()
+    assert status_payload["status"] == "failed"
+    assert status_payload["step"] == "failed"
+
 
 async def test_phase_12_persistence_unavailable_falls_back_to_in_memory_runtime(
     api_client: AsyncClient,
@@ -336,7 +373,10 @@ async def test_phase_12_persistence_unavailable_falls_back_to_in_memory_runtime(
     assert upload_response.status_code == 200, upload_response.text
     upload_payload = upload_response.json()
     assert upload_payload["status"] == "completed"
-    assert upload_payload["message"] == "Upload processed in memory because persistence is unavailable."
+    assert (
+        upload_payload["message"]
+        == "Upload processed in memory because persistence is unavailable."
+    )
 
     job_id = upload_payload["job_id"]
     job_response = await api_client.get(f"/api/jobs/{job_id}")

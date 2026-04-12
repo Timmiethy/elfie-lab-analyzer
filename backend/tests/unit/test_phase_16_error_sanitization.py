@@ -58,6 +58,7 @@ if "app.db.session" not in sys.modules:
     sys.modules["app.db.session"] = db_session_stub
 
 from app.api.routes import upload as upload_route
+from tests.support.pdf_builder import build_text_pdf
 
 
 class _DummyUploadFile:
@@ -132,12 +133,12 @@ def test_upload_route_sanitizes_processing_errors_but_keeps_operator_note(
         asyncio.run(
             upload_route.upload_lab_report(
                 _DummyUploadFile(
-                    filename="report.pdf",
-                    content_type="application/pdf",
-                    payload=b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
-                ),
-                session_factory=lambda: _DummySessionContext(session),
-            )
+                filename="report.pdf",
+                content_type="application/pdf",
+                payload=build_text_pdf(["Glucose 180 mg/dL"]),
+            ),
+            session_factory=lambda: _DummySessionContext(session),
+        )
         )
 
     assert exc_info.value.status_code == 422

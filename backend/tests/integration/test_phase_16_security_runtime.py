@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from io import BytesIO
 from pathlib import Path
 from stat import S_IMODE
@@ -133,8 +134,13 @@ async def test_phase_16_upload_storage_is_private_and_artifact_access_is_audited
 
     stored_file = Path(document.storage_path)
     assert stored_file.exists()
-    assert S_IMODE(stored_file.stat().st_mode) == 0o600
-    assert S_IMODE(stored_file.parent.stat().st_mode) == 0o700
+    assert stored_file.resolve().is_relative_to(settings.artifact_store_path.resolve())
+
+    # Windows temp dirs use ACLs that `stat()` does not project into POSIX mode bits,
+    # so the chmod contract is only directly assertable on POSIX hosts.
+    if os.name != "nt":
+        assert S_IMODE(stored_file.stat().st_mode) == 0o600
+        assert S_IMODE(stored_file.parent.stat().st_mode) == 0o700
 
     patient_response = await api_client.get(f"/api/artifacts/{job_id}/patient")
     clinician_response = await api_client.get(f"/api/artifacts/{job_id}/clinician")

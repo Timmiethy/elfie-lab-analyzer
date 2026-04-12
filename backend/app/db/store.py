@@ -15,6 +15,7 @@ from typing import Any, TypeVar
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy import update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tables import (
@@ -38,6 +39,16 @@ T = TypeVar("T")
 
 def _coerce_uuid(value: UUID | str) -> UUID:
     return value if isinstance(value, UUID) else UUID(str(value))
+
+
+def _json_clone(value: Any) -> Any:
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, Mapping):
+        return {str(key): _json_clone(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_clone(item) for item in value]
+    return value
 
 
 async def _add_and_flush(session: AsyncSession, entity: T) -> T:
@@ -105,6 +116,12 @@ class TopLevelLifecycleStore:
         lane_type: str,
         storage_path: str,
         page_count: int | None = None,
+        document_class: str | None = None,
+        preflight_failure_code: str | None = None,
+        duplicate_state: str | None = None,
+        promotion_status: str | None = None,
+        text_extractability: str | None = None,
+        image_density: str | None = None,
         language_id: str | None = None,
         region: str | None = None,
     ) -> Document:
@@ -115,6 +132,12 @@ class TopLevelLifecycleStore:
             file_size_bytes=file_size_bytes,
             page_count=page_count,
             lane_type=lane_type,
+            document_class=document_class,
+            preflight_failure_code=preflight_failure_code,
+            duplicate_state=duplicate_state,
+            promotion_status=promotion_status,
+            text_extractability=text_extractability,
+            image_density=image_density,
             language_id=language_id,
             region=region,
             storage_path=storage_path,
@@ -174,20 +197,37 @@ class TopLevelLifecycleStore:
         dead_letter: bool | None = None,
         operator_note: str | None = None,
     ) -> Job:
+        values: dict[str, Any] = {
+            "status": status,
+            "updated_at": utc_now(),
+        }
+        if retry_count is not None:
+            values["retry_count"] = retry_count
+        if dead_letter is not None:
+            values["dead_letter"] = dead_letter
+        if operator_note is not None:
+            values["operator_note"] = operator_note
+
+        result = await self.session.execute(
+            sql_update(Job)
+            .where(Job.id == _coerce_uuid(job_id))
+            .values(**values)
+        )
+        if result.rowcount == 0:
+            raise LookupError("job_not_found")
+
+        await self.session.flush()
         job = await self.get_job(job_id)
         if job is None:
             raise LookupError("job_not_found")
-
         job.status = status
-        job.updated_at = utc_now()
+        job.updated_at = values["updated_at"]
         if retry_count is not None:
             job.retry_count = retry_count
         if dead_letter is not None:
             job.dead_letter = dead_letter
         if operator_note is not None:
             job.operator_note = operator_note
-
-        await self.session.flush()
         return job
 
     async def create_patient_artifact(
@@ -228,6 +268,10 @@ class TopLevelLifecycleStore:
         job_id: UUID | str,
         source_checksum: str,
         parser_version: str,
+        adapter_version: str | None = None,
+        row_assembly_version: str | None = None,
+        row_type_rule_set_version: str | None = None,
+        formula_version: str | None = None,
         terminology_release: str,
         mapping_threshold_config: Mapping[str, Any],
         unit_engine_version: str,
@@ -243,6 +287,10 @@ class TopLevelLifecycleStore:
             job_id=_coerce_uuid(job_id),
             source_checksum=source_checksum,
             parser_version=parser_version,
+            adapter_version=adapter_version,
+            row_assembly_version=row_assembly_version,
+            row_type_rule_set_version=row_type_rule_set_version,
+            formula_version=formula_version,
             ocr_version=ocr_version,
             terminology_release=terminology_release,
             mapping_threshold_config=dict(mapping_threshold_config),
@@ -282,6 +330,12 @@ class TopLevelLifecycleStore:
         raw_value_string: str | None = None,
         raw_unit_string: str | None = None,
         raw_reference_range: str | None = None,
+        source_block_id: str | None = None,
+        source_row_id: str | None = None,
+        row_type: str | None = None,
+        block_type: str | None = None,
+        family_adapter_id: str | None = None,
+        failure_code: str | None = None,
         extraction_confidence: float | None = None,
         id: UUID | str | None = None,
     ) -> ExtractedRow:
@@ -296,6 +350,12 @@ class TopLevelLifecycleStore:
             raw_value_string=raw_value_string,
             raw_unit_string=raw_unit_string,
             raw_reference_range=raw_reference_range,
+            source_block_id=source_block_id,
+            source_row_id=source_row_id,
+            row_type=row_type,
+            block_type=block_type,
+            family_adapter_id=family_adapter_id,
+            failure_code=failure_code,
             extraction_confidence=extraction_confidence,
         )
         return await _add_and_flush(self.session, extracted_row)
@@ -312,6 +372,20 @@ class TopLevelLifecycleStore:
         raw_value_string: str | None = None,
         raw_unit_string: str | None = None,
         parsed_numeric_value: float | None = None,
+        source_block_id: str | None = None,
+        source_row_id: str | None = None,
+        row_type: str | None = None,
+        measurement_kind: str | None = None,
+        support_code: str | None = None,
+        failure_code: str | None = None,
+        family_adapter_id: str | None = None,
+        parsed_locale: str | None = None,
+        parsed_comparator: str | None = None,
+        primary_result: Any | None = None,
+        secondary_result: Any | None = None,
+        candidate_trace: Any | None = None,
+        derived_formula_id: str | None = None,
+        source_observation_ids: list[UUID | str] | None = None,
         accepted_analyte_code: str | None = None,
         accepted_analyte_display: str | None = None,
         specimen_context: str | None = None,
@@ -336,6 +410,22 @@ class TopLevelLifecycleStore:
             raw_value_string=raw_value_string,
             raw_unit_string=raw_unit_string,
             parsed_numeric_value=parsed_numeric_value,
+            source_block_id=source_block_id,
+            source_row_id=source_row_id,
+            row_type=row_type,
+            measurement_kind=measurement_kind,
+            support_code=support_code,
+            failure_code=failure_code,
+            family_adapter_id=family_adapter_id,
+            parsed_locale=parsed_locale,
+            parsed_comparator=parsed_comparator,
+            primary_result=_json_clone(primary_result) if primary_result is not None else None,
+            secondary_result=_json_clone(secondary_result) if secondary_result is not None else None,
+            candidate_trace=_json_clone(candidate_trace) if candidate_trace is not None else None,
+            derived_formula_id=derived_formula_id,
+            source_observation_ids=[_coerce_uuid(value) for value in source_observation_ids]
+            if source_observation_ids is not None
+            else None,
             accepted_analyte_code=accepted_analyte_code,
             accepted_analyte_display=accepted_analyte_display,
             specimen_context=specimen_context,
@@ -574,6 +664,7 @@ class TopLevelLifecycleStore:
         job = await self.get_job(job_id)
         if job is None:
             raise LookupError("job_not_found")
+        document = await self.get_document(job.document_id)
 
         lineage_runs_count = await self.count_lineage_runs(job_id)
         latest_lineage = await self.get_latest_lineage_run(job_id)
@@ -617,6 +708,16 @@ class TopLevelLifecycleStore:
             "dead_letter": bool(job.dead_letter),
             "operator_note": job.operator_note,
             "lineage_runs_count": lineage_runs_count,
+            "document": None
+            if document is None
+            else {
+                "document_class": document.document_class,
+                "preflight_failure_code": document.preflight_failure_code,
+                "duplicate_state": document.duplicate_state,
+                "promotion_status": document.promotion_status,
+                "text_extractability": document.text_extractability,
+                "image_density": document.image_density,
+            },
             "latest_lineage_run": None
             if latest_lineage is None
             else {"id": str(latest_lineage.id)},

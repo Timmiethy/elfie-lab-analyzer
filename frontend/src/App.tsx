@@ -34,7 +34,6 @@ type Notice = {
   text: string;
 } | null;
 
-const CLINICIAN_SHARE_ENABLED = false;
 const PREVIEW_FIXTURE_ENABLED = true;
 const PREVIEW_QUERY_VALUE = 'fixtures';
 
@@ -147,8 +146,8 @@ function App() {
       <PageChrome
         compact
         title="Preview Fixtures"
-        subtitle="Developer-only fixture selector for reviewing result surfaces while backend artifact routes remain stubbed."
-        rightSlot={<PillBadge tone="neutral">Preview mode</PillBadge>}
+        subtitle="Developer-only fixtures for reviewing result surfaces. Use the live upload flow for smoke validation."
+        rightSlot={<PillBadge tone="neutral">Developer fixtures</PillBadge>}
       >
         <div
           style={{
@@ -267,9 +266,8 @@ function App() {
             Preview mode
           </p>
           <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>
-            These screens use typed local fixtures. The live backend artifact
-            routes remain stubbed, so preview mode is the honest way to review
-            post-processing UI right now.
+            These screens use typed local fixtures. The live upload flow is the
+            smoke source of truth, so use it for runtime validation.
           </p>
         </div>
 
@@ -277,7 +275,7 @@ function App() {
           onClick={() => setState('upload')}
           style={{ marginTop: '1rem' }}
         >
-          Try the live upload flow
+          Open live upload
         </SecondaryButton>
       </PageChrome>
     );
@@ -297,7 +295,7 @@ function App() {
   if (state === 'patient_artifact') {
     const currentArtifact = jobId ? artifact : previewFixture.patientArtifact;
     const clinicianShareAvailable = jobId
-      ? CLINICIAN_SHARE_ENABLED
+      ? true
       : Boolean(previewFixture.clinicianArtifact);
 
     if (artifactError) {
@@ -367,11 +365,6 @@ function App() {
 
   if (state === 'clinician_share') {
     if (jobId) {
-      if (!CLINICIAN_SHARE_ENABLED) {
-        setState('patient_artifact');
-        return null;
-      }
-
       return (
         <ClinicianShare
           jobId={jobId}

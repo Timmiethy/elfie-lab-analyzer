@@ -150,7 +150,8 @@ export default function Processing({
         if (
           normalizedStatus === 'completed' ||
           normalizedStatus === 'done' ||
-          normalizedStatus === 'success'
+          normalizedStatus === 'success' ||
+          normalizedStatus === 'partial'
         ) {
           finishWithSuccess();
           return;
@@ -159,7 +160,8 @@ export default function Processing({
         if (
           normalizedStatus === 'failed' ||
           normalizedStatus === 'error' ||
-          normalizedStatus === 'dead_letter'
+          normalizedStatus === 'dead_letter' ||
+          normalizedStatus === 'dead_lettered'
         ) {
           finishWithFailure(
             'Processing failed. Please try uploading a different file or contact support.',
@@ -197,8 +199,9 @@ export default function Processing({
   const circumference = 2 * Math.PI * circleRadius;
   const dashOffset =
     circumference - (Math.min(progressPercent, 100) / 100) * circumference;
-  const backendLabel =
-    BACKEND_STEP_LABELS[currentStep] ?? 'Running support checks';
+  const backendLabel = currentStep
+    ? BACKEND_STEP_LABELS[currentStep] ?? 'Running support checks'
+    : 'Running support checks';
 
   if (error) {
     return (

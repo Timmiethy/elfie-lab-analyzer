@@ -3,6 +3,7 @@
 This module intentionally stays conservative:
 - it never pretends OCR succeeded when the optional stack is unavailable
 - it can normalize injected OCR text/rows into downstream QA-compatible rows
+- it discovers a real OCR backend with surya primary and doctr fallback
 - it derives stable identifiers when callers do not provide them
 """
 
@@ -10,21 +11,40 @@ from __future__ import annotations
 
 import inspect
 import re
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from copy import deepcopy
 from hashlib import sha256
+from importlib import import_module
 from importlib.util import find_spec
-from collections.abc import Awaitable, Callable, Mapping, Sequence
-from typing import Any
-from uuid import UUID, NAMESPACE_URL, uuid5
+from io import BytesIO
+from typing import Any, TypedDict
+from uuid import NAMESPACE_URL, UUID, uuid5
 
-_IMAGE_BETA_STACK_AVAILABLE = find_spec("doctr") is not None and find_spec("surya") is not None
+
+def _module_available(module_name: str) -> bool:
+    try:
+        return find_spec(module_name) is not None
+    except (ImportError, ValueError):  # pragma: no cover - defensive import guard
+        return False
+
+
+_SURYA_STACK_AVAILABLE = _module_available("surya")
+_DOCTR_STACK_AVAILABLE = _module_available("doctr")
 
 _LINE_VALUE_PATTERN = re.compile(
-    (
+
         r"^\s*(?P<label>.*?)(?:\s+|[:=\-\u2013\u2014|])"
         r"(?P<value>[+-]?\d+(?:\.\d+)?)\b(?P<unit>.*\S)?\s*$"
-    )
+
 )
+_DEFAULT_OCR_ENGINE = "beta_adapter"
+
+
+class OcrPromotionDecision(TypedDict):
+    promotion_status: str
+    backend_available: bool
+    backend_candidates: list[str]
+    positioned_output: bool
 
 
 class OcrAdapter:
@@ -32,7 +52,8 @@ class OcrAdapter:
 
     The adapter accepts an injected OCR backend or pre-extracted OCR text/rows.
     When neither is available, it raises a clear runtime error instead of
-    silently fabricating OCR output.
+    silently fabricating OCR output. When optional OCR stacks are present, it
+    prefers surya and falls back to doctr.
     """
 
     def __init__(
@@ -43,11 +64,30 @@ class OcrAdapter:
     ) -> None:
         self._ocr_backend = ocr_backend
         self._image_beta_enabled = image_beta_enabled
+        self._auto_backend_candidates = self._build_auto_backend_candidates()
 
     def is_available(self) -> bool:
         """Return whether this adapter can run with a real OCR backend."""
 
-        return self._ocr_backend is not None or _IMAGE_BETA_STACK_AVAILABLE
+        return bool(self._candidate_backends())
+
+    def promotion_decision(self) -> OcrPromotionDecision:
+        """Report whether image-beta OCR is eligible for promotion."""
+
+        backend_candidates = [name for name, _ in self._candidate_backends()]
+        backend_available = bool(backend_candidates)
+        if not self._image_beta_enabled:
+            promotion_status = "blocked_image_beta_disabled"
+        elif backend_available:
+            promotion_status = "beta_ready"
+        else:
+            promotion_status = "blocked_no_ocr_backend"
+        return {
+            "promotion_status": promotion_status,
+            "backend_available": backend_available,
+            "backend_candidates": backend_candidates,
+            "positioned_output": backend_available,
+        }
 
     async def extract(
         self,
@@ -67,10 +107,6 @@ class OcrAdapter:
         fails loudly and keeps the lane visibly beta.
         """
 
-        if not self._image_beta_enabled:
-            raise RuntimeError(
-                "image_beta_disabled: enable the image-beta lane before invoking OCR"
-            )
         if not isinstance(image_bytes, (bytes, bytearray)):
             raise TypeError("image_bytes must be bytes")
         if not image_bytes:
@@ -85,6 +121,7 @@ class OcrAdapter:
                 document_uuid=document_uuid,
                 source_page=source_page,
                 language_id=language_id,
+                ocr_engine=_DEFAULT_OCR_ENGINE,
             )
 
         if normalized_lines:
@@ -93,33 +130,160 @@ class OcrAdapter:
                 document_uuid=document_uuid,
                 source_page=source_page,
                 language_id=language_id,
+                ocr_engine=_DEFAULT_OCR_ENGINE,
             )
 
-        if self._ocr_backend is not None:
-            backend_output = self._ocr_backend(bytes(image_bytes))
-            if inspect.isawaitable(backend_output):
-                backend_output = await self._await_backend_output(backend_output)
-            return self._normalize_backend_output(
-                backend_output,
-                document_uuid=document_uuid,
-                source_page=source_page,
-                language_id=language_id,
+        if not self._image_beta_enabled:
+            raise RuntimeError(
+                "image_beta_disabled: enable the image-beta lane before invoking OCR"
             )
 
-        if not _IMAGE_BETA_STACK_AVAILABLE:
+        backend_candidates = self._candidate_backends()
+        if not backend_candidates:
             raise RuntimeError(
                 "image_beta_ocr_unavailable: install the optional OCR extras with "
                 '`pip install -e ".[dev,image-beta]"` or inject pre-extracted OCR '
                 "rows/text into OcrAdapter.extract()"
             )
 
-        raise RuntimeError(
-            "image_beta_ocr_backend_not_wired: the optional OCR packages are "
-            "available, but no OCR backend callable or pre-extracted text/rows was provided"
-        )
+        last_error: Exception | None = None
+        for backend_name, backend in backend_candidates:
+            try:
+                backend_output = backend(bytes(image_bytes))
+                if inspect.isawaitable(backend_output):
+                    backend_output = await self._await_backend_output(backend_output)
+                return self._normalize_backend_output(
+                    backend_output,
+                    document_uuid=document_uuid,
+                    source_page=source_page,
+                    language_id=language_id,
+                    ocr_engine=backend_name,
+                )
+            except Exception as exc:  # pragma: no cover - exercised via fallback tests
+                last_error = exc
+
+        raise RuntimeError("image_beta_ocr_backend_failed") from last_error
 
     async def _await_backend_output(self, backend_output: Awaitable[Any]) -> Any:
         return await backend_output
+
+    def _candidate_backends(self) -> list[tuple[str, Callable[[bytes], Any]]]:
+        candidates: list[tuple[str, Callable[[bytes], Any]]] = []
+        if self._ocr_backend is not None:
+            candidates.append(("injected", self._ocr_backend))
+        candidates.extend(self._auto_backend_candidates)
+        return candidates
+
+    def _build_auto_backend_candidates(self) -> list[tuple[str, Callable[[bytes], Any]]]:
+        candidates: list[tuple[str, Callable[[bytes], Any]]] = []
+
+        surya_backend = self._build_surya_backend()
+        if surya_backend is not None:
+            candidates.append(("surya", surya_backend))
+
+        doctr_backend = self._build_doctr_backend()
+        if doctr_backend is not None:
+            candidates.append(("doctr", doctr_backend))
+
+        return candidates
+
+    def _build_surya_backend(self) -> Callable[[bytes], Any] | None:
+        if not _SURYA_STACK_AVAILABLE:
+            return None
+
+        for module_name in ("surya", "surya.ocr"):
+            try:
+                module = import_module(module_name)
+            except Exception:
+                continue
+
+            runner = self._locate_callable(
+                module,
+                ("run_ocr", "ocr", "extract", "predict"),
+            )
+            if runner is None:
+                continue
+
+            return lambda image_bytes, runner=runner: self._invoke_backend_callable(
+                runner,
+                image_bytes,
+            )
+
+        return None
+
+    def _build_doctr_backend(self) -> Callable[[bytes], Any] | None:
+        if not _DOCTR_STACK_AVAILABLE:
+            return None
+
+        for module_name in ("doctr", "doctr.models", "doctr.io"):
+            try:
+                module = import_module(module_name)
+            except Exception:
+                continue
+
+            factory = self._locate_callable(
+                module,
+                ("ocr_predictor", "predictor", "run_ocr", "ocr", "extract"),
+            )
+            if factory is None:
+                continue
+
+            backend_callable = self._instantiate_backend_factory(factory)
+            def backend(image_bytes: bytes, backend_callable=backend_callable) -> Any:
+                return self._invoke_backend_callable(backend_callable, image_bytes)
+
+            return backend
+
+        return None
+
+    @staticmethod
+    def _locate_callable(module: Any, candidate_names: Sequence[str]) -> Callable[..., Any] | None:
+        for candidate_name in candidate_names:
+            candidate = getattr(module, candidate_name, None)
+            if callable(candidate):
+                return candidate
+        return None
+
+    @staticmethod
+    def _instantiate_backend_factory(factory: Callable[..., Any]) -> Callable[..., Any]:
+        for kwargs in (
+            {},
+            {"pretrained": True},
+            {"assume_straight_pages": True},
+            {"pretrained": True, "assume_straight_pages": True},
+        ):
+            try:
+                backend = factory(**kwargs)
+            except TypeError:
+                continue
+            except Exception:
+                continue
+            if callable(backend):
+                return backend
+
+        return factory
+
+    def _invoke_backend_callable(
+        self,
+        backend: Callable[..., Any],
+        image_bytes: bytes,
+    ) -> Any:
+        attempts = (
+            lambda: backend(image_bytes),
+            lambda: backend(BytesIO(image_bytes)),
+            lambda: backend([BytesIO(image_bytes)]),
+            lambda: backend([image_bytes]),
+        )
+        last_error: Exception | None = None
+        for attempt in attempts:
+            try:
+                return attempt()
+            except TypeError as exc:
+                last_error = exc
+
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("ocr_backend_invocation_failed")
 
     def _normalize_backend_output(
         self,
@@ -128,28 +292,61 @@ class OcrAdapter:
         document_uuid: UUID,
         source_page: int,
         language_id: str | None,
+        ocr_engine: str,
     ) -> list[dict[str, Any]]:
+        if hasattr(backend_output, "__dict__") and not isinstance(
+            backend_output,
+            (str, bytes, bytearray, Mapping, Sequence),
+        ):
+            public_payload = {
+                key: getattr(backend_output, key)
+                for key in ("rows", "lines", "text", "pages", "blocks", "predictions", "result")
+                if hasattr(backend_output, key)
+            }
+            if public_payload:
+                return self._normalize_backend_output(
+                    public_payload,
+                    document_uuid=document_uuid,
+                    source_page=source_page,
+                    language_id=language_id,
+                    ocr_engine=ocr_engine,
+                )
+
         if isinstance(backend_output, Mapping):
-            if "rows" in backend_output:
-                return self._normalize_rows(
-                    backend_output["rows"],
+            for key in ("rows", "lines", "text", "pages", "blocks", "predictions", "result"):
+                if key not in backend_output:
+                    continue
+                value = backend_output[key]
+                if key == "rows":
+                    return self._normalize_rows(
+                        value,
+                        document_uuid=document_uuid,
+                        source_page=source_page,
+                        language_id=language_id,
+                        ocr_engine=ocr_engine,
+                    )
+                if key == "lines":
+                    return self._rows_from_lines(
+                        value,
+                        document_uuid=document_uuid,
+                        source_page=source_page,
+                        language_id=language_id,
+                        ocr_engine=ocr_engine,
+                    )
+                if key == "text":
+                    return self._rows_from_lines(
+                        self._collect_lines(ocr_text=str(value)),
+                        document_uuid=document_uuid,
+                        source_page=source_page,
+                        language_id=language_id,
+                        ocr_engine=ocr_engine,
+                    )
+                return self._normalize_backend_output(
+                    value,
                     document_uuid=document_uuid,
                     source_page=source_page,
                     language_id=language_id,
-                )
-            if "lines" in backend_output:
-                return self._rows_from_lines(
-                    backend_output["lines"],
-                    document_uuid=document_uuid,
-                    source_page=source_page,
-                    language_id=language_id,
-                )
-            if "text" in backend_output:
-                return self._rows_from_lines(
-                    self._collect_lines(ocr_text=str(backend_output["text"])),
-                    document_uuid=document_uuid,
-                    source_page=source_page,
-                    language_id=language_id,
+                    ocr_engine=ocr_engine,
                 )
 
         if isinstance(backend_output, str):
@@ -158,10 +355,12 @@ class OcrAdapter:
                 document_uuid=document_uuid,
                 source_page=source_page,
                 language_id=language_id,
+                ocr_engine=ocr_engine,
             )
 
         if isinstance(backend_output, Sequence) and not isinstance(
-            backend_output, (bytes, bytearray, str)
+            backend_output,
+            (bytes, bytearray, str),
         ):
             if all(isinstance(item, str) for item in backend_output):
                 return self._rows_from_lines(
@@ -169,6 +368,7 @@ class OcrAdapter:
                     document_uuid=document_uuid,
                     source_page=source_page,
                     language_id=language_id,
+                    ocr_engine=ocr_engine,
                 )
             if all(isinstance(item, Mapping) for item in backend_output):
                 return self._normalize_rows(
@@ -176,7 +376,22 @@ class OcrAdapter:
                     document_uuid=document_uuid,
                     source_page=source_page,
                     language_id=language_id,
+                    ocr_engine=ocr_engine,
                 )
+
+            rows: list[dict[str, Any]] = []
+            for item in backend_output:
+                rows.extend(
+                    self._normalize_backend_output(
+                        item,
+                        document_uuid=document_uuid,
+                        source_page=source_page,
+                        language_id=language_id,
+                        ocr_engine=ocr_engine,
+                    )
+                )
+            if rows:
+                return rows
 
         raise RuntimeError("ocr_backend_returned_unsupported_payload")
 
@@ -187,6 +402,7 @@ class OcrAdapter:
         document_uuid: UUID,
         source_page: int,
         language_id: str | None,
+        ocr_engine: str,
     ) -> list[dict[str, Any]]:
         normalized_rows: list[dict[str, Any]] = []
         for index, row in enumerate(ocr_rows):
@@ -197,6 +413,7 @@ class OcrAdapter:
                     source_page=source_page,
                     language_id=language_id,
                     row_index=index,
+                    ocr_engine=ocr_engine,
                 )
             )
         return normalized_rows
@@ -208,6 +425,7 @@ class OcrAdapter:
         document_uuid: UUID,
         source_page: int,
         language_id: str | None,
+        ocr_engine: str,
     ) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         for index, line in enumerate(lines):
@@ -236,7 +454,7 @@ class OcrAdapter:
                 "language_id": language_id,
                 "extraction_confidence": 0.55 if value_string or unit_string else 0.35,
                 "lane_type": "image_beta",
-                "ocr_engine": "beta_adapter",
+                "ocr_engine": ocr_engine,
             }
             rows.append(row)
 
@@ -250,10 +468,11 @@ class OcrAdapter:
         source_page: int,
         language_id: str | None,
         row_index: int,
+        ocr_engine: str,
     ) -> dict[str, Any]:
         normalized_row = deepcopy(dict(row))
 
-        row_document_id = normalized_row.get("document_id", document_uuid)
+        row_document_id = normalized_row.get("document_id") or document_uuid
         row_document_uuid = self._coerce_document_id(row_document_id, b"")
         raw_text = self._clean_text(
             normalized_row.get("raw_text")
@@ -321,7 +540,7 @@ class OcrAdapter:
             ),
         )
         normalized_row.setdefault("lane_type", "image_beta")
-        normalized_row.setdefault("ocr_engine", "beta_adapter")
+        normalized_row.setdefault("ocr_engine", ocr_engine)
         return normalized_row
 
     @staticmethod
@@ -387,4 +606,4 @@ class OcrAdapter:
         return sha256(payload.encode("utf-8")).hexdigest()
 
 
-__all__ = ["OcrAdapter"]
+__all__ = ["OcrAdapter", "OcrPromotionDecision"]

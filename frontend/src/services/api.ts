@@ -19,3 +19,7 @@ export async function getPatientArtifact(jobId: string): Promise<Response> {
 export async function getClinicianArtifact(jobId: string): Promise<Response> {
   return fetch(`${BASE_URL}/artifacts/${jobId}/clinician`);
 }
+
+export async function getClinicianPdf(jobId: string): Promise<Response> {
+  return fetch(`${BASE_URL}/artifacts/${jobId}/clinician/pdf`);
+}

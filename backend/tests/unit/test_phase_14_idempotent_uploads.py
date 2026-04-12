@@ -56,6 +56,7 @@ if "app.db.session" not in sys.modules:
     sys.modules["app.db.session"] = db_session_stub
 
 from app.api.routes import upload as upload_route
+from tests.support.pdf_builder import build_text_pdf
 
 
 class _DummyUploadFile:
@@ -141,7 +142,7 @@ def test_upload_route_reuses_existing_job_for_same_idempotency_key(
             _DummyUploadFile(
                 filename="report.pdf",
                 content_type="application/pdf",
-                payload=b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
+                payload=build_text_pdf(["Glucose 180 mg/dL"]),
             ),
             session_factory=lambda: _DummySessionContext(session),
         )

@@ -35,6 +35,7 @@ from app.schemas.artifact import SupportBanner, TrustStatus
 from app.services.analyte_resolver import AnalyteResolver
 from app.services.artifact_renderer import ArtifactRenderer
 from app.services.benchmark import BenchmarkRecorder
+from app.services.clinician_pdf import clinician_pdf_route, write_clinician_pdf
 from app.services.comparable_history import ComparableHistoryService
 from app.services.explanation import ExplanationAdapter
 from app.services.extraction_qa import ExtractionQA
@@ -57,6 +58,10 @@ _SUPPORTED_LANES = {"trusted_pdf", "image_beta", "structured"}
 _PARSER_VERSION_TRUSTED = "trusted-pdf-v1"
 _PARSER_VERSION_IMAGE_BETA = "image-beta-bypass"
 _OCR_VERSION_IMAGE_BETA = "beta-adapter-v1"
+_ADAPTER_VERSION = "family-adapter-v1"
+_ROW_ASSEMBLY_VERSION = "row-assembly-v1"
+_ROW_TYPE_RULE_SET_VERSION = "row-type-rules-v1"
+_FORMULA_VERSION = "formula-v1"
 _TERMINOLOGY_RELEASE_DEFAULT = "seeded-demo-2026-04-10"
 _MAPPING_THRESHOLD_DEFAULT = {"default": 0.9}
 _UNIT_ENGINE_VERSION = "ucum-v1"
@@ -133,6 +138,10 @@ def _build_lineage_payload(
         "parser_version": (
             _PARSER_VERSION_TRUSTED if lane_type == "trusted_pdf" else _PARSER_VERSION_IMAGE_BETA
         ),
+        "adapter_version": _ADAPTER_VERSION,
+        "row_assembly_version": _ROW_ASSEMBLY_VERSION,
+        "row_type_rule_set_version": _ROW_TYPE_RULE_SET_VERSION,
+        "formula_version": _FORMULA_VERSION,
         "ocr_version": _OCR_VERSION_IMAGE_BETA if lane_type == "image_beta" else None,
         "terminology_release": terminology_release,
         "mapping_threshold_config": _MAPPING_THRESHOLD_DEFAULT,
@@ -167,6 +176,10 @@ def _build_persistence_payloads(
         "lineage_run": {
             "source_checksum": lineage["source_checksum"],
             "parser_version": lineage["parser_version"],
+            "adapter_version": lineage.get("adapter_version"),
+            "row_assembly_version": lineage.get("row_assembly_version"),
+            "row_type_rule_set_version": lineage.get("row_type_rule_set_version"),
+            "formula_version": lineage.get("formula_version"),
             "ocr_version": lineage["ocr_version"],
             "terminology_release": lineage["terminology_release"],
             "mapping_threshold_config": lineage["mapping_threshold_config"],
@@ -200,11 +213,8 @@ def _assemble_result(
 ) -> dict:
     return {
         "job_id": job_id,
-        "status": (
-            "completed"
-            if qa_result["passed"] and patient_artifact["support_banner"] == "fully_supported"
-            else "partial"
-        ),
+        "status": "completed" if patient_artifact["support_banner"] == "fully_supported" else "partial",
+        "step": PipelineStep.LINEAGE_PERSIST.value,
         "lane_type": lane_type,
         "qa": qa_result,
         "observations": observations,
@@ -232,6 +242,7 @@ def _build_proof_pack(
         artifact_refs={
             "patient_artifact": f"/api/artifacts/{job_uuid}/patient",
             "clinician_artifact": f"/api/artifacts/{job_uuid}/clinician",
+            "clinician_pdf": clinician_pdf_route(job_uuid),
             "job_status": f"/api/jobs/{job_uuid}",
             "proof_pack": proof_pack_route(job_uuid),
         },
@@ -303,6 +314,7 @@ class PipelineOrchestrator:
                 analyte_resolver=analyte_resolver,
                 ucum_engine=ucum_engine,
             )
+            normalized_observations = _attach_derived_source_links(normalized_observations)
             panels = panel_reconstructor.reconstruct(normalized_observations)
             findings = rule_engine.evaluate(normalized_observations, patient_context)
             findings = severity_policy.assign(findings, patient_context)
@@ -336,6 +348,7 @@ class PipelineOrchestrator:
                 render_context,
                 observations=normalized_observations,
             )
+            write_clinician_pdf(job_uuid, clinician_artifact)
             snapshot_metadata = get_loaded_snapshot_metadata()
             terminology_release = (
                 snapshot_metadata.get("release", _TERMINOLOGY_RELEASE_DEFAULT)
@@ -385,6 +398,7 @@ class PipelineOrchestrator:
                 benchmark,
             )
             result["proof_pack_ref"] = proof_pack_route(job_uuid)
+            result["clinician_pdf_ref"] = clinician_pdf_route(job_uuid)
             result["proof_pack"] = proof_pack
 
             if db_session is not None:
@@ -551,6 +565,14 @@ async def _persist_row_level_entities(
             raw_value_string=row.get("raw_value_string"),
             raw_unit_string=row.get("raw_unit_string"),
             raw_reference_range=row.get("raw_reference_range"),
+            source_block_id=row.get("block_id"),
+            source_row_id=str((row.get("candidate_trace") or {}).get("segment_index"))
+            if isinstance(row.get("candidate_trace"), dict) and (row.get("candidate_trace") or {}).get("segment_index") is not None
+            else row.get("source_row_id"),
+            row_type=row.get("row_type"),
+            block_type=row.get("page_class"),
+            family_adapter_id=row.get("family_adapter_id"),
+            failure_code=row.get("failure_code"),
             extraction_confidence=row.get("extraction_confidence"),
         )
         extracted_row_ids_by_row_hash[str(row["row_hash"])] = persisted_row.id
@@ -577,6 +599,20 @@ async def _persist_row_level_entities(
             raw_value_string=observation.get("raw_value_string"),
             raw_unit_string=observation.get("raw_unit_string"),
             parsed_numeric_value=observation.get("parsed_numeric_value"),
+            source_block_id=observation.get("source_block_id") or observation.get("block_id"),
+            source_row_id=observation.get("source_row_id"),
+            row_type=observation.get("row_type"),
+            measurement_kind=observation.get("measurement_kind"),
+            support_code=observation.get("support_code"),
+            failure_code=observation.get("failure_code"),
+            family_adapter_id=observation.get("family_adapter_id"),
+            parsed_locale=_compact_parsed_locale(observation.get("parsed_locale")),
+            parsed_comparator=observation.get("parsed_comparator"),
+            primary_result=observation.get("primary_result"),
+            secondary_result=observation.get("secondary_result"),
+            candidate_trace=observation.get("candidate_trace"),
+            derived_formula_id=observation.get("derived_formula_id"),
+            source_observation_ids=observation.get("source_observation_ids"),
             accepted_analyte_code=observation.get("accepted_analyte_code"),
             accepted_analyte_display=observation.get("accepted_analyte_display"),
             specimen_context=observation.get("specimen_context"),
@@ -646,6 +682,29 @@ def _enum_value(value: object) -> object:
     return value
 
 
+def _compact_parsed_locale(value: object) -> str | None:
+    if isinstance(value, dict):
+        decimal_separator = str(value.get("decimal_separator") or "").strip()
+        thousands_separator = str(value.get("thousands_separator") or "").strip()
+        normalized = bool(value.get("normalized"))
+        parts: list[str] = []
+        if decimal_separator == ",":
+            parts.append("decimal_comma")
+        elif decimal_separator == ".":
+            parts.append("decimal_dot")
+        if thousands_separator == ",":
+            parts.append("thousands_comma")
+        elif thousands_separator == ".":
+            parts.append("thousands_dot")
+        if normalized:
+            parts.append("normalized")
+        return "+".join(parts) or None
+    if value is None:
+        return None
+    rendered = str(value).strip()
+    return rendered or None
+
+
 def _stable_identifier(value: str, *, max_length: int = 64) -> str:
     if len(value) <= max_length:
         return value
@@ -681,48 +740,135 @@ def _normalize_observations(
         resolver_result = analyte_resolver.resolve(
             raw_label=updated["raw_analyte_label"],
             context={
+                "row_type": updated.get("row_type"),
+                "measurement_kind": updated.get("measurement_kind"),
+                "family_adapter_id": updated.get("family_adapter_id"),
                 "specimen_context": updated.get("specimen_context"),
                 "language_id": updated.get("language_id"),
+                "raw_unit_string": updated.get("raw_unit_string"),
+                "primary_result": updated.get("primary_result"),
+                "source_observation_ids": updated.get("source_observation_ids"),
+                "derived_formula_id": updated.get("derived_formula_id"),
             },
         )
         updated["candidates"] = resolver_result["candidates"]
         updated["support_state"] = resolver_result["support_state"]
+        if "support_code" in resolver_result:
+            updated["support_code"] = resolver_result.get("support_code")
+        if "failure_code" in resolver_result:
+            updated["failure_code"] = resolver_result.get("failure_code")
+        updated["candidate_trace"] = resolver_result.get("candidate_trace") or updated.get(
+            "candidate_trace"
+        )
 
         accepted_candidate = resolver_result.get("accepted_candidate")
         if accepted_candidate is not None:
             updated["accepted_analyte_code"] = accepted_candidate["candidate_code"]
             updated["accepted_analyte_display"] = accepted_candidate["candidate_display"]
 
-        parsed_numeric_value = updated.get("parsed_numeric_value")
-        raw_value_string = updated.get("raw_value_string")
-        numeric_value = parsed_numeric_value
-        if numeric_value is None and raw_value_string not in (None, ""):
-            numeric_value = float(str(raw_value_string))
-            updated["parsed_numeric_value"] = numeric_value
+        primary_result = (
+            dict(updated["primary_result"])
+            if isinstance(updated.get("primary_result"), dict)
+            else None
+        )
+        secondary_result = (
+            dict(updated["secondary_result"])
+            if isinstance(updated.get("secondary_result"), dict)
+            else None
+        )
 
-        raw_unit_string = updated.get("raw_unit_string")
-        if numeric_value is not None and raw_unit_string:
-            if _is_launch_scope_kidney_unit(raw_unit_string):
-                updated["canonical_value"] = float(numeric_value)
-                updated["canonical_unit"] = str(raw_unit_string)
-            else:
-                try:
-                    conversion = ucum_engine.validate_and_convert(
-                        float(numeric_value),
-                        str(raw_unit_string),
-                        str(raw_unit_string),
-                    )
-                    updated["canonical_value"] = conversion["canonical_value"]
-                    updated["canonical_unit"] = conversion["canonical_unit"]
-                except ValueError as exc:
+        if primary_result is not None:
+            try:
+                normalized_channels = ucum_engine.normalize_dual_unit_channels(
+                    primary_result,
+                    secondary_result,
+                )
+                updated["primary_result"] = normalized_channels["primary_result"]
+                updated["secondary_result"] = normalized_channels["secondary_result"]
+                updated["canonical_value"] = normalized_channels["canonical_value"]
+                updated["canonical_unit"] = normalized_channels["canonical_unit"]
+                updated["parsed_numeric_value"] = normalized_channels["primary_result"].get(
+                    "normalized_numeric_value"
+                )
+                updated["parsed_locale"] = _compact_parsed_locale(
+                    normalized_channels["primary_result"].get("parse_locale")
+                )
+                updated["parsed_comparator"] = normalized_channels["primary_result"].get(
+                    "normalized_comparator"
+                )
+                if normalized_channels.get("failure_code") is not None:
                     updated["support_state"] = "partial"
-                    updated["suppression_reasons"] = sorted(
-                        {*(updated.get("suppression_reasons") or []), str(exc)}
-                    )
+                    updated["support_code"] = normalized_channels.get("support_code")
+                    updated["failure_code"] = normalized_channels.get("failure_code")
+            except ValueError as exc:
+                updated["support_state"] = "partial"
+                updated["support_code"] = "partial_result"
+                updated["failure_code"] = "unit_parse_fail"
+                updated["suppression_reasons"] = sorted(
+                    {*(updated.get("suppression_reasons") or []), str(exc)}
+                )
 
         normalized_observations.append(updated)
 
     return normalized_observations
+
+
+def _attach_derived_source_links(observations: list[dict]) -> list[dict]:
+    observations_by_display: dict[str, list[dict]] = {}
+    for observation in observations:
+        display = str(observation.get("accepted_analyte_display") or "").strip().lower()
+        if display:
+            observations_by_display.setdefault(display, []).append(observation)
+
+    def _source_ids(*candidate_labels: str) -> list[UUID]:
+        source_ids: list[UUID] = []
+        for label in candidate_labels:
+            for source_observation in observations_by_display.get(label, []):
+                source_id = source_observation.get("id")
+                if source_id is None:
+                    continue
+                if not isinstance(source_id, UUID):
+                    source_id = UUID(str(source_id))
+                if source_id not in source_ids:
+                    source_ids.append(source_id)
+        return source_ids
+
+    for observation in observations:
+        display = str(observation.get("accepted_analyte_display") or "").strip().lower()
+        if display == "egfr":
+            source_ids = _source_ids("creatinine")
+            if source_ids:
+                observation["measurement_kind"] = "derived"
+                observation["derived_formula_id"] = (
+                    observation.get("derived_formula_id") or "reported_egfr_creatinine_link_v1"
+                )
+                observation["source_observation_ids"] = source_ids
+                observation["candidate_trace"] = [
+                    *(observation.get("candidate_trace") or []),
+                    {
+                        "stage": "derived_source_link",
+                        "status": "bound",
+                        "detail": "creatinine",
+                    },
+                ]
+        if display == "acr":
+            source_ids = _source_ids("urine albumin", "urine creatinine")
+            if source_ids:
+                observation["measurement_kind"] = "derived"
+                observation["derived_formula_id"] = (
+                    observation.get("derived_formula_id") or "reported_acr_ratio_link_v1"
+                )
+                observation["source_observation_ids"] = source_ids
+                observation["candidate_trace"] = [
+                    *(observation.get("candidate_trace") or []),
+                    {
+                        "stage": "derived_source_link",
+                        "status": "bound",
+                        "detail": "urine_albumin+urine_creatinine",
+                    },
+                ]
+
+    return observations
 
 
 def _support_banner(observations: list[dict]) -> str:

@@ -1,0 +1,342 @@
+{
+  "contract_version": "v11-corpus-manifest-v1",
+  "corpus_root": "pdfs_by_difficulty",
+  "files": [
+    {
+      "path": "easy/seed_innoquest_dbticbm.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "innoquest_bilingual_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_innoquest_standard_sample_report.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "innoquest_standard",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_labcorp_cd4_cd8_sample.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "labcorp_cd4_cd8",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_labtestingapi_sample_report.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "labtestingapi_standard",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_quest_cardioiq_annotation_sample.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "quest_cardioiq",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_quest_diabetes_risk_panel_sample.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "quest_diabetes_risk_panel",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_quest_vitamin_d_out_of_range_sample.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "quest_vitamin_d",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_ulta_sample_alt.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "ulta_alt",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_ulta_sample_general_2dd28.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "ulta_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_ulta_sample_general_ae0623.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "ulta_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_ulta_sample_general_b709e5.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "ulta_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_ulta_sample_general_fbbed0.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "ulta_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_ulta_sample_hba1c_ca990c.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "ulta_hba1c",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "easy/seed_ulta_sample_psa_435d98.pdf",
+      "difficulty": "easy",
+      "kind": "pdf",
+      "family": "ulta_psa",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "hard/var_hod_ultrasound_image_only_pdf.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "hod_ultrasound",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "hard/var_innoquest_cardiometabolic_mixed_page_order.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "innoquest_cardiometabolic",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "partial"
+    },
+    {
+      "path": "hard/var_innoquest_dbticbm_threshold_conflict_annotation.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "innoquest_bilingual_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "partial"
+    },
+    {
+      "path": "hard/var_innoquest_dbticrp_missing_demographics.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "innoquest_bilingual_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "partial"
+    },
+    {
+      "path": "hard/var_quest_alt_mixed_en_vi_overlay.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "ulta_alt",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "partial"
+    },
+    {
+      "path": "hard/var_quest_cardioiq_comma_decimal_locale.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "quest_cardioiq",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "hard/var_quest_mayo_merged_two_reports.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "quest_diabetes_risk_panel",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "partial"
+    },
+    {
+      "path": "hard/var_roswell_pathology_lowres_scan.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "roswell_pathology",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "hard/var_singapore_mr_password_protected.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "singapore_medical_report",
+      "expected_lane": "unsupported",
+      "expected_outcome": "unsupported"
+    },
+    {
+      "path": "hard/var_sterling_pathology_two_column_crop.pdf",
+      "difficulty": "hard",
+      "kind": "pdf",
+      "family": "sterling_pathology",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "medium/seed_ailife_pathology_sample.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "ailife_pathology",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "medium/seed_cap_patient_centered_pathology_report.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "cap_pathology",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "medium/seed_hod_ultrasound_sample_report.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "hod_ultrasound",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "medium/seed_innoquest_bilingual_2dbtica.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "innoquest_bilingual_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "medium/seed_innoquest_cardiometabolic_risks.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "innoquest_cardiometabolic",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "medium/seed_innoquest_dbtic1dm.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "innoquest_bilingual_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "medium/seed_innoquest_dbticcm.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "innoquest_bilingual_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "medium/seed_innoquest_dbticrp.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "innoquest_bilingual_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "medium/seed_innoquest_pdia.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "innoquest_bilingual_general",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "medium/seed_personal_health_report_sample.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "personal_health_report",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "medium/seed_roswell_sample_pathology_report.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "roswell_pathology",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "medium/seed_singapore_medical_report_sample.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "singapore_medical_report",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "medium/seed_sterlingaccuris_pathology_sample_report.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "sterling_pathology",
+      "expected_lane": "image_beta",
+      "expected_outcome": "beta_supported"
+    },
+    {
+      "path": "medium/var_innoquest_duplicate_pages.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "innoquest_standard",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "supported"
+    },
+    {
+      "path": "medium/var_labcorp_halfpage_missing_footer.pdf",
+      "difficulty": "medium",
+      "kind": "pdf",
+      "family": "labcorp_cd4_cd8",
+      "expected_lane": "trusted_pdf",
+      "expected_outcome": "partial"
+    },
+    {
+      "path": "download_results.json",
+      "difficulty": null,
+      "kind": "metadata",
+      "family": null,
+      "expected_lane": null,
+      "expected_outcome": null
+    },
+    {
+      "path": "download_summary.txt",
+      "difficulty": null,
+      "kind": "metadata",
+      "family": null,
+      "expected_lane": null,
+      "expected_outcome": null
+    },
+    {
+      "path": "failed_downloads.csv",
+      "difficulty": null,
+      "kind": "metadata",
+      "family": null,
+      "expected_lane": null,
+      "expected_outcome": null
+    }
+  ]
+}

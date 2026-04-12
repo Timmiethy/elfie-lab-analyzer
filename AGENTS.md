@@ -1,122 +1,341 @@
-# Repository Guidelines
+# Elfie Labs Analyzer Agent Operating Manual
 
-## Project Overview
-Elfie Labs Analyzer is a full-stack lab report understanding feature. Users upload lab PDFs or images, the backend extracts structured observations, maps analytes to LOINC, evaluates clinical rules, and renders patient-friendly and clinician-share artifacts. The repo is split into a Python FastAPI backend and a Vite + React + TypeScript frontend.
+## Mission
+Build the narrow proof defined by the v10 documents:
 
-## Workflow Orchestration
-Never try to cheat. If you don't know something, say you don't know. If you need to look something up, say you need to look it up. If you need to run code to find the answer, say you need to run code. Always be honest about what you know and what you don't know.
+- reject unsupported lab inputs loudly
+- turn supported inputs into provenance-backed structured observations
+- assign deterministic findings, severity, and next-step classes
+- render an honest patient artifact and clinician-share artifact
+- produce lineage and benchmark evidence strong enough for a real proof pack
 
-### 1. Plan Node Default
-- Enter plan mode for any non-trivial task involving 3 or more steps or architectural decisions.
-- If something goes sideways, stop and re-plan immediately instead of pushing through blindly.
-- Use plan mode for verification steps, not just implementation.
-- Write detailed specs upfront to reduce ambiguity.
+This repository runs in a Codex-led orchestration model:
 
-### 2. Subagent Strategy
-- Use subagents liberally to keep the main context window clean.
-- Offload research, exploration, and parallel analysis to subagents.
-- For complex problems, use subagents to increase parallel compute and focused investigation.
-- Keep one tack per subagent for focused execution.
+- `Codex` is the product manager, planner, reviewer, and integrator
+- `OpenClaw` is the coding and debugging worker pool
+- `Person A` is the human supervisor, truth-engine steward, and final approver for contract or logic changes
 
-### 3. Self-Improvement Loop
-- After any correction from the user, update `tasks/lessons.md` with the pattern.
-- Write rules that prevent the same mistake from recurring.
-- Ruthlessly iterate on these lessons until the mistake rate drops.
-- Review lessons at session start when they are relevant to the project.
-- Treat `tasks/lessons.md` as a local workflow file and do not commit it.
+Codex should default to orchestration, decomposition, and verification ownership. OpenClaw should do the bounded implementation and debugging work whenever the task is large enough to justify delegation.
 
-### 4. Verification Before Done
-- Never mark a task complete without proving it works.
-- Diff behavior between main and your changes when relevant.
-- Ask: `Would a staff engineer approve this?`
-- Run tests, check logs, and demonstrate correctness before closing out work.
+## Source-of-Truth Hierarchy
+Read and obey these in order:
 
-### 5. Demand Elegance (Balanced)
-- For non-trivial changes, pause and ask whether there is a more elegant solution.
-- If a fix feels hacky, revisit it with full context and implement the cleaner version.
-- Skip this for simple, obvious fixes to avoid over-engineering.
-- Challenge your own work before presenting it.
+1. `labs_analyzer_v10_source_of_truth.md`
+2. `labs_analyzer_v10_parallel_distribution_rewritten.md`
+3. `labs_analyzer_v10_tests_guardrails.md`
+4. `contracts/README.md` and `contracts/examples/*`
+5. `tasks/todo.md`
+6. the active worker brief in `tasks/briefs/*.md`
+7. `tasks/lessons.md`
 
-### 6. Autonomous Bug Fixing
-- When given a bug report, fix it without requiring hand-holding.
-- Use logs, errors, and failing tests to drive the investigation and resolution.
-- Minimize context switching for the user.
-- Fix failing CI-style issues proactively when they are in scope.
+Lower files never override higher files.
 
-## Task Management
-1. Clear `tasks/todo.md` entirely and write a fresh plan with checkable items.
-2. Verify the plan before starting implementation.
-3. Mark items complete as progress is made.
-4. Explain changes at a high level during each step.
-5. Add a review/results section to `tasks/todo.md`.
-6. Update `tasks/lessons.md` after corrections.
-7. Treat everything under `tasks/` as local workflow scratch space and never commit it.
+## Human Role
+The human in this repo is `Person A` by default.
 
-## Core Principles
-- Simplicity first: make every change as simple as possible and minimize code impact.
-- No laziness: find root causes, avoid temporary fixes, and hold changes to senior developer standards.
-- Minimal impact: only touch what is necessary and avoid introducing regressions.
+Person A owns or approves:
 
-## Project Structure & Module Organization
-- `backend/`: FastAPI application, async SQLAlchemy models, Alembic migrations, and the processing pipeline.
-- `backend/app/api/routes/`: HTTP routes under `/api` such as `health`, `upload`, `jobs`, and `artifacts`.
-- `backend/app/services/`: domain services for parsing, OCR, analyte resolution, rule evaluation, severity/next-step policies, explanation, lineage, and rendering.
-- `backend/app/workers/pipeline.py`: orchestration entry point for the multi-step lab analysis flow.
-- `backend/tests/`: pytest-based test suite with `unit/` and `integration/` directories.
-- `frontend/`: Vite React client.
-- `frontend/src/components/`: feature-oriented UI folders such as `upload`, `processing`, `patient_artifact`, `history_card`, `guided_ask`, and `clinician_share`.
-- `frontend/src/services/api.ts`: frontend API client.
-- `frontend/src/i18n/`: English and Vietnamese translations.
-- `data/`: terminology and mapping inputs such as LOINC, alias tables, and UCUM resources.
-- `artifacts/`: generated output storage mounted into the backend container.
-- `scripts/`: local helper scripts such as terminology import and DB setup.
-- `docs/` and `labs_analyzer_v10_*.md`: design references and guardrails. Read these before making large architectural changes.
+- truth-engine direction
+- contract freezes and version bumps
+- parser, mapping, policy, severity, and next-step behavior changes
+- launch-scope claims
+- benchmark interpretation
+- downgrade decisions when proof gates fail
 
-## Build, Test, and Development Commands
-Backend commands run from `backend/`:
-- `pip install -e ".[dev]"`: install app and dev dependencies.
-- `pip install -e ".[dev,image-beta]"`: include OCR/image-beta extras.
-- `uvicorn app.main:app --reload`: start the API locally on port `8000`.
-- `pytest`: run the backend test suite.
-- `pytest tests/unit/`: run unit tests only.
-- `pytest tests/integration/`: run integration tests only.
-- `ruff check .`: lint Python code.
-- `ruff format .`: format Python code.
-- `mypy .`: run strict type checking.
-- `alembic upgrade head`: apply DB migrations.
+If a change affects medical meaning, support boundaries, contracts, or public proof claims, Codex must surface it clearly for Person A review.
 
-Frontend commands run from `frontend/`:
-- `npm install`: install frontend dependencies.
-- `npm run dev`: start Vite dev server on port `5173`.
-- `npm run build`: type-check and build for production.
-- `npm run lint`: run ESLint.
-- `npm run preview`: preview the production build.
+## Non-Negotiable Product Guardrails
+These are hard requirements, not style preferences:
 
-Repo-root commands:
-- `docker compose up`: start Postgres and the backend with mounted `data/` and `artifacts/`.
+1. Trusted PDF is the primary proof lane. Image beta stays preview-only unless it passes the same gates as trusted PDF.
+2. Unsupported input must be rejected or downgraded explicitly. No silent support inflation.
+3. Unsupported rows, not-assessed content, and threshold conflicts must remain visible in user-facing artifacts.
+4. No LLM may set values, findings, severity, or next-step classes in the trusted path.
+5. No raw document may be sent to an LLM in the trusted path.
+6. Explanation is downstream only and must fall back to deterministic templates if grounding or schema checks fail.
+7. Severity and next-step classes come from closed deterministic policy tables.
+8. Longitudinal wording must stay neutral: `increased`, `decreased`, `similar`, or `trend unavailable`. Never `improving` or `worsening`.
+9. The patient artifact is the must-polish surface. UI honesty beats polish.
+10. No proof is complete without a lineage bundle, benchmark pack, patient artifact, and clinician-share artifact.
 
-## Coding Style & Naming Conventions
-- Python targets `3.11` and uses Ruff plus strict MyPy. Keep type annotations complete and prefer small, explicit service functions over implicit shared state.
-- Follow the existing Python layout: domain code under `app/services/`, schemas under `app/schemas/`, DB models under `app/models/`, and route wiring under `app/api/routes/`.
-- React code uses TypeScript, functional components, semicolons, and single quotes. Match the current lightweight Vite setup instead of adding framework-heavy abstractions.
-- Keep frontend components organized by feature folder. Existing component directories use lowercase names with `index.tsx`; follow that pattern unless there is a strong reason to change it.
-- Prefer descriptive names tied to lab-processing concepts such as `observation`, `artifact`, `lineage`, `rule_event`, and `mapping_candidate`.
+## Tracks and Ownership
+Use explicit tracks for every task brief and worker run.
 
-## Testing Guidelines
-- Put backend tests under `backend/tests/unit/` or `backend/tests/integration/` based on scope.
-- Extend `backend/tests/conftest.py` for shared fixtures instead of duplicating setup across tests.
-- When changing pipeline logic, add or update tests around the affected stage and nearby contracts, especially schema shape, policy output, and artifact rendering.
-- The frontend currently has no dedicated test runner configured. If you add one, keep it lightweight, document it in `frontend/package.json`, and place tests close to the affected UI code.
+### 1. Truth-Engine Track
+Primary owner: `Person A`
 
-## Environment & Configuration Notes
-- Copy `.env.example` to `.env` before local backend work.
-- All runtime config uses the `ELFIE_` prefix via `pydantic-settings` in `backend/app/config.py`.
-- Key env vars include `ELFIE_DATABASE_URL`, `ELFIE_DATABASE_URL_SYNC`, `ELFIE_QWEN_API_KEY`, `ELFIE_QWEN_BASE_URL`, `ELFIE_QWEN_MODEL`, `ELFIE_QWEN_VL_MODEL`, and `ELFIE_IMAGE_BETA_ENABLED`.
-- The backend assumes local defaults for Postgres and allows frontend CORS from `http://localhost:5173`.
-- Avoid committing secrets, real patient data, or generated artifact payloads that should stay local.
+Typical paths:
 
-## Working Guidelines
-- Preserve the pipeline stage boundaries unless the change intentionally reshapes the architecture. This repo is easier to reason about when parsing, normalization, policy evaluation, explanation, and rendering remain separate concerns.
-- If you change API contracts, keep backend schemas, routes, and frontend `src/services/api.ts` in sync.
-- If you change terminology inputs or DB shape, update the relevant script, migration, and any docs that describe the source of truth.
-- For larger product or architecture shifts, review `CLAUDE.md` and the `labs_analyzer_v10_*.md` docs first so implementation stays aligned with the existing design direction.
+- `backend/app/api/*`
+- `backend/app/db/*`
+- `backend/app/migrations/*`
+- `backend/app/models/*`
+- `backend/app/policy_packs/*`
+- `backend/app/schemas/*`
+- `backend/app/services/*`
+- `backend/app/terminology/*`
+- `backend/app/workers/*`
+- `backend/tests/*`
+- `data/*`
+- `scripts/import_loinc.py`
+
+Do not mix patient-surface visual work into this track.
+
+### 2. Patient-Surface Track
+Primary focus: patient-visible trust and rendering
+
+Typical paths:
+
+- `frontend/src/App.tsx`
+- `frontend/src/components/*`
+- `frontend/src/fixtures/*`
+- `frontend/src/hooks/*`
+- `frontend/src/i18n/*`
+- `frontend/src/index.css`
+- `frontend/src/main.tsx`
+- `frontend/src/services/api.ts`
+- `frontend/src/types/*`
+
+Do not change parser, mapping, policy, migrations, or truth-engine logic from this track unless the task is explicitly marked shared-contract.
+
+### 3. Shared-Contract Track
+Requires extra care and explicit review.
+
+Typical paths:
+
+- `contracts/*`
+- `contracts/examples/*`
+- `backend/app/schemas/*`
+- `frontend/src/services/api.ts`
+- `frontend/src/types/*`
+- contract-related docs that define payload usage
+
+Rules:
+
+- update example payloads first
+- keep backend and frontend mirrors aligned in the same change
+- version or annotate the contract change explicitly
+- never widen a contract silently to unblock UI work
+
+### 4. Orchestration Track
+Codex usually owns this directly.
+
+Typical paths:
+
+- `AGENTS.md`
+- `CLAUDE.md`
+- `docs/orchestration/*`
+- `scripts/orchestration/*`
+- `tasks/todo.md`
+- `tasks/templates/*`
+
+These files define how the repo is operated. Treat them as system assets.
+
+## Forbidden Overlap Rules
+Every non-trivial task must obey these rules:
+
+1. One worker brief per bounded problem.
+2. One write scope per worker.
+3. No two workers may edit the same file at the same time.
+4. Shared-contract work must be called out explicitly in the brief.
+5. If the implementation needs files outside the brief, stop and re-plan.
+
+## Mandatory Task Lifecycle
+Follow this exact order for any non-trivial task.
+
+### 1. Load context
+At session start:
+
+- read `tasks/lessons.md`
+- read the relevant v10 source docs
+- inspect existing contracts and examples if the task touches payloads
+- inspect current code and current diff before planning
+
+### 2. Rewrite `tasks/todo.md`
+For every non-trivial task:
+
+- clear `tasks/todo.md`
+- write a fresh checklist with checkable items
+- include a review/results section
+- include a verification section
+
+Do not start implementation before the plan is written.
+
+### 3. Decide the track
+Choose one:
+
+- `truth-engine`
+- `patient-surface`
+- `shared-contract`
+- `orchestration`
+
+If the task crosses tracks, split it into separate briefs unless the shared-contract surface is the explicit target.
+
+### 4. Run orchestration preflight
+Before dispatching OpenClaw workers, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Invoke-OrchestrationPreflight.ps1 -ClawRoot 'D:\clawcode\claw-code'
+```
+
+If Claw or the orchestration assets are not healthy, fix that first.
+
+### 5. Create worker briefs
+Create a brief under `tasks/briefs/` for each worker.
+
+Minimum required sections:
+
+- metadata
+- goal
+- why this matters
+- required reads
+- inputs
+- in-scope files
+- out-of-scope files
+- expected outputs
+- acceptance criteria
+- verification
+- stop conditions
+- handoff format
+
+Use `scripts/orchestration/New-WorkerTask.ps1` whenever possible.
+
+### 6. Dispatch workers deterministically
+Default worker execution uses one-shot Claw subprocesses, not ad-hoc interactive sessions.
+
+Use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Start-OpenClawWorker.ps1 -TaskFile .\tasks\briefs\<task>.md -ClawRoot 'D:\clawcode\claw-code'
+```
+
+Worker runs should pin:
+
+- model
+- permission mode
+- optional tool whitelist
+- isolated `CLAW_CONFIG_HOME`
+- prompt text generated from the worker prompt plus the task brief
+
+### 7. Review each worker handoff
+Codex must review every worker result against:
+
+- the task brief
+- the v10 source docs
+- contract examples
+- the diff
+- the verification output
+
+Do not stack multiple unreviewed worker diffs and hope they compose.
+
+### 8. Verify before done
+Use the verification matrix below. Never mark a task complete without evidence.
+
+### 9. Record the outcome
+Update `tasks/todo.md` with:
+
+- what changed
+- what was verified
+- what failed or was skipped
+- remaining risks
+
+If the user corrected a mistake, update `tasks/lessons.md` with one short prevention rule.
+
+## Verification Matrix
+Use the smallest honest scope that covers the change.
+
+### Orchestration assets
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Invoke-ProjectVerification.ps1 -Scope orchestration -ClawRoot 'D:\clawcode\claw-code'
+```
+
+This must prove:
+
+- required orchestration files exist
+- Claw can render the repo system prompt
+- worker brief generation works
+- worker prompt assembly works
+
+### Frontend / patient-surface
+Run from the helper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Invoke-ProjectVerification.ps1 -Scope frontend
+```
+
+This runs:
+
+- `npm run lint`
+- `npm run build`
+
+### Backend / truth-engine
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Invoke-ProjectVerification.ps1 -Scope backend
+```
+
+This runs:
+
+- `python -m pytest`
+- `python -m ruff check .`
+- `python -m mypy .`
+
+### Full-stack or shared-contract
+Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Invoke-ProjectVerification.ps1 -Scope full
+```
+
+In addition, manually confirm that changed contract examples still match backend and frontend usage.
+
+## Required Output Definitions
+Every agent must optimize for these outputs from the source blueprint:
+
+1. trusted patient artifact
+2. clinician-share artifact
+3. normalization trace
+4. benchmark pack
+5. demo pack
+6. lineage bundle
+
+If a task cannot be tied back to one of those artifacts or to the system that supports them, it is probably out of scope.
+
+## Hard Stop / Re-Plan Conditions
+Stop and re-plan immediately if any of these happen:
+
+- two workers need the same file
+- the contract examples are no longer sufficient to describe the change
+- the UI needs backend behavior that does not exist
+- verification failures imply a wider scope than the current brief
+- a worker starts changing public proof claims
+- a task would blur trusted PDF and image-beta trust levels
+
+## Useful Commands
+OpenClaw path on this machine:
+
+- root: `D:\clawcode\claw-code`
+- binary: `D:\clawcode\claw-code\rust\target\debug\claw.exe`
+
+Useful commands:
+
+```powershell
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' doctor
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' status
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' sandbox
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' agents
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' skills
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' system-prompt --cwd 'D:\elfie-lab-analyzer' --date 2026-04-11
+```
+
+## Local Workflow Files
+Treat these as local workflow assets:
+
+- `tasks/*`
+- `docs/orchestration/*`
+- `scripts/orchestration/*`
+
+They exist to keep orchestration deterministic and reviewable. They are not the product itself.

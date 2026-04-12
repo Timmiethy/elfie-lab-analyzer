@@ -1,5 +1,5 @@
 {
-  "contract_version": "observation-contract-v1",
+  "contract_version": "observation-contract-v2",
   "job_id": "11111111-1111-1111-1111-111111111111",
   "report_date": "2026-04-10",
   "top_findings": [

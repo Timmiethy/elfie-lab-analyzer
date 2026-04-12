@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from app.schemas.artifact import SupportBanner, TrustStatus
+from app.schemas.artifact import SupportBanner, TrustStatus, UnsupportedReason
 from app.schemas.finding import FindingSchema, NextStepClass, SeverityClass
 
 _SEVERITY_ORDER = {
@@ -46,6 +46,43 @@ _NEXTSTEP_ORDER = {
     NextStepClass.AX: 5,
 }
 
+_VISIBLE_UNSUPPORTED_REASONS = {reason.value for reason in UnsupportedReason}
+_HIDDEN_LABEL_MARKERS = (
+    "date of birth",
+    "dob",
+    "collected",
+    "report printed",
+    "reference range",
+    "threshold table",
+    "threshold-table",
+    "guideline",
+    "narrative",
+    "footer",
+    "header",
+    "page ",
+    "patient name",
+    "mrn",
+    "accession",
+    "sample report",
+    "patient id",
+    "account number",
+    "ordered items",
+    "icon legend",
+    "test request",
+    "ordered",
+    "received",
+    "report date",
+)
+_HIDDEN_REASON_MARKERS = (
+    "admin_metadata_row",
+    "threshold_table_row",
+    "narrative_row",
+    "footer_header_row",
+    "report_metadata_row",
+    "test_request_list",
+    "patient_demographics_row",
+)
+
 
 def _coerce_uuid(value: UUID | str) -> UUID:
     return value if isinstance(value, UUID) else UUID(str(value))
@@ -61,6 +98,38 @@ def _coerce_trust_status(value: TrustStatus | str) -> TrustStatus:
 
 def _normalize_findings(findings: list[dict]) -> list[dict]:
     return [FindingSchema.model_validate(finding).model_dump(mode="json") for finding in findings]
+
+
+def _normalize_text(value: object) -> str:
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def _normalize_not_assessed_reason(reason: object) -> str:
+    normalized = _normalize_text(reason)
+    if normalized in _VISIBLE_UNSUPPORTED_REASONS:
+        return normalized
+    return UnsupportedReason.UNREADABLE_VALUE.value
+
+
+def _is_hidden_not_assessed_label(raw_label: object) -> bool:
+    normalized = _normalize_text(raw_label)
+    if not normalized:
+        return False
+    return any(marker in normalized for marker in _HIDDEN_LABEL_MARKERS)
+
+
+def _is_hidden_not_assessed_reason(reason: object) -> bool:
+    normalized = _normalize_text(reason)
+    return any(marker in normalized for marker in _HIDDEN_REASON_MARKERS)
+
+
+def _make_not_assessed_item(raw_label: object, reason: object) -> dict | None:
+    if _is_hidden_not_assessed_label(raw_label) or _is_hidden_not_assessed_reason(reason):
+        return None
+    return {
+        "raw_label": str(raw_label or "unknown"),
+        "reason": _normalize_not_assessed_reason(reason),
+    }
 
 
 def _severity_rank(severity: SeverityClass) -> int:
@@ -112,17 +181,19 @@ def _make_flagged_cards(findings: list[dict], context: dict) -> list[dict]:
 
 def _make_not_assessed(findings: list[dict], observations: list[dict] | None = None) -> list[dict]:
     items: list[dict] = []
+    seen: set[tuple[str, str]] = set()
     finding_obs_ids: set[str] = set()
     for finding in findings:
-        if finding.get("suppression_active") or (
-            SeverityClass(finding["severity_class"]) == SeverityClass.SX
-        ):
-            items.append(
-                {
-                    "raw_label": finding["rule_id"],
-                    "reason": finding.get("suppression_reason") or "insufficient_support",
-                }
+        if finding.get("suppression_active") or SeverityClass(finding["severity_class"]) == SeverityClass.SX:
+            item = _make_not_assessed_item(
+                finding["rule_id"],
+                finding.get("suppression_reason") or UnsupportedReason.UNREADABLE_VALUE.value,
             )
+            if item is not None:
+                key = (item["raw_label"], item["reason"])
+                if key not in seen:
+                    seen.add(key)
+                    items.append(item)
         for obs_id in finding.get("observation_ids", []):
             finding_obs_ids.add(str(obs_id))
 
@@ -134,43 +205,48 @@ def _make_not_assessed(findings: list[dict], observations: list[dict] | None = N
             if str(support_state or "").lower() != "supported":
                 obs_id = str(observation.get("id", ""))
                 if obs_id not in finding_obs_ids:
-                    items.append(
-                        {
-                            "raw_label": observation.get("raw_analyte_label", "unknown"),
-                            "reason": "insufficient_support",
-                        }
+                    observation_reason = _observation_not_assessed_reason(observation)
+                    item = _make_not_assessed_item(
+                        observation.get("raw_analyte_label", "unknown"),
+                        observation_reason,
                     )
+                    if item is not None:
+                        key = (item["raw_label"], item["reason"])
+                        if key not in seen:
+                            seen.add(key)
+                            items.append(item)
     return items
+
+
+def _observation_not_assessed_reason(observation: dict) -> object:
+    suppression_reasons = observation.get("suppression_reasons") or []
+    if isinstance(suppression_reasons, list):
+        for reason in suppression_reasons:
+            normalized_reason = _normalize_text(reason)
+            if normalized_reason in _VISIBLE_UNSUPPORTED_REASONS:
+                return normalized_reason
+
+    for key in ("suppression_reason", "reason", "support_reason"):
+        reason = observation.get(key)
+        if reason is not None:
+            return reason
+
+    return UnsupportedReason.UNREADABLE_VALUE.value
 
 
 def _apply_comparable_history_not_assessed(
     items: list[dict],
     comparable_history: dict | None,
 ) -> list[dict]:
-    if comparable_history is None:
-        return items
-    if comparable_history.get("comparability_status") != "unavailable":
-        return items
+    """Keep comparable_history structured but never inject synthetic prior-trend rows.
 
-    raw_label = f"prior {_normalize_comparable_history_label(comparable_history)} trend"
-    if any(
-        item.get("reason") == "comparable_history_unavailable"
-        and item.get("raw_label") == raw_label
-        for item in items
-    ):
-        return items
+    v11 guardrails: patient-visible not_assessed must stay tied to unresolved
+    result rows, not missing longitudinal context. When comparable history is
+    unavailable the comparable_history field itself carries the neutral
+    unavailable payload -- nothing needs to appear in not_assessed.
+    """
 
-    return [
-        *items,
-        {
-            "raw_label": raw_label,
-            "reason": "comparable_history_unavailable",
-        },
-    ]
-
-
-def _normalize_comparable_history_label(comparable_history: dict) -> str:
-    return str(comparable_history.get("analyte_display") or "unknown analyte").strip().lower()
+    return items
 
 
 class ArtifactRenderer:
@@ -223,6 +299,7 @@ class ArtifactRenderer:
             "findings": normalized_findings,
             "language_id": context.get("language_id", "en"),
             "comparable_history": comparable_history,
+            "trace_refs": context.get("trace_refs"),
         }
 
     def render_clinician(
@@ -254,4 +331,5 @@ class ArtifactRenderer:
             "trust_status": _coerce_trust_status(context.get("trust_status", TrustStatus.TRUSTED)),
             "not_assessed": _make_not_assessed(normalized_findings, observations),
             "provenance_link": context.get("provenance_link"),
+            "trace_refs": context.get("trace_refs"),
         }

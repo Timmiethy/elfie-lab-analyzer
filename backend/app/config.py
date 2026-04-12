@@ -11,6 +11,9 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for limited test envs
         pass
 
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
 class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://elfie:elfie@localhost:5432/elfie_labs"
@@ -31,13 +34,13 @@ class Settings(BaseSettings):
     qwen_vl_model: str = "qwen-vl-max"
 
     # Terminology
-    loinc_path: Path = Path("data/loinc")
-    terminology_snapshot_path: Path = Path("data/loinc")
-    alias_tables_path: Path = Path("data/alias_tables")
-    ucum_path: Path = Path("data/ucum")
+    loinc_path: Path = _REPO_ROOT / "data" / "loinc"
+    terminology_snapshot_path: Path = _REPO_ROOT / "data" / "loinc"
+    alias_tables_path: Path = _REPO_ROOT / "data" / "alias_tables"
+    ucum_path: Path = _REPO_ROOT / "data" / "ucum"
 
     # Artifact storage
-    artifact_store_path: Path = Path("artifacts")
+    artifact_store_path: Path = _REPO_ROOT / "artifacts"
     upload_retention_days: int = 30
     artifact_retention_days: int = 30
 
@@ -53,7 +56,7 @@ class Settings(BaseSettings):
     # Image beta lane toggle
     image_beta_enabled: bool = False
 
-    model_config = {"env_file": ".env", "env_prefix": "ELFIE_"}
+    model_config = {"env_file": str(_REPO_ROOT / ".env"), "env_prefix": "ELFIE_"}
 
 
 settings = Settings()

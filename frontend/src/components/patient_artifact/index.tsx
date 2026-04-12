@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { ComparableHistoryEntry, PatientArtifact } from '../../types';
-import HistoryCard, { type HistoryObservation } from '../history_card';
+import type { PatientArtifact } from '../../types';
+import HistoryCard from '../history_card';
 import {
   PageChrome,
   PillBadge,
@@ -38,6 +38,22 @@ const SUPPORT_BANNER_META: Record<
   },
 };
 
+const TRUST_STATUS_META: Record<
+  PatientArtifact['trust_status'],
+  { label: string; tone: 'trusted' | 'beta'; body: string }
+> = {
+  trusted: {
+    label: 'Trusted PDF lane',
+    tone: 'trusted',
+    body: 'Trusted PDF path.',
+  },
+  non_trusted_beta: {
+    label: 'Non-trusted beta lane',
+    tone: 'beta',
+    body: 'Image beta path.',
+  },
+};
+
 const SEVERITY_META: Record<
   PatientArtifact['overall_severity'],
   { label: string; bg: string; color: string; icon: string }
@@ -49,22 +65,6 @@ const SEVERITY_META: Record<
   S4: { label: 'Urgent follow-up recommended', bg: '#FEE2E2', color: '#991B1B', icon: '\u{1F6A8}' },
   SX: { label: 'Cannot assess severity', bg: '#F3F4F6', color: '#4B5563', icon: '\u2753' },
 };
-
-function mapComparableHistoryToObservations(
-  entries: ComparableHistoryEntry[],
-): HistoryObservation[] {
-  return entries.map((entry) => ({
-    analyte_display: entry.analyte_display,
-    current_value: entry.current_value,
-    current_unit: entry.current_unit,
-    previous_value: entry.previous_value,
-    previous_unit: entry.previous_unit,
-    previous_date: entry.previous_date,
-    direction: entry.direction,
-    comparability_status: entry.comparability_status,
-    comparability_reason: entry.comparability_reason,
-  }));
-}
 
 function splitReviewedItem(item: string): { label: string; value: string } {
   const [label, ...rest] = item.split('\u2014');
@@ -90,6 +90,7 @@ export default function PatientArtifact({
   const [expandedCard, setExpandedCard] = useState<number | null>(0);
   const [reviewedCollapsed, setReviewedCollapsed] = useState(true);
   const supportMeta = SUPPORT_BANNER_META[artifact.support_banner];
+  const trustMeta = TRUST_STATUS_META[artifact.trust_status];
   const severityMeta = SEVERITY_META[artifact.overall_severity];
   const hasFlagged = artifact.flagged_cards.length > 0;
   const hasNextStep =
@@ -199,15 +200,24 @@ export default function PatientArtifact({
         Wellness-support only. No diagnosis, treatment, or medication advice.
       </p>
 
-      {artifact.comparable_history.length > 0 && (
-        <div style={{ marginTop: '0.85rem' }}>
-          <HistoryCard
-            observations={mapComparableHistoryToObservations(
-              artifact.comparable_history,
-            )}
-          />
-        </div>
-      )}
+      <p
+        style={{
+          margin: '0.35rem 0 0',
+          fontSize: '0.72rem',
+          lineHeight: 1.4,
+          color:
+            trustMeta.tone === 'trusted'
+              ? STITCH_COLORS.trustedText
+              : STITCH_COLORS.betaText,
+          fontWeight: 700,
+        }}
+      >
+        {trustMeta.body}
+      </p>
+
+      <div style={{ marginTop: '0.85rem' }}>
+        <HistoryCard history={artifact.comparable_history} />
+      </div>
 
       <section style={{ marginTop: '0.7rem' }}>
         <div

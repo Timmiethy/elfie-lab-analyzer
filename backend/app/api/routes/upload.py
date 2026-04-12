@@ -102,7 +102,18 @@ async def _persisted_upload_response(
             filename=classification["sanitized_filename"],
             mime_type=classification["mime_type"],
             file_size_bytes=classification["file_size_bytes"],
+            page_count=classification.get("page_count"),
             lane_type=classification["lane_type"],
+            document_class=classification.get("document_class"),
+            preflight_failure_code=classification.get("failure_code"),
+            duplicate_state=classification.get("duplicate_state"),
+            promotion_status=classification.get("promotion_status"),
+            text_extractability=str(classification.get("text_extractability"))
+            if classification.get("text_extractability") is not None
+            else None,
+            image_density=str(classification.get("image_density"))
+            if classification.get("image_density") is not None
+            else None,
             storage_path=str(storage_path),
         )
         job = await store.create_job(
