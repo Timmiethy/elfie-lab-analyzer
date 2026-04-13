@@ -36,6 +36,10 @@ class RunResult:
     promotion_status: str | None = None
     failure_code: str | None = None
     document_class: str | None = None
+    route_lane_type: str | None = None
+    route_runtime_lane_type: str | None = None
+    route_document_class: str | None = None
+    route_confidence: float | None = None
     error: str | None = None
     observations_count: int = 0
     clean_rows_count: int = 0
@@ -84,6 +88,10 @@ class RunResult:
             "promotion_status": self.promotion_status,
             "failure_code": self.failure_code,
             "document_class": self.document_class,
+            "route_lane_type": self.route_lane_type,
+            "route_runtime_lane_type": self.route_runtime_lane_type,
+            "route_document_class": self.route_document_class,
+            "route_confidence": self.route_confidence,
             "error": self.error,
             "lane_matches": self.lane_matches(),
             "outcome_matches": self.outcome_matches(),
@@ -103,7 +111,7 @@ class RunResult:
 
 @dataclass
 class CorpusReport:
-    contract_version: str = "v11-corpus-report-v1"
+    contract_version: str = "corpus-evaluation-report-v2"
     timestamp: str = ""
     total_entries: int = 0
     completed: int = 0

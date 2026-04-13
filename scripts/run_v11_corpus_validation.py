@@ -73,6 +73,10 @@ async def _run_manifest(*, enable_image_beta: bool, runtime: dict[str, object]) 
             promotion_status=preflight.get("promotion_status"),
             failure_code=preflight.get("failure_code"),
             document_class=preflight.get("document_class"),
+            route_lane_type=preflight.get("route_lane_type"),
+            route_runtime_lane_type=preflight.get("route_runtime_lane_type"),
+            route_document_class=preflight.get("route_document_class"),
+            route_confidence=float(preflight.get("route_confidence") or 0.0),
         )
 
         lane_type = preflight.get("lane_type")
@@ -110,10 +114,32 @@ async def _run_manifest(*, enable_image_beta: bool, runtime: dict[str, object]) 
                 result.row_assembly_version = parser_meta["row_assembly_version"]
 
         elif lane_type == "unsupported":
-            result.actual_status = "unsupported"
-            result.actual_outcome = "unsupported"
-            if preflight.get("failure_code"):
-                result.error = str(preflight["failure_code"])
+            if str(preflight.get("promotion_status")) == "ready_unsupported":
+                try:
+                    pipeline_result = await pipeline.run(
+                        entry.path,
+                        file_bytes=file_bytes,
+                        lane_type="unsupported",
+                        source_checksum=preflight.get("checksum"),
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    result.actual_status = "error"
+                    result.actual_outcome = "error"
+                    result.error = f"{type(exc).__name__}: {exc}"
+                else:
+                    result.actual_status = str(pipeline_result.get("status") or "partial")
+                    result.actual_outcome = "unsupported"
+                    result.observations_count = len(pipeline_result.get("observations", []))
+                    result.findings_count = len(pipeline_result.get("findings", []))
+                    patient_artifact = pipeline_result.get("patient_artifact", {})
+                    result.not_assessed_count = len(patient_artifact.get("not_assessed", []))
+                    result.support_banner = patient_artifact.get("support_banner")
+                    result.job_id = str(pipeline_result.get("job_id") or entry.path)
+            else:
+                result.actual_status = "unsupported"
+                result.actual_outcome = "unsupported"
+                if preflight.get("failure_code"):
+                    result.error = str(preflight["failure_code"])
 
         elif lane_type == "image_beta":
             # v12: run image_beta lane through the pipeline when enabled and promoted

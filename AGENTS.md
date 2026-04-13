@@ -33,6 +33,20 @@ Lower files never override higher files.
 
 `labs_analyzer_v12_delta_plan.md` is a delta on top of `labs_analyzer_v11_source_of_truth.md`. The v10 parallel split and guardrail pack still govern role boundaries and test posture until they are explicitly replaced.
 
+## Link-First Documentation Index
+Use links to existing docs rather than copying their content into task briefs or handoffs:
+
+- `README.md`: local setup, backend/frontend dev startup, and baseline project commands
+- `docs/orchestration/README.md`: full Codex + OpenClaw operating runbook
+- `docs/orchestration/prompts/codex_orchestrator.md`: Codex planning/review prompt reference
+- `docs/orchestration/prompts/openclaw_worker.md`: OpenClaw execution prompt reference
+- `contracts/README.md`: contract freeze boundaries and change discipline
+- `contracts/examples/*`: authoritative payload examples for shared-contract work
+- `tasks/lessons.md`: active mistake-prevention rules
+- `tasks/todo.md`: current task scope, checkpoints, and verification evidence
+
+If a section is already documented in one of those files, link to it instead of duplicating prose.
+
 ## Human Role
 The human in this repo is `Person A` by default.
 
@@ -256,6 +270,18 @@ Update `tasks/todo.md` with:
 - remaining risks
 
 If the user corrected a mistake, update `tasks/lessons.md` with one short prevention rule.
+
+## Build and Verification Entry Points
+Use repository-owned wrappers and manifests as command authorities:
+
+- orchestration and scoped verification: `scripts/orchestration/Invoke-ProjectVerification.ps1`
+- worker preflight: `scripts/orchestration/Invoke-OrchestrationPreflight.ps1`
+- worker brief generation: `scripts/orchestration/New-WorkerTask.ps1`
+- deterministic worker launch: `scripts/orchestration/Start-OpenClawWorker.ps1`
+- backend dependency and tooling baseline: `backend/pyproject.toml`
+- frontend scripts baseline: `frontend/package.json`
+
+Local development startup remains documented in `README.md`; prefer that file as the single setup source.
 
 ## Verification Matrix
 Use the smallest honest scope that covers the change.

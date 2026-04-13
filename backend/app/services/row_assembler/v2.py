@@ -124,6 +124,25 @@ _SECTION_HEADING_KEYWORDS = {
     "diagnostic values",
 }
 
+# v12 residual reference-table fragments that must never lead a measured row.
+_EXCLUDED_LABEL_PREFIX_FRAGMENTS = {
+    "high",
+    "low",
+    "within",
+    "total men",
+    "total women",
+    "ldl-c/hdl-c men",
+    "ldl-c/hdl-c women",
+    "cholesterol /hdl-c ratio men",
+    "cholesterol /hdl-c ratio women",
+    "ratio castelli ii men",
+    "ratio castelli ii women",
+    "castelli ii men",
+    "castelli ii women",
+    "clin chem lab med",
+    "ref. ranges special chemistry specimen serum nt-probnp",
+}
+
 
 def _looks_like_unit_substance(line: str) -> bool:
     """Return True if the line looks like a unit-with-substance continuation.
@@ -942,6 +961,9 @@ class RowAssemblerV2:
             # treated as the full measurement, not split.  The key signal is
             # that the line has BOTH alpha tokens and value tokens.
             if is_value and not has_primary_value and continuation_info is None:
+                # v12: drop leading threshold/reference fragments before attaching
+                # the first measured value line.
+                current_group = self._trim_excluded_label_prefix(current_group)
                 # Check if this line looks like a complete measurement:
                 # it has an alpha prefix AND a value AND a trailing unit/range
                 if self._is_complete_measurement_line(stripped):
@@ -1017,6 +1039,30 @@ class RowAssemblerV2:
                 final.append(group)
 
         return final
+
+    def _trim_excluded_label_prefix(self, labels: list[str]) -> list[str]:
+        """Trim leading excluded label fragments from a pending label buffer."""
+        if not labels:
+            return labels
+        trimmed = list(labels)
+        while trimmed and self._is_excluded_label_fragment(trimmed[0]):
+            trimmed.pop(0)
+        return trimmed
+
+    @staticmethod
+    def _is_excluded_label_fragment(line: str) -> bool:
+        normalized = " ".join(str(line or "").strip().lower().split())
+        if not normalized:
+            return True
+        if normalized in _EXCLUDED_LABEL_PREFIX_FRAGMENTS:
+            return True
+        if normalized.startswith("ldl-c/hdl-c"):
+            return True
+        if normalized.startswith("cholesterol /hdl-c ratio"):
+            return True
+        if normalized.startswith("ratio castelli ii"):
+            return True
+        return False
 
     @staticmethod
     def _is_complete_measurement_line(line: str) -> bool:

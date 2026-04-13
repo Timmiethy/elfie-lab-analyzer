@@ -53,7 +53,7 @@ from app.terminology import get_loaded_snapshot_metadata
 
 _JOB_RUNS: dict[str, dict] = {}
 _LOGGER = logging.getLogger(__name__)
-_SUPPORTED_LANES = {"trusted_pdf", "image_beta", "structured"}
+_SUPPORTED_LANES = {"trusted_pdf", "image_beta", "structured", "unsupported"}
 
 # v12 parser lineage constants
 _PARSER_VERSION_TRUSTED = "pymupdf-1.27.x"
@@ -648,6 +648,9 @@ async def _extract_rows(
             document_id=job_uuid,
             language_id="en",
         )
+
+    if lane_type == "unsupported":
+        return []
 
     raise ValueError(f"unsupported_lane:{lane_type}")
 

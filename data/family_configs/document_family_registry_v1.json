@@ -1,0 +1,160 @@
+{
+  "contract_version": "family-config-registry-v1",
+  "version": "2026-04-13",
+  "route_hints": {
+    "lab_signals": [
+      "glucose",
+      "hba1c",
+      "creatinine",
+      "cholesterol",
+      "hemoglobin",
+      "wbc",
+      "platelet",
+      "triglyceride",
+      "ldl",
+      "hdl",
+      "reference range",
+      "analyte",
+      "result",
+      "unit"
+    ],
+    "interpreted_summary": [
+      "impression",
+      "assessment",
+      "recommendation",
+      "clinical summary",
+      "interpretation"
+    ],
+    "non_lab_medical": [
+      "ultrasound",
+      "mri",
+      "ct scan",
+      "x-ray",
+      "radiology",
+      "echocardiogram",
+      "pathology report"
+    ],
+    "composite_markers": [
+      "appendix",
+      "attachment",
+      "section",
+      "report printed",
+      "tests requested"
+    ],
+    "admin_markers": [
+      "dob",
+      "age",
+      "mrn",
+      "accession",
+      "patient id",
+      "ordered by",
+      "collection"
+    ]
+  },
+  "page_kind_hints": {
+    "lab_results": [
+      "analyte",
+      "result",
+      "unit",
+      "reference",
+      "range",
+      "mmol/l",
+      "mg/dl"
+    ],
+    "threshold_reference": [
+      "prediabetes",
+      "risk",
+      "normal",
+      "cut off",
+      "threshold",
+      "target range"
+    ],
+    "admin_metadata": [
+      "dob",
+      "age",
+      "collected",
+      "printed",
+      "patient",
+      "accession"
+    ],
+    "narrative_guidance": [
+      "guideline",
+      "interpret",
+      "note",
+      "recommend",
+      "clinical presentation"
+    ],
+    "interpreted_summary": [
+      "impression",
+      "summary",
+      "conclusion"
+    ],
+    "non_lab_medical": [
+      "ultrasound",
+      "radiology",
+      "echocardiogram",
+      "clinic visit"
+    ],
+    "footer_header": [
+      "page",
+      "all rights reserved",
+      "laboratory report"
+    ]
+  },
+  "block_role_hints": {
+    "result_block": [
+      "result",
+      "unit",
+      "analyte",
+      "reference",
+      "range"
+    ],
+    "threshold_block": [
+      "prediabetes",
+      "risk",
+      "cut off",
+      "threshold",
+      "target range"
+    ],
+    "admin_block": [
+      "dob",
+      "mrn",
+      "patient id",
+      "accession",
+      "ordered"
+    ],
+    "narrative_block": [
+      "guideline",
+      "recommend",
+      "interpretation",
+      "clinical"
+    ],
+    "header_footer_block": [
+      "page",
+      "laboratory report",
+      "all rights reserved"
+    ]
+  },
+  "artifact_policy": {
+    "visible_unsupported_categories": {
+      "unsupported_family": "unsupported_family",
+      "unit_parse_fail": "unit_parse_fail",
+      "unreadable_value": "unreadable_value",
+      "threshold_conflict": "threshold_conflict",
+      "comparable_history_unavailable": "comparable_history_unavailable",
+      "derived_observation_unbound": "derived_observation_unbound"
+    },
+    "hidden_markers": [
+      "dob",
+      "mrn",
+      "accession",
+      "page ",
+      "guideline",
+      "threshold",
+      "reference table",
+      "admin_metadata_row",
+      "narrative_guidance_row",
+      "header_footer_row"
+    ]
+  }
+}

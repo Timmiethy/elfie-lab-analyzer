@@ -104,7 +104,8 @@ async def _persisted_upload_response(
             file_size_bytes=classification["file_size_bytes"],
             page_count=classification.get("page_count"),
             lane_type=classification["lane_type"],
-            document_class=classification.get("document_class"),
+            document_class=classification.get("route_document_class")
+            or classification.get("document_class"),
             preflight_failure_code=classification.get("failure_code"),
             duplicate_state=classification.get("duplicate_state"),
             promotion_status=classification.get("promotion_status"),

@@ -683,37 +683,56 @@ class OcrAdapter:
         language_id: str | None,
         ocr_engine: str,
     ) -> list[dict[str, Any]]:
-        """v12: Convert raw OCR page text into candidate rows via PageParseArtifactV3 -> RowAssemblerV2.
+        """v13: Convert raw OCR page text into candidate rows via
+        PageParseArtifactV4 -> BlockGraphV1 -> RowAssemblerV3.
 
         This is the contract bridge for the image-lane OCR path so it produces
         the same downstream row shape as the trusted PDF path.
         """
-        from app.services.parser.page_parse_artifact_v3 import (
-            PageParseArtifactV3,
-            PageParseBlockV3,
+        from app.services.document_system.block_graph_builder import BlockGraphBuilder
+        from app.services.document_system.ocr_substrate import OcrSubstrate
+        from app.services.document_system.row_assembler import (
+            RowAssemblerV3,
+            candidate_row_to_legacy,
         )
-        from app.services.row_assembler.v2 import RowAssemblerV2
 
-        lines = [line for line in page_text.splitlines() if line.strip()]
-        block = PageParseBlockV3(
-            block_id=f"ocr-page-{source_page}",
-            block_type="result_table",
-            lines=lines,
-        )
-        artifact = PageParseArtifactV3(
-            page_id=f"ocr:{document_uuid}:page-{source_page}",
+        substrate = OcrSubstrate()
+        artifact_v4 = substrate.artifact_from_text(
+            page_text=page_text,
+            page_number=source_page,
+            document_id=str(document_uuid),
             backend_id=_IMAGE_BETA_PARSER_BACKEND,
             backend_version=_IMAGE_BETA_PARSER_VERSION,
-            lane_type="image_beta",
-            page_kind="unknown",
-            text_extractability="low",
-            block_count=1,
-            blocks=[block],
-            raw_text=page_text,
-            page_number=source_page,
         )
-        assembler = RowAssemblerV2()
-        raw_rows = assembler.assemble(artifact, family_adapter_id="generic_layout")
+
+        block_graph = BlockGraphBuilder().build(artifact_v4)
+        assembler = RowAssemblerV3()
+        page_class = {
+            "lab_results": "analyte_table_page",
+            "threshold_reference": "threshold_page",
+            "admin_metadata": "admin_page",
+            "narrative_guidance": "narrative_page",
+            "interpreted_summary": "narrative_page",
+            "non_lab_medical": "narrative_page",
+            "footer_header": "header_footer_page",
+        }.get(getattr(artifact_v4.page_kind, "value", "unknown"), "mixed_page")
+
+        candidate_rows, suppression_report = assembler.assemble(
+            block_graph=block_graph,
+            artifact=artifact_v4,
+            family_adapter_id="generic_layout",
+            page_class=page_class,
+        )
+        raw_rows = []
+        for candidate_row in candidate_rows:
+            legacy_row = candidate_row_to_legacy(candidate_row, trust_level=artifact_v4.lane_type)
+            legacy_row["source_page"] = source_page
+            legacy_row["candidate_trace"] = {
+                **(legacy_row.get("candidate_trace") or {}),
+                "suppression_record_count": len(suppression_report.suppression_records),
+            }
+            raw_rows.append(legacy_row)
+
         return self._enrich_ocr_rows(raw_rows, document_uuid=document_uuid, ocr_engine=ocr_engine)
 
     def _enrich_ocr_rows(

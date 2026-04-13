@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     terminology_snapshot_path: Path = _REPO_ROOT / "data" / "loinc"
     alias_tables_path: Path = _REPO_ROOT / "data" / "alias_tables"
     ucum_path: Path = _REPO_ROOT / "data" / "ucum"
+    family_config_registry_path: Path = _REPO_ROOT / "data" / "family_configs" / "document_family_registry_v1.json"
 
     # Artifact storage
     artifact_store_path: Path = _REPO_ROOT / "artifacts"

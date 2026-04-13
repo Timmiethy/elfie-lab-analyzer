@@ -10,6 +10,7 @@ from typing import Any, TypedDict
 import fitz  # PyMuPDF
 
 from app.config import settings
+from app.services.document_system.document_router import DocumentRouteInput, DocumentRouter
 from app.services.ocr import OcrAdapter
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,6 +27,11 @@ class InputGatewayError(ValueError):
 class InputGatewayPreflight(TypedDict, total=False):
     lane_type: str
     document_class: str
+    route_lane_type: str
+    route_runtime_lane_type: str
+    route_document_class: str
+    route_confidence: float
+    route_reason_codes: list[str]
     failure_code: str | None
     duplicate_state: str
     promotion_status: str
@@ -80,6 +86,12 @@ class InputGateway:
     _IMAGE_BETA_IMAGE_DENSITY_THRESHOLD = 0.35
     _IMAGE_BETA_TEXT_EXTRACTABILITY_THRESHOLD = 0.65
 
+    def __init__(self) -> None:
+        self._document_router = DocumentRouter(
+            image_density_threshold=self._IMAGE_BETA_IMAGE_DENSITY_THRESHOLD,
+            text_extractability_threshold=self._IMAGE_BETA_TEXT_EXTRACTABILITY_THRESHOLD,
+        )
+
     async def preflight(
         self,
         file_bytes: bytes,
@@ -116,6 +128,11 @@ class InputGateway:
                 **base_result,
                 "lane_type": "structured",
                 "document_class": "structured_record",
+                "route_lane_type": "interpreted_summary",
+                "route_runtime_lane_type": "structured",
+                "route_document_class": "structured_record",
+                "route_confidence": 1.0,
+                "route_reason_codes": ["structured_json_input"],
                 "promotion_status": "ready",
                 "text_extractability": 1.0,
                 "image_density": 0.0,
@@ -132,10 +149,32 @@ class InputGateway:
         if extension == ".pdf":
             return {**base_result, **self._preflight_pdf(file_bytes)}
 
+        route_decision = self._document_router.decide(
+            DocumentRouteInput(
+                checksum=checksum,
+                extension=extension,
+                mime_type=normalized_mime_type,
+                page_count=1,
+                image_density=1.0,
+                text_extractability=0.0,
+                has_text_layer=False,
+                has_image_layer=True,
+                total_text_chars=0,
+                password_protected=False,
+                corrupt=False,
+                text_sample="",
+            )
+        )
+
         return {
             **base_result,
             "lane_type": "image_beta",
             "document_class": "image_file",
+            "route_lane_type": route_decision.lane_type.value,
+            "route_runtime_lane_type": route_decision.runtime_lane_type,
+            "route_document_class": route_decision.document_class,
+            "route_confidence": route_decision.confidence,
+            "route_reason_codes": route_decision.reason_codes,
             "promotion_status": self._resolve_image_beta_promotion_status(),
             "text_extractability": 0.0,
             "image_density": 1.0,
@@ -162,7 +201,7 @@ class InputGateway:
         promotion_status = result.get("promotion_status")
         if failure_code:
             raise InputGatewayError(str(failure_code))
-        if promotion_status not in {"ready", "beta_ready"}:
+        if promotion_status not in {"ready", "beta_ready", "ready_unsupported"}:
             raise InputGatewayError(str(promotion_status))
         return dict(result)
 
@@ -256,6 +295,7 @@ class InputGateway:
         total_text_words = 0
         has_text_layer = False
         has_image_layer = False
+        text_sample_parts: list[str] = []
 
         for page_idx in range(page_count):
             page = doc[page_idx]
@@ -288,6 +328,8 @@ class InputGateway:
             if cleaned_text:
                 has_text_layer = True
                 total_text_chars += len(cleaned_text)
+                if len("\n".join(text_sample_parts)) < 6000:
+                    text_sample_parts.append(cleaned_text[:1500])
 
             words = page.get_text("words") or []
             total_text_words += len(words)
@@ -303,14 +345,43 @@ class InputGateway:
             text_extractability=text_extractability,
         )
 
+        route_decision = self._document_router.decide(
+            DocumentRouteInput(
+                checksum=sha256(file_bytes).hexdigest(),
+                extension=".pdf",
+                mime_type="application/pdf",
+                page_count=page_count,
+                image_density=image_density,
+                text_extractability=text_extractability,
+                has_text_layer=has_text_layer,
+                has_image_layer=has_image_layer,
+                total_text_chars=total_text_chars,
+                password_protected=False,
+                corrupt=False,
+                text_sample="\n".join(text_sample_parts),
+            )
+        )
+
+        # Preserve density/text-based lane selection and only override to
+        # unsupported for explicit non-lab/interpreted routing outcomes.
+        if route_decision.runtime_lane_type == "unsupported":
+            lane_type = "unsupported"
+
         if lane_type == "trusted_pdf":
             promotion_status = "ready"
+        elif lane_type == "unsupported":
+            promotion_status = "ready_unsupported"
         else:
             promotion_status = self._resolve_image_beta_promotion_status()
 
         return {
             "lane_type": lane_type,
             "document_class": document_class,
+            "route_lane_type": route_decision.lane_type.value,
+            "route_runtime_lane_type": route_decision.runtime_lane_type,
+            "route_document_class": route_decision.document_class,
+            "route_confidence": route_decision.confidence,
+            "route_reason_codes": route_decision.reason_codes,
             "failure_code": None,
             "promotion_status": promotion_status,
             "text_extractability": text_extractability,
@@ -335,6 +406,11 @@ class InputGateway:
         return {
             "lane_type": "unsupported",
             "document_class": "unsupported_pdf",
+            "route_lane_type": "unsupported",
+            "route_runtime_lane_type": "unsupported",
+            "route_document_class": "unsupported",
+            "route_confidence": 1.0,
+            "route_reason_codes": [failure_code],
             "failure_code": failure_code,
             "promotion_status": promotion_status,
             "text_extractability": 0.0,

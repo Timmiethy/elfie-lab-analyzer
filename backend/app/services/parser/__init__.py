@@ -1344,10 +1344,21 @@ def _parse_trusted_pdf_v12(
     if rows:
         return rows
 
-    # Fallback: if the new path yields nothing but text exists, fall through
-    # to the old pdfplumber path for backwards compatibility.
-    # This is a safety valve, not the primary path.
+    # Safety valve for rare parse misses.
     return _parse_trusted_pdf(file_bytes, max_pages=max_pages)
+
+
+def _page_class_from_v4_kind(page_kind: str) -> str:
+    mapping = {
+        "lab_results": "analyte_table_page",
+        "threshold_reference": "threshold_page",
+        "admin_metadata": "admin_page",
+        "narrative_guidance": "narrative_page",
+        "interpreted_summary": "narrative_page",
+        "non_lab_medical": "narrative_page",
+        "footer_header": "header_footer_page",
+    }
+    return mapping.get(str(page_kind), "mixed_page")
 
 
 def _materialize_v12_row(

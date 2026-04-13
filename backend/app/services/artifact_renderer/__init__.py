@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from app.schemas.artifact import SupportBanner, TrustStatus, UnsupportedReason
+from app.services.document_system.artifact_policy import ArtifactPolicy
 from app.schemas.finding import FindingSchema, NextStepClass, SeverityClass
 
 _SEVERITY_ORDER = {
@@ -266,10 +267,12 @@ class ArtifactRenderer:
         highest_nextstep = _highest_nextstep(normalized_findings)
         nextstep_title, nextstep_reason = _NEXTSTEP_COPY[highest_nextstep]
         comparable_history = context.get("comparable_history")
-        not_assessed = _apply_comparable_history_not_assessed(
+        raw_not_assessed = _apply_comparable_history_not_assessed(
             _make_not_assessed(normalized_findings, observations),
             comparable_history,
         )
+        policy_result = ArtifactPolicy().sanitize_not_assessed(raw_not_assessed)
+        not_assessed = policy_result.not_assessed
 
         return {
             "job_id": _coerce_uuid(context["job_id"]),
@@ -329,7 +332,9 @@ class ArtifactRenderer:
                 context.get("support_banner", SupportBanner.FULLY_SUPPORTED)
             ),
             "trust_status": _coerce_trust_status(context.get("trust_status", TrustStatus.TRUSTED)),
-            "not_assessed": _make_not_assessed(normalized_findings, observations),
+            "not_assessed": ArtifactPolicy().sanitize_not_assessed(
+                _make_not_assessed(normalized_findings, observations)
+            ).not_assessed,
             "provenance_link": context.get("provenance_link"),
             "trace_refs": context.get("trace_refs"),
         }
