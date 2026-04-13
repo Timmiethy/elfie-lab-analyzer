@@ -55,11 +55,12 @@ _JOB_RUNS: dict[str, dict] = {}
 _LOGGER = logging.getLogger(__name__)
 _SUPPORTED_LANES = {"trusted_pdf", "image_beta", "structured"}
 
-_PARSER_VERSION_TRUSTED = "trusted-pdf-v1"
-_PARSER_VERSION_IMAGE_BETA = "image-beta-bypass"
-_OCR_VERSION_IMAGE_BETA = "beta-adapter-v1"
+# v12 parser lineage constants
+_PARSER_VERSION_TRUSTED = "pymupdf-1.27.x"
+_PARSER_VERSION_IMAGE_BETA = "qwen-vl-ocr-2025-11-20"
+_OCR_VERSION_IMAGE_BETA = "qwen-vl-ocr-2025-11-20"
 _ADAPTER_VERSION = "family-adapter-v1"
-_ROW_ASSEMBLY_VERSION = "row-assembly-v1"
+_ROW_ASSEMBLY_VERSION = "row-assembly-v2"
 _ROW_TYPE_RULE_SET_VERSION = "row-type-rules-v1"
 _FORMULA_VERSION = "formula-v1"
 _TERMINOLOGY_RELEASE_DEFAULT = "seeded-demo-2026-04-10"
@@ -132,14 +133,33 @@ def _build_lineage_payload(
     source_checksum: str | None,
     lane_type: str,
     terminology_release: str,
+    parser_backend: str | None = None,
+    parser_backend_version: str | None = None,
+    row_assembly_version: str | None = None,
 ) -> dict:
+    """Build the v12 lineage payload with parser substrate metadata.
+
+    When parser_backend and parser_backend_version are provided by the extraction
+    step, they are recorded honestly in the lineage bundle. Otherwise the pipeline
+    falls back to the lane-level constants for backwards compatibility.
+    """
+    effective_parser = parser_backend or (
+        "pymupdf" if lane_type == "trusted_pdf" else "qwen_ocr"
+    )
+    effective_parser_version = parser_backend_version or (
+        _PARSER_VERSION_TRUSTED if lane_type == "trusted_pdf" else _PARSER_VERSION_IMAGE_BETA
+    )
+    effective_row_assembly = row_assembly_version or _ROW_ASSEMBLY_VERSION
+
     return {
         "source_checksum": source_checksum or f"source:{job_id}",
+        "parser_backend": effective_parser,
+        "parser_backend_version": effective_parser_version,
         "parser_version": (
             _PARSER_VERSION_TRUSTED if lane_type == "trusted_pdf" else _PARSER_VERSION_IMAGE_BETA
         ),
         "adapter_version": _ADAPTER_VERSION,
-        "row_assembly_version": _ROW_ASSEMBLY_VERSION,
+        "row_assembly_version": effective_row_assembly,
         "row_type_rule_set_version": _ROW_TYPE_RULE_SET_VERSION,
         "formula_version": _FORMULA_VERSION,
         "ocr_version": _OCR_VERSION_IMAGE_BETA if lane_type == "image_beta" else None,
@@ -175,6 +195,8 @@ def _build_persistence_payloads(
         },
         "lineage_run": {
             "source_checksum": lineage["source_checksum"],
+            "parser_backend": lineage.get("parser_backend"),
+            "parser_backend_version": lineage.get("parser_backend_version"),
             "parser_version": lineage["parser_version"],
             "adapter_version": lineage.get("adapter_version"),
             "row_assembly_version": lineage.get("row_assembly_version"),
@@ -355,26 +377,51 @@ class PipelineOrchestrator:
                 if snapshot_metadata
                 else _TERMINOLOGY_RELEASE_DEFAULT
             )
+
+            # v12: capture parser metadata from extraction step if available
+            parser_backend = _extract_parser_backend(extracted_rows)
+            parser_backend_version = _extract_parser_backend_version(extracted_rows)
+            row_assembly_version = _extract_row_assembly_version(extracted_rows)
+
             lineage_payload = _build_lineage_payload(
                 job_id,
                 source_checksum=source_checksum,
                 lane_type=selected_lane,
                 terminology_release=terminology_release,
+                parser_backend=parser_backend,
+                parser_backend_version=parser_backend_version,
+                row_assembly_version=row_assembly_version,
             )
             lineage = lineage_logger.record(str(job_uuid), lineage_payload)
+            # v12: merge the logger return (persisted ids) into the deterministic payload
+            # so that sparse collaborator returns do not drop v12 provenance fields.
+            lineage = {**lineage_payload, **lineage}
             processing_ms = int((perf_counter() - processing_start) * 1000)
+
+            # Compute benchmark metrics deterministically; the recorder may enrich
+            # them but must not strip pipeline-computed provenance metadata.
+            computed_metrics = {
+                "extracted_rows": len(extracted_rows),
+                "clean_rows": len(qa_result["clean_rows"]),
+                "findings": len(findings),
+                "panels": len(panels),
+                "extraction_ms": extraction_ms,
+                "processing_ms": processing_ms,
+                "parser_backend": parser_backend,
+                "parser_backend_version": parser_backend_version,
+                "row_assembly_version": row_assembly_version,
+            }
             benchmark = benchmark_recorder.record(
                 lineage_id=str(lineage["id"]),
                 report_type=_REPORT_TYPE,
-                metrics={
-                    "extracted_rows": len(extracted_rows),
-                    "clean_rows": len(qa_result["clean_rows"]),
-                    "findings": len(findings),
-                    "panels": len(panels),
-                    "extraction_ms": extraction_ms,
-                    "processing_ms": processing_ms,
-                },
+                metrics=computed_metrics,
             )
+            # v12: merge computed metrics with the recorder return so sparse
+            # collaborator dicts do not erase pipeline-computed provenance fields.
+            benchmark_metrics = benchmark.get("metrics", {})
+            for key, value in computed_metrics.items():
+                benchmark_metrics.setdefault(key, value)
+            benchmark["metrics"] = benchmark_metrics
             proof_pack = _build_proof_pack(
                 benchmark_recorder=benchmark_recorder,
                 job_uuid=job_uuid,
@@ -463,6 +510,68 @@ def _validate_lane(lane_type: str) -> None:
         raise ValueError(f"unsupported_lane:{lane_type}")
 
 
+# ---------------------------------------------------------------------------
+# v12 runtime page-limit guard (separate from parser-level truncation)
+# ---------------------------------------------------------------------------
+
+def _enforce_pdf_page_limit(file_bytes: bytes) -> None:
+    """Raise ``page_count_limit_exceeded`` if the PDF exceeds ``settings.max_pdf_pages``.
+
+    This is a runtime safety check that lives in the pipeline layer, not in the
+    parser itself.  ``BornDigitalParser.parse(..., max_pages=...)`` intentionally
+    truncates rather than raising; the hard failure belongs at the upload/runtime
+    boundary so oversized uploads produce a persisted ``failed`` job with a clear
+    ``operator_note``.
+    """
+    import fitz
+
+    try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        page_count = doc.page_count
+    except Exception:  # noqa: BLE001 - corrupt PDF is handled upstream
+        return
+    finally:
+        try:
+            doc.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+    limit = settings.max_pdf_pages
+    if page_count > limit:
+        raise ValueError(f"page_count_limit_exceeded:{page_count}>{limit}")
+
+
+# ---------------------------------------------------------------------------
+# v12 parser metadata extraction helpers
+# ---------------------------------------------------------------------------
+
+def _extract_parser_backend(rows: list[dict]) -> str | None:
+    """Return the parser backend identifier from extraction rows, if present."""
+    for row in rows:
+        backend = row.get("parser_backend") or row.get("_v12_parser_backend")
+        if backend:
+            return str(backend)
+    return None
+
+
+def _extract_parser_backend_version(rows: list[dict]) -> str | None:
+    """Return the parser backend version from extraction rows, if present."""
+    for row in rows:
+        version = row.get("parser_backend_version") or row.get("_v12_parser_backend_version")
+        if version:
+            return str(version)
+    return None
+
+
+def _extract_row_assembly_version(rows: list[dict]) -> str | None:
+    """Return the row-assembly version from extraction rows, if present."""
+    for row in rows:
+        version = row.get("row_assembly_version") or row.get("_v12_row_assembly_version")
+        if version:
+            return str(version)
+    return None
+
+
 def _seed_extracted_rows(document_id: UUID) -> list[dict]:
     return [
         {
@@ -478,6 +587,10 @@ def _seed_extracted_rows(document_id: UUID) -> list[dict]:
             "specimen_context": "serum",
             "language_id": "en",
             "extraction_confidence": 0.99,
+            # v12 parser lineage metadata on seed rows
+            "parser_backend": "pymupdf",
+            "parser_backend_version": _PARSER_VERSION_TRUSTED,
+            "row_assembly_version": _ROW_ASSEMBLY_VERSION,
         },
         {
             "document_id": document_id,
@@ -492,6 +605,9 @@ def _seed_extracted_rows(document_id: UUID) -> list[dict]:
             "specimen_context": "blood",
             "language_id": "en",
             "extraction_confidence": 0.98,
+            "parser_backend": "pymupdf",
+            "parser_backend_version": _PARSER_VERSION_TRUSTED,
+            "row_assembly_version": _ROW_ASSEMBLY_VERSION,
         },
     ]
 
@@ -521,6 +637,7 @@ async def _extract_rows(
         return _seed_extracted_rows(job_uuid)
 
     if lane_type == "trusted_pdf":
+        _enforce_pdf_page_limit(file_bytes)
         return await TrustedPdfParser().parse(file_bytes, max_pages=settings.max_pdf_pages)
 
     if lane_type == "image_beta":

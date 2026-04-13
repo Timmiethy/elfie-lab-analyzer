@@ -1,0 +1,16 @@
+INFO:     Started server process [41288]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+ocr_row_shape_ceiling_exceeded: raw_unit_string_too_long | raw_text='Liver is enlarged in size (~ 164 mm) and shows increase in parenchymal echogenic' | raw_unit_string='mm and shows increase in parenchymal ech'
+ocr_row_shape_ceiling_exceeded: raw_unit_string_too_long | raw_text='posterior shadowing in relation to the posterior wall - it may represent polyp /' | raw_unit_string='shadowing in relation to the posterior w'
+ocr_row_shape_ceiling_exceeded: raw_unit_string_too_long | raw_text='A small midline defect of size ~ 14 mm is seen in the linea alba in umbilical re' | raw_unit_string='mm is seen in the linea alba in umbilica'
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(82>32) | raw_text='radicals are normal. Portal vein is normal in course and caliber. Gall bladder i' | raw_unit_string='mm shows lobulated outline and increase '
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(95>32) | raw_text='Note: Blood glucose level is maintained by a very complex integrated mechanism i' | raw_unit_string=''
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(72>32) | raw_text='Clinical Significance of LFT: The clinical suspicion of liver disease usually le' | raw_unit_string=''
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(189>32) | raw_text='Clinical Significance: The major circulating form of vitamin D is 25-hydroxyvita' | raw_unit_string=''
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(33>32) | raw_text='Factors That Interfere With HbA1c Measurement: Hemoglobin variants, elevated fet' | raw_unit_string=''
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(42>32) | raw_text='Since HbA1c Reflects long term Fluctuations in the blood glucose concentration, ' | raw_unit_string=''
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(33>32) | raw_text='Target goals of < 7.0% may be beneficial in patients with short duration of diab' | raw_unit_string=''
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(34>32) | raw_text='Any condition that shortens erythrocyte survival such as sickle cell disease, pr' | raw_unit_string=''
+ocr_row_shape_ceiling_exceeded: raw_text_token_count_exceeded(61>32) | raw_text='1. TSH Levels are subject to circadian variation, reaching peak levels between 2' | raw_unit_string=''

@@ -13,6 +13,7 @@ from app.services.parser import (
     _extract_reference_range,
     _is_admin,
     _is_derived,
+    _is_location_line,
     _is_narrative,
     _is_noise_line,
     _is_threshold,
@@ -813,6 +814,24 @@ class TestWave5RealCorpusSuppression:
             family_adapter_id="generic_layout",
         )
         assert result["row_type"] == "narrative_guidance_row"
+        assert result["is_excluded"] is True
+
+    def test_wave21_innoquest_address_line_not_typed_as_measurement(self) -> None:
+        """Wave-21: Innoquest address lines like GRIBBLES IT DEPARTMENT with
+        jalan/floor fragments must NOT classify as measured_analyte_row.
+
+        Root cause: `_LOCATION_HINTS` missed floor abbreviations (`flr`) and
+        Malaysian street tokens (`jalan`), allowing `14 JALAN 19/1 2ND FLR`
+        to satisfy `_looks_like_measurement` via the numeric token + `/` tail.
+        """
+        result = classify_candidate_text(
+            "GRIBBLES IT DEPARTMENTAAAAA 14 JALAN 19/1 2ND FLR",
+            page_class="analyte_table_page",
+            family_adapter_id="innoquest_bilingual_general",
+        )
+        assert result["row_type"] == "admin_metadata_row", (
+            f"Address line leaked as {result['row_type']}"
+        )
         assert result["is_excluded"] is True
 
 

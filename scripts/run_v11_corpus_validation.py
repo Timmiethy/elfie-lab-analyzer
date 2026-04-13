@@ -29,6 +29,7 @@ def _load_runtime_modules():
     from tests.support.corpus_runner import (
         CorpusReport,
         RunResult,
+        extract_v12_parser_metadata,
         load_manifest,
         load_pdf,
         write_corpus_report,
@@ -41,6 +42,7 @@ def _load_runtime_modules():
         "PipelineOrchestrator": PipelineOrchestrator,
         "CorpusReport": CorpusReport,
         "RunResult": RunResult,
+        "extract_v12_parser_metadata": extract_v12_parser_metadata,
         "load_manifest": load_manifest,
         "load_pdf": load_pdf,
         "write_corpus_report": write_corpus_report,
@@ -55,6 +57,7 @@ async def _run_manifest(*, enable_image_beta: bool, runtime: dict[str, object]) 
     load_manifest = runtime["load_manifest"]
     load_pdf = runtime["load_pdf"]
     write_corpus_report = runtime["write_corpus_report"]
+    extract_v12_parser_metadata = runtime["extract_v12_parser_metadata"]
     results = []
 
     for entry in load_manifest():
@@ -72,7 +75,9 @@ async def _run_manifest(*, enable_image_beta: bool, runtime: dict[str, object]) 
             document_class=preflight.get("document_class"),
         )
 
-        if preflight.get("lane_type") == "trusted_pdf":
+        lane_type = preflight.get("lane_type")
+
+        if lane_type == "trusted_pdf":
             try:
                 pipeline_result = await pipeline.run(
                     entry.path,
@@ -97,16 +102,66 @@ async def _run_manifest(*, enable_image_beta: bool, runtime: dict[str, object]) 
                 benchmark_metrics = pipeline_result.get("benchmark", {}).get("metrics", {})
                 result.processing_ms = int(benchmark_metrics.get("processing_ms") or 0)
                 result.job_id = str(pipeline_result.get("job_id") or entry.path)
-        elif preflight.get("lane_type") == "unsupported":
+
+                # v12: capture parser substrate metadata from pipeline result
+                parser_meta = extract_v12_parser_metadata(pipeline_result, "trusted_pdf")
+                result.parser_backend = parser_meta["parser_backend"]
+                result.parser_backend_version = parser_meta["parser_backend_version"]
+                result.row_assembly_version = parser_meta["row_assembly_version"]
+
+        elif lane_type == "unsupported":
             result.actual_status = "unsupported"
             result.actual_outcome = "unsupported"
             if preflight.get("failure_code"):
                 result.error = str(preflight["failure_code"])
-        else:
-            result.actual_status = "preflight_only"
-            result.actual_outcome = str(preflight.get("promotion_status") or "image_beta")
+
+        elif lane_type == "image_beta":
+            # v12: run image_beta lane through the pipeline when enabled and promoted
+            result.actual_lane = "image_beta"
             if enable_image_beta and str(preflight.get("promotion_status")) == "beta_ready":
-                result.error = "image_beta_runtime_not_implemented_for_pdf_inputs"
+                try:
+                    pipeline_result = await pipeline.run(
+                        entry.path,
+                        file_bytes=file_bytes,
+                        lane_type="image_beta",
+                        source_checksum=preflight.get("checksum"),
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    result.actual_status = "error"
+                    result.actual_outcome = "error"
+                    result.error = f"{type(exc).__name__}: {exc}"
+                else:
+                    qa_metrics = pipeline_result.get("qa", {}).get("metrics", {})
+                    patient_artifact = pipeline_result.get("patient_artifact", {})
+                    result.actual_status = str(pipeline_result.get("status") or "partial")
+                    result.actual_outcome = result.actual_status
+                    result.observations_count = len(pipeline_result.get("observations", []))
+                    result.clean_rows_count = int(qa_metrics.get("clean_rows") or 0)
+                    result.findings_count = len(pipeline_result.get("findings", []))
+                    result.not_assessed_count = len(patient_artifact.get("not_assessed", []))
+                    result.support_banner = patient_artifact.get("support_banner")
+                    benchmark_metrics = pipeline_result.get("benchmark", {}).get("metrics", {})
+                    result.processing_ms = int(benchmark_metrics.get("processing_ms") or 0)
+                    result.job_id = str(pipeline_result.get("job_id") or entry.path)
+
+                    # v12: capture parser substrate metadata from pipeline result
+                    parser_meta = extract_v12_parser_metadata(pipeline_result, "image_beta")
+                    result.parser_backend = parser_meta["parser_backend"]
+                    result.parser_backend_version = parser_meta["parser_backend_version"]
+                    result.row_assembly_version = parser_meta["row_assembly_version"]
+            else:
+                # image_beta not enabled or not promoted: record as blocked
+                result.actual_status = "blocked"
+                result.actual_outcome = str(preflight.get("promotion_status") or "image_beta")
+                if not enable_image_beta:
+                    result.error = "image_beta_disabled_pass_use_enable_image_beta_flag"
+                else:
+                    result.error = f"image_beta_not_promoted_status_{preflight.get('promotion_status', 'unknown')}"
+
+        else:
+            # Fallback for unexpected lane types
+            result.actual_status = "preflight_only"
+            result.actual_outcome = str(preflight.get("promotion_status") or "unknown")
 
         results.append(result)
 
@@ -118,7 +173,12 @@ async def _run_manifest(*, enable_image_beta: bool, runtime: dict[str, object]) 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run the v11 manifest-driven corpus validation over pdfs_by_difficulty."
+        description=(
+            "Run the v12 manifest-driven corpus validation over pdfs_by_difficulty. "
+            "Supports trusted_pdf (PyMuPDF) and image_beta (qwen-vl-ocr-2025-11-20) lanes. "
+            "Parser substrate metadata (parser_backend, parser_backend_version, "
+            "row_assembly_version) is recorded in the report for each entry."
+        )
     )
     parser.add_argument(
         "--loinc-path",
@@ -130,7 +190,11 @@ def main() -> int:
     parser.add_argument(
         "--enable-image-beta",
         action="store_true",
-        help="Temporarily enable image-beta promotion checks during the run.",
+        help=(
+            "Enable image-beta lane execution for entries with promotion_status=beta_ready. "
+            "Requires the Qwen OCR API key to be configured via ELFIE_QWEN_OCR_API_KEY. "
+            "Without this flag, image_beta entries are recorded as blocked."
+        ),
     )
     parser.add_argument(
         "--print-json",

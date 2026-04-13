@@ -7,7 +7,7 @@
     "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
   },
   "benchmark_contract_version": "benchmark-contract-v1",
-  "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+  "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
   "contract_version": "benchmark-proof-pack-v1",
   "family_benchmarks": {},
   "lineage": {
@@ -15,7 +15,7 @@
     "build_commit": "local-dev",
     "family_adapter_version": "family-adapter-v1",
     "formula_version": "formula-v1",
-    "id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+    "id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
     "job_id": "3dd29ed9-a1e7-54c7-b42f-7005b9811e63",
     "mapping_threshold_config": {
       "default": 0.9
@@ -23,8 +23,10 @@
     "model_version": null,
     "nextstep_policy_version": "nextstep-v1",
     "ocr_version": null,
-    "parser_version": "trusted-pdf-v1",
-    "row_assembly_version": "row-assembly-v1",
+    "parser_backend": "pymupdf",
+    "parser_backend_version": "pymupdf-1.27.x",
+    "parser_version": "pymupdf-1.27.x",
+    "row_assembly_version": "row-assembly-v2",
     "row_type_rule_set_version": "row-type-rules-v1",
     "rule_pack_version": "rules-v1",
     "severity_policy_version": "severity-v1",
@@ -33,14 +35,17 @@
     "terminology_release": "loinc-test-fixture",
     "unit_engine_version": "ucum-v1"
   },
-  "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+  "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
   "metrics": {
     "clean_rows": 2,
     "extracted_rows": 2,
     "extraction_ms": 0,
     "findings": 2,
     "panels": 1,
-    "processing_ms": 5
+    "parser_backend": "pymupdf",
+    "parser_backend_version": "pymupdf-1.27.x",
+    "processing_ms": 3,
+    "row_assembly_version": "row-assembly-v2"
   },
   "regression_tags": [],
   "report_type": "truth_engine_seeded_pipeline",
@@ -53,19 +58,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -77,7 +82,7 @@
         "report_type": "truth_engine_seeded_pipeline"
       },
       "report_name": "ablation_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     },
     "clinician_scan_report.json": {
       "artifact_refs": {
@@ -87,19 +92,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -110,7 +115,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "clinician_scan_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     },
     "coverage_report.json": {
       "artifact_refs": {
@@ -120,19 +125,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -144,12 +149,15 @@
           "clean_rows": 2,
           "extracted_rows": 2,
           "findings": 2,
-          "panels": 1
+          "panels": 1,
+          "parser_backend": "pymupdf",
+          "parser_backend_version": "pymupdf-1.27.x",
+          "row_assembly_version": "row-assembly-v2"
         },
         "regressed_metrics": []
       },
       "report_name": "coverage_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     },
     "explanation_report.json": {
       "artifact_refs": {
@@ -159,19 +167,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -183,7 +191,7 @@
         "template_version": "templates-v1"
       },
       "report_name": "explanation_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     },
     "mapping_report.json": {
       "artifact_refs": {
@@ -193,19 +201,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -222,11 +230,14 @@
           "extraction_ms": 0,
           "findings": 2,
           "panels": 1,
-          "processing_ms": 5
+          "parser_backend": "pymupdf",
+          "parser_backend_version": "pymupdf-1.27.x",
+          "processing_ms": 3,
+          "row_assembly_version": "row-assembly-v2"
         }
       },
       "report_name": "mapping_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     },
     "parser_report.json": {
       "artifact_refs": {
@@ -236,19 +247,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -259,11 +270,11 @@
         "regression_tags": [],
         "timing": {
           "extraction_ms": 0,
-          "processing_ms": 5
+          "processing_ms": 3
         }
       },
       "report_name": "parser_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     },
     "partial_support_report.json": {
       "artifact_refs": {
@@ -273,19 +284,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -299,7 +310,7 @@
         }
       },
       "report_name": "partial_support_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     },
     "patient_comprehension_report.json": {
       "artifact_refs": {
@@ -309,19 +320,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -332,7 +343,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "patient_comprehension_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     },
     "policy_report.json": {
       "artifact_refs": {
@@ -342,19 +353,19 @@
         "patient_artifact": "/api/artifacts/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/patient",
         "proof_pack": "/api/jobs/3dd29ed9-a1e7-54c7-b42f-7005b9811e63/proof-pack"
       },
-      "benchmark_id": "8f9694fd-d0bf-5fce-9758-85573b5cd4ff",
+      "benchmark_id": "07e24c5c-a4c1-5294-9683-c1502e042d36",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "2b79a0f1-2474-5398-8abe-f82b0e968b5e",
+      "lineage_id": "aab46796-74c2-5487-bb92-dac9a35bd5b7",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
         "ocr_version": null,
-        "parser_version": "trusted-pdf-v1",
-        "row_assembly_version": "row-assembly-v1",
+        "parser_version": "pymupdf-1.27.x",
+        "row_assembly_version": "row-assembly-v2",
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
@@ -368,7 +379,7 @@
         "severity_policy_version": "severity-v1"
       },
       "report_name": "policy_report.json",
-      "timestamp": "2026-04-12T10:55:34.873010Z"
+      "timestamp": "2026-04-13T07:18:54.015439Z"
     }
   },
   "summary": {
@@ -378,13 +389,16 @@
       "clean_rows": 2,
       "extracted_rows": 2,
       "findings": 2,
-      "panels": 1
+      "panels": 1,
+      "parser_backend": "pymupdf",
+      "parser_backend_version": "pymupdf-1.27.x",
+      "row_assembly_version": "row-assembly-v2"
     },
     "regressed_metrics": [],
     "regression_tags": [],
     "timing": {
       "extraction_ms": 0,
-      "processing_ms": 5
+      "processing_ms": 3
     },
     "trace_refs": {}
   },

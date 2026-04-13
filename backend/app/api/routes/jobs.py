@@ -166,12 +166,14 @@ async def retry_job(
             )
             raise HTTPException(status_code=422, detail=_PROCESSING_FAILED_DETAIL) from exc
 
+        # v12: Clear stale operator_note on successful retry
         await _update_job_status_in_fresh_session(
             job_uuid,
             status=result["status"],
             session_factory=session_factory,
             retry_count=retry_count,
             dead_letter=False,
+            clear_operator_note=True,
         )
         return await _get_persisted_job(job_uuid, session_factory)
     except (InterfaceError, OperationalError):
@@ -303,6 +305,7 @@ async def _update_job_status_in_fresh_session(
     retry_count: int | None = None,
     dead_letter: bool | None = None,
     operator_note: str | None = None,
+    clear_operator_note: bool = False,
 ) -> None:
     async with session_factory() as session:
         store = TopLevelLifecycleStore(session)
@@ -312,5 +315,6 @@ async def _update_job_status_in_fresh_session(
             retry_count=retry_count,
             dead_letter=dead_letter,
             operator_note=operator_note,
+            clear_operator_note=clear_operator_note,
         )
         await session.commit()

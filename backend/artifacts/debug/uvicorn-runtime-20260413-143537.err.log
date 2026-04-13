@@ -1,0 +1,8 @@
+INFO:     Started server process [25452]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+pipeline_failed job_id=0f29f27f-4b99-4493-b532-b87f92d56214 lane=image_beta error=(sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.StringDataRightTruncationError'>: value too long for type character varying(64)
+[SQL: INSERT INTO extracted_rows (id, document_id, job_id, source_page, row_hash, raw_text, raw_analyte_label, raw_value_string, raw_unit_string, raw_reference_range, source_block_id, source_row_id, row_type, block_type, family_adapter_id, failure_code, extraction_confidence, created_at) VALUES ($1::UUID, $2::UUID, $3::UUID, $4::INTEGER, $5::VARCHAR, $6::VARCHAR, $7::VARCHAR, $8::VARCHAR, $9::VARCHAR, $10::VARCHAR, $11::VARCHAR, $12::VARCHAR, $13::VARCHAR, $14::VARCHAR, $15::VARCHAR, $16::VARCHAR, $17::FLOAT, $18::TIMESTAMP WITH TIME ZONE)]
+[parameters: (UUID('6c1dd0ea-a8b3-43de-8361-7b90b9b31c1a'), UUID('402beb69-293e-4399-bc25-fd5bb0a17999'), UUID('0f29f27f-4b99-4493-b532-b87f92d56214'), 4, '6feea2e34b239f86c7f8dc9a3cffaa5e5e6429b1e4616274aedaffbe5a904bd0', 'Liver is enlarged in size (~ 164 mm) and shows increase in parenchymal echogenicity. Intrahepatic biliary', 'Liver is enlarged in size ~', '164', 'mm and shows increase in parenchymal echogenicity. Intrahepatic biliary', None, 'page-4:line-015', '1', 'measured_analyte_row', 'mixed_page', 'generic_layout', None, 0.98, datetime.datetime(2026, 4, 13, 7, 36, 54, 567946, tzinfo=datetime.timezone.utc))]
+(Background on this error at: https://sqlalche.me/e/20/dbapi)

@@ -1,0 +1,29 @@
+INFO:     Started server process [25644]
+INFO:     Waiting for application startup.
+INFO:     ASGI 'lifespan' protocol appears unsupported.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\hlbtp\AppData\Local\Programs\Python\Python311\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 420, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\hlbtp\AppData\Local\Programs\Python\Python311\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\hlbtp\AppData\Local\Programs\Python\Python311\Lib\site-packages\uvicorn\middleware\asgi2.py", line 14, in __call__
+    instance = self.app(scope)
+               ^^^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not callable
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\hlbtp\AppData\Local\Programs\Python\Python311\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 420, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\hlbtp\AppData\Local\Programs\Python\Python311\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\hlbtp\AppData\Local\Programs\Python\Python311\Lib\site-packages\uvicorn\middleware\asgi2.py", line 14, in __call__
+    instance = self.app(scope)
+               ^^^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not callable

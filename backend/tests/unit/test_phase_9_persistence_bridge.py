@@ -282,3 +282,115 @@ def test_pipeline_persists_top_level_bundle_when_db_session_is_provided(monkeypa
     assert "clinician_artifact" in calls["bundle"]
     assert "lineage_run" in calls["bundle"]
     assert "benchmark_run" in calls["bundle"]
+
+
+def test_store_update_job_status_clears_operator_note_explicitly(monkeypatch) -> None:
+    """v12: update_job_status(clear_operator_note=True) must set operator_note to None
+    even when the current value is a stale error message.
+
+    This proves the explicit-clear path does not conflate None-as-omit with
+    None-as-clear, which was the root cause of the stale-note bug.
+    """
+    from app.db import store as store_module
+
+    captured: dict[str, object] = {}
+    job_id = uuid4()
+
+    class FakeJob:
+        def __init__(self) -> None:
+            self.id = job_id
+            self.status = "completed"
+            self.operator_note = "old failure: timeout"
+            self.retry_count = 1
+            self.dead_letter = False
+            self.updated_at = None
+
+    class FakeSession:
+        async def execute(self, stmt):
+            # v12: _values is keyed by Column objects, values are BindParameters.
+            # Normalize to string keys and unwrapped values for assertions.
+            captured["execute_values"] = {
+                col.name if hasattr(col, "name") else col: (
+                    bp.value if hasattr(bp, "value") else bp
+                )
+                for col, bp in stmt._values.items()  # noqa: SLF001
+            }
+            return SimpleNamespace(rowcount=1)
+
+        async def flush(self) -> None:
+            pass
+
+        async def get(self, _model, _pk):
+            return FakeJob()
+
+    async def run_test() -> None:
+        session = FakeSession()
+        persistence = store_module.TopLevelLifecycleStore(session)
+        job = await persistence.update_job_status(
+            job_id,
+            status="completed",
+            retry_count=2,
+            clear_operator_note=True,
+        )
+        assert job.operator_note is None
+        return captured
+
+    result = asyncio.run(run_test())
+    assert "execute_values" in result
+    assert result["execute_values"]["operator_note"] is None
+    assert result["execute_values"]["status"] == "completed"
+
+
+def test_store_update_job_status_preserves_omit_semantics_for_operator_note(monkeypatch) -> None:
+    """v12: update_job_status without clear_operator_note must NOT touch the
+    operator_note column, preserving the existing None-as-omit convention."""
+    from app.db import store as store_module
+
+    captured: dict[str, object] = {}
+    job_id = uuid4()
+
+    class FakeJob:
+        def __init__(self) -> None:
+            self.id = job_id
+            self.status = "completed"
+            self.operator_note = "stale failure message"
+            self.retry_count = 0
+            self.dead_letter = False
+            self.updated_at = None
+
+    class FakeSession:
+        async def execute(self, stmt):
+            # v12: _values is keyed by Column objects, values are BindParameters.
+            # Normalize to string keys and unwrapped values for assertions.
+            captured["execute_values"] = {
+                col.name if hasattr(col, "name") else col: (
+                    bp.value if hasattr(bp, "value") else bp
+                )
+                for col, bp in stmt._values.items()  # noqa: SLF001
+            }
+            return SimpleNamespace(rowcount=1)
+
+        async def flush(self) -> None:
+            pass
+
+        async def get(self, _model, _pk):
+            return FakeJob()
+
+    async def run_test() -> None:
+        session = FakeSession()
+        persistence = store_module.TopLevelLifecycleStore(session)
+        job = await persistence.update_job_status(
+            job_id,
+            status="completed",
+            retry_count=1,
+        )
+        # Without clear_operator_note, the model instance should retain the old note
+        assert job.operator_note == "stale failure message"
+        return captured
+
+    result = asyncio.run(run_test())
+    assert "execute_values" in result
+    # operator_note must NOT appear in the SQL values dict (None-as-omit)
+    assert "operator_note" not in result["execute_values"]
+    assert result["execute_values"]["status"] == "completed"
+

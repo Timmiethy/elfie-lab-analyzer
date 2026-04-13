@@ -1,7 +1,7 @@
 # Elfie Labs Analyzer Agent Operating Manual
 
 ## Mission
-Build the narrow proof defined by the v10 documents:
+Build the narrow proof defined by the current truth stack:
 
 - reject unsupported lab inputs loudly
 - turn supported inputs into provenance-backed structured observations
@@ -20,15 +20,18 @@ Codex should default to orchestration, decomposition, and verification ownership
 ## Source-of-Truth Hierarchy
 Read and obey these in order:
 
-1. `labs_analyzer_v10_source_of_truth.md`
-2. `labs_analyzer_v10_parallel_distribution_rewritten.md`
-3. `labs_analyzer_v10_tests_guardrails.md`
-4. `contracts/README.md` and `contracts/examples/*`
-5. `tasks/todo.md`
-6. the active worker brief in `tasks/briefs/*.md`
-7. `tasks/lessons.md`
+1. `labs_analyzer_v11_source_of_truth.md`
+2. `labs_analyzer_v12_delta_plan.md`
+3. `labs_analyzer_v10_parallel_distribution_rewritten.md`
+4. `labs_analyzer_v10_tests_guardrails.md`
+5. `contracts/README.md` and `contracts/examples/*`
+6. `tasks/todo.md`
+7. the active worker brief in `tasks/briefs/*.md`
+8. `tasks/lessons.md`
 
 Lower files never override higher files.
+
+`labs_analyzer_v12_delta_plan.md` is a delta on top of `labs_analyzer_v11_source_of_truth.md`. The v10 parallel split and guardrail pack still govern role boundaries and test posture until they are explicitly replaced.
 
 ## Human Role
 The human in this repo is `Person A` by default.
@@ -37,7 +40,8 @@ Person A owns or approves:
 
 - truth-engine direction
 - contract freezes and version bumps
-- parser, mapping, policy, severity, and next-step behavior changes
+- parser substrate, lane routing, model pinning, and parser-output contract changes
+- mapping, policy, severity, and next-step behavior changes
 - launch-scope claims
 - benchmark interpretation
 - downgrade decisions when proof gates fail
@@ -57,6 +61,18 @@ These are hard requirements, not style preferences:
 8. Longitudinal wording must stay neutral: `increased`, `decreased`, `similar`, or `trend unavailable`. Never `improving` or `worsening`.
 9. The patient artifact is the must-polish surface. UI honesty beats polish.
 10. No proof is complete without a lineage bundle, benchmark pack, patient artifact, and clinician-share artifact.
+
+## Current Phase Guardrails
+These are specific to the active v12 parser-migration phase:
+
+1. Keep the v11 normalization-first architecture. The active change surface is the parser substrate, not the deterministic reasoning core.
+2. Trusted born-digital parsing uses `PyMuPDF` 1.27.x as the primary backend.
+3. Image/scanned parsing uses `qwen-vl-ocr-2025-11-20` as the primary backend and stays `image_beta` until its own gates pass.
+4. `pdfplumber` is debug and forensic-only. It is not the production primary parser in this phase.
+5. `PaddleOCR-VL-1.5` is shadow benchmark-only unless Person A explicitly changes the plan.
+6. No parser backend may emit `CanonicalObservationV2` directly. Parser backends emit `PageParseArtifactV3`.
+7. `RowAssemblerV2` owns the handoff from `PageParseArtifactV3` to typed candidate rows. Parser work must not silently bypass that contract.
+8. Do not adopt `docling-parse`, `marker`, `surya`, `docTR`, or generic `qwen-vl-plus` / `qwen-vl-max` as the primary parser or OCR lane without Person A approval and corpus replay.
 
 ## Tracks and Ownership
 Use explicit tracks for every task brief and worker run.
@@ -147,7 +163,7 @@ Follow this exact order for any non-trivial task.
 At session start:
 
 - read `tasks/lessons.md`
-- read the relevant v10 source docs
+- read the relevant v11/v12 source docs
 - inspect existing contracts and examples if the task touches payloads
 - inspect current code and current diff before planning
 
@@ -221,7 +237,7 @@ Worker runs should pin:
 Codex must review every worker result against:
 
 - the task brief
-- the v10 source docs
+- the active truth stack
 - contract examples
 - the diff
 - the verification output
@@ -293,14 +309,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\orchestration\Invoke-ProjectV
 In addition, manually confirm that changed contract examples still match backend and frontend usage.
 
 ## Required Output Definitions
-Every agent must optimize for these outputs from the source blueprint:
+Every agent must optimize for these outputs from the active source stack:
 
-1. trusted patient artifact
-2. clinician-share artifact
-3. normalization trace
-4. benchmark pack
-5. demo pack
-6. lineage bundle
+1. `PageParseArtifactV3`
+2. `CandidateRowArtifactV2`
+3. `NormalizationTraceV3`
+4. `CanonicalObservationV2`
+5. `SuppressionReportV2`
+6. `PatientArtifactV2`
+7. `ClinicianArtifactV2`
+8. `CorpusBenchmarkReportV2`
 
 If a task cannot be tied back to one of those artifacts or to the system that supports them, it is probably out of scope.
 
@@ -313,6 +331,8 @@ Stop and re-plan immediately if any of these happen:
 - verification failures imply a wider scope than the current brief
 - a worker starts changing public proof claims
 - a task would blur trusted PDF and image-beta trust levels
+- a task starts rewriting normalization contracts or policy logic when the brief is only authorized for parser migration
+- a worker tries to restore `pdfplumber` or a generic vision model as the primary parser path
 
 ## Useful Commands
 OpenClaw path on this machine:
@@ -328,7 +348,7 @@ Useful commands:
 & 'D:\clawcode\claw-code\rust\target\debug\claw.exe' sandbox
 & 'D:\clawcode\claw-code\rust\target\debug\claw.exe' agents
 & 'D:\clawcode\claw-code\rust\target\debug\claw.exe' skills
-& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' system-prompt --cwd 'D:\elfie-lab-analyzer' --date 2026-04-11
+& 'D:\clawcode\claw-code\rust\target\debug\claw.exe' system-prompt --cwd 'D:\elfie-lab-analyzer' --date 2026-04-12
 ```
 
 ## Local Workflow Files

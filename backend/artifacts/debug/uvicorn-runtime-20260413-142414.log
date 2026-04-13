@@ -1,0 +1,16 @@
+INFO:     127.0.0.1:56356 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56357 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56358 - "GET /api/health/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56359 - "GET /api/health/privacy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56360 - "GET /api/health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56363 - "POST /api/upload HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56364 - "POST /api/upload HTTP/1.1" 400 Bad Request
+Consider using the pymupdf_layout package for a greatly improved page layout analysis.
+INFO:     127.0.0.1:56370 - "POST /api/upload HTTP/1.1" 422 Unprocessable Entity
+INFO:     127.0.0.1:56369 - "POST /api/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53075 - "GET /api/jobs/cc3ed7f2-4c51-4e57-b78a-3fbe0e156d55 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53076 - "GET /api/artifacts/cc3ed7f2-4c51-4e57-b78a-3fbe0e156d55/patient HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53078 - "GET /api/artifacts/0f29f27f-4b99-4493-b532-b87f92d56214/patient HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53077 - "GET /api/jobs/cc3ed7f2-4c51-4e57-b78a-3fbe0e156d55/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53079 - "GET /api/jobs/0f29f27f-4b99-4493-b532-b87f92d56214 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53080 - "GET /api/jobs/0f29f27f-4b99-4493-b532-b87f92d56214/audit HTTP/1.1" 200 OK

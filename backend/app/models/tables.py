@@ -214,6 +214,8 @@ class LineageRun(Base):
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), nullable=False)
     source_checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     parser_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    parser_backend: Mapped[str | None] = mapped_column(String(32))
+    parser_backend_version: Mapped[str | None] = mapped_column(String(64))
     adapter_version: Mapped[str | None] = mapped_column(String(32))
     row_assembly_version: Mapped[str | None] = mapped_column(String(32))
     row_type_rule_set_version: Mapped[str | None] = mapped_column(String(32))

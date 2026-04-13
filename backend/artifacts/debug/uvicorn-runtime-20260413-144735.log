@@ -1,0 +1,18 @@
+INFO:     127.0.0.1:51978 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51980 - "GET /api/health/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51981 - "GET /api/health/privacy HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51982 - "GET /api/health/ready HTTP/1.1" 200 OK
+Consider using the pymupdf_layout package for a greatly improved page layout analysis.
+INFO:     127.0.0.1:51990 - "POST /api/jobs/4d1679aa-05a9-42cc-8b50-cd123b2d3c62/retry HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /api/jobs/4d1679aa-05a9-42cc-8b50-cd123b2d3c62/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /api/jobs/4d1679aa-05a9-42cc-8b50-cd123b2d3c62 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /api/jobs/4d1679aa-05a9-42cc-8b50-cd123b2d3c62/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "POST /api/jobs/0f29f27f-4b99-4493-b532-b87f92d56214/retry HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /api/jobs/0f29f27f-4b99-4493-b532-b87f92d56214/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /api/jobs/0f29f27f-4b99-4493-b532-b87f92d56214 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51990 - "GET /api/jobs/0f29f27f-4b99-4493-b532-b87f92d56214/audit HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50203 - "GET /api/health/ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57810 - "POST /api/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57811 - "GET /api/jobs/64de2886-edca-412e-a7f2-d01ec581209f/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61416 - "GET /api/jobs/64de2886-edca-412e-a7f2-d01ec581209f/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53815 - "GET /api/artifacts/64de2886-edca-412e-a7f2-d01ec581209f/patient HTTP/1.1" 200 OK

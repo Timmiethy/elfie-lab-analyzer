@@ -1,0 +1,5 @@
+INFO:     Started server process [42164]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+pipeline_failed job_id=0f29f27f-4b99-4493-b532-b87f92d56214 lane=image_beta error=image_beta_ocr_backend_failed

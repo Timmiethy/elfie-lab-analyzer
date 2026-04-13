@@ -209,6 +209,7 @@ async def _update_job_status_in_fresh_session(
     retry_count: int | None = None,
     dead_letter: bool | None = None,
     operator_note: str | None = None,
+    clear_operator_note: bool = False,
 ) -> None:
     async with session_factory() as session:
         store = TopLevelLifecycleStore(session)
@@ -218,5 +219,6 @@ async def _update_job_status_in_fresh_session(
             retry_count=retry_count,
             dead_letter=dead_letter,
             operator_note=operator_note,
+            clear_operator_note=clear_operator_note,
         )
         await session.commit()

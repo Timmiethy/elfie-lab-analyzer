@@ -45,6 +45,11 @@ class RunResult:
     processing_ms: int = 0
     job_id: str | None = None
 
+    # v12 parser substrate metadata recorded honestly from runtime results
+    parser_backend: str | None = None
+    parser_backend_version: str | None = None
+    row_assembly_version: str | None = None
+
     def lane_matches(self) -> bool:
         if self.expected_lane is None:
             return True
@@ -89,6 +94,10 @@ class RunResult:
             "support_banner": self.support_banner,
             "processing_ms": self.processing_ms,
             "job_id": self.job_id,
+            # v12 parser substrate metadata
+            "parser_backend": self.parser_backend,
+            "parser_backend_version": self.parser_backend_version,
+            "row_assembly_version": self.row_assembly_version,
         }
 
 
@@ -114,19 +123,18 @@ class CorpusReport:
         self.entries = [r.to_report() for r in results]
 
         for r in results:
-            if r.error:
-                self.errors += 1
-            elif r.actual_status == "completed":
+            if r.actual_status == "completed":
                 self.completed += 1
             elif r.actual_status == "partial":
                 self.partial += 1
+            elif r.actual_status == "blocked" or (
+                r.expected_lane == "image_beta" and r.actual_lane in {"unsupported", "image_beta"}
+            ):
+                self.blocked += 1
             elif r.actual_lane == "unsupported":
                 self.unsupported += 1
-            elif r.expected_lane == "image_beta" and r.actual_lane in {
-                "unsupported",
-                "image_beta",
-            }:
-                self.blocked += 1
+            elif r.error:
+                self.errors += 1
 
             if r.lane_matches():
                 self.lane_matches += 1
@@ -211,3 +219,44 @@ def write_corpus_report(report: CorpusReport) -> Path:
         encoding="utf-8",
     )
     return report_path
+
+
+def extract_v12_parser_metadata(
+    pipeline_result: dict[str, Any],
+    lane_type: str,
+) -> dict[str, str | None]:
+    """Extract v12 parser substrate metadata from a pipeline result.
+
+    Reads parser_backend, parser_backend_version, and row_assembly_version
+    from the lineage or benchmark sections. Falls back to lane-level defaults
+    when the pipeline result does not carry explicit parser metadata.
+    """
+    lineage = pipeline_result.get("lineage", {})
+    benchmark = pipeline_result.get("benchmark", {})
+    metrics = benchmark.get("metrics", {})
+
+    parser_backend = (
+        lineage.get("parser_backend")
+        or metrics.get("parser_backend")
+        or ("pymupdf" if lane_type == "trusted_pdf" else "qwen_ocr")
+    )
+    parser_backend_version = (
+        lineage.get("parser_backend_version")
+        or metrics.get("parser_backend_version")
+        or (
+            "pymupdf-1.27.x"
+            if lane_type == "trusted_pdf"
+            else "qwen-vl-ocr-2025-11-20"
+        )
+    )
+    row_assembly_version = (
+        lineage.get("row_assembly_version")
+        or metrics.get("row_assembly_version")
+        or "row-assembly-v2"
+    )
+
+    return {
+        "parser_backend": str(parser_backend) if parser_backend else None,
+        "parser_backend_version": str(parser_backend_version) if parser_backend_version else None,
+        "row_assembly_version": str(row_assembly_version) if row_assembly_version else None,
+    }

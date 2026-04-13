@@ -1,0 +1,35 @@
+{
+  "fixture": "medium/seed_innoquest_dbticrp.pdf",
+  "checkpoint": "post_wave9_local_review_integration",
+  "upload_status": "partial",
+  "lane_type": "trusted_pdf",
+  "h_rows_count": 2,
+  "h_obs_count": 1,
+  "rows": [
+    {
+      "raw_analyte_label": "HbA1c 葡萄糖血红蛋白",
+      "raw_text": "HbA1c 葡萄糖血红蛋白 5.1 % 32 mmol/mol",
+      "raw_value_string": "5.1",
+      "raw_unit_string": "%",
+      "raw_reference_range": null
+    },
+    {
+      "raw_analyte_label": "Diagnostic Values of HbA1c in Malaysian Adults HbA1c NGSP % HbA1c IFCC mmol/mol",
+      "raw_text": "Diagnostic Values of HbA1c in Malaysian Adults HbA1c (NGSP) %    HbA1c (IFCC) mmol/mol < 5.7             < 39                 Normal",
+      "raw_value_string": "<5.7",
+      "raw_unit_string": null,
+      "raw_reference_range": "< 39 Normal"
+    }
+  ],
+  "observations": [
+    {
+      "raw_analyte_label": "HbA1c 葡萄糖血红蛋白",
+      "accepted_analyte_display": "HbA1c",
+      "raw_value_string": "5.1",
+      "raw_unit_string": "%",
+      "support_state": "supported",
+      "support_code": "supported_result"
+    }
+  ],
+  "diagnosis": "The remaining failing assertion is extracted-row leakage only. The bilingual measurement row is correct and supported; the threshold category table still survives as a measured extracted row because it contains HbA1c tokens plus comparator/range text."
+}

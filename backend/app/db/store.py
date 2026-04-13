@@ -196,6 +196,7 @@ class TopLevelLifecycleStore:
         retry_count: int | None = None,
         dead_letter: bool | None = None,
         operator_note: str | None = None,
+        clear_operator_note: bool = False,
     ) -> Job:
         values: dict[str, Any] = {
             "status": status,
@@ -207,6 +208,8 @@ class TopLevelLifecycleStore:
             values["dead_letter"] = dead_letter
         if operator_note is not None:
             values["operator_note"] = operator_note
+        if clear_operator_note:
+            values["operator_note"] = None
 
         result = await self.session.execute(
             sql_update(Job)
@@ -226,7 +229,9 @@ class TopLevelLifecycleStore:
             job.retry_count = retry_count
         if dead_letter is not None:
             job.dead_letter = dead_letter
-        if operator_note is not None:
+        if clear_operator_note:
+            job.operator_note = None
+        elif operator_note is not None:
             job.operator_note = operator_note
         return job
 
@@ -267,6 +272,8 @@ class TopLevelLifecycleStore:
         *,
         job_id: UUID | str,
         source_checksum: str,
+        parser_backend: str | None = None,
+        parser_backend_version: str | None = None,
         parser_version: str,
         adapter_version: str | None = None,
         row_assembly_version: str | None = None,
@@ -286,6 +293,8 @@ class TopLevelLifecycleStore:
         lineage_run = LineageRun(
             job_id=_coerce_uuid(job_id),
             source_checksum=source_checksum,
+            parser_backend=parser_backend,
+            parser_backend_version=parser_backend_version,
             parser_version=parser_version,
             adapter_version=adapter_version,
             row_assembly_version=row_assembly_version,

@@ -45,6 +45,7 @@ _REFERENCE_ONLY_PREFIXES = ("reference range", "reference interval", "ref range"
 _VITALS_HINTS = (
     "height feet",
     "height inches",
+    "weight",
     "blood pressure",
     "systolic",
     "diastolic",
@@ -56,7 +57,7 @@ _VITALS_HINTS = (
     "respiratory rate",
     "temperature",
 )
-_LOCATION_HINTS = ("room ", " floor", "ward ")
+_LOCATION_HINTS = ("room ", " floor", "ward ", " flr", " flr.", " jalan ")
 _UNIT_PREFIX_CANONICAL = {
     "%": "%",
     "mg/dl": "mg/dL",
@@ -149,6 +150,7 @@ _THRESHOLD_LABELS = {
     "normal",
     "ifg",
     "prediabetes",
+    "diabetes",
     "dm",
     "t2dm",
     "glucose levels",
@@ -194,8 +196,16 @@ UNIT_HINTS = ("mg/dl", "g/dl", "g/l", "mg/l", "mmol/l", "umol/l", "nmol/l", "pmo
 
 
 class TrustedPdfParser:
+    """Trusted PDF parser using the v12 PyMuPDF-backed parser substrate.
+
+    The public ``parse`` signature is unchanged for backwards compatibility.
+    Internally it now uses BornDigitalParser + RowAssemblerV2 instead of
+    pdfplumber-first extraction.  pdfplumber is still imported for debug
+    helpers but is NOT used as the primary trusted extraction path.
+    """
+
     async def parse(self, file_bytes: bytes, *, max_pages: int | None = None) -> list[dict[str, Any]]:
-        return _parse_trusted_pdf(file_bytes, max_pages=max_pages)
+        return _parse_trusted_pdf_v12(file_bytes, max_pages=max_pages)
 
 
 class GenericLayoutAdapter:
@@ -242,12 +252,18 @@ def classify_candidate_text(
         return _classification("threshold_reference_row", "reference_table", "excluded", "threshold_table_row", page_class, family_adapter_id, True)
     if _is_reference_only_line(lower):
         return _classification("threshold_reference_row", "reference_table", "excluded", "threshold_reference_row", page_class, family_adapter_id, True)
+    if _is_threshold_comparator_row(text, lower):
+        return _classification("threshold_reference_row", "reference_table", "excluded", "threshold_comparator_row", page_class, family_adapter_id, True)
     if _looks_like_measurement(text):
         if _is_acr_measurement(lower) or _is_reported_derived_measurement(lower):
             return _classification("measured_analyte_row", "numeric", "supported", None, page_class, family_adapter_id, False)
         if _is_derived(lower):
-            failure = "derived_observation_unbound" if family_adapter_id in {"innoquest_bilingual_general"} or any(h in lower for h in DERIVED_SOURCE_REQUIRED) else None
-            return _classification("derived_analyte_row", "derived", "partial" if failure else "supported", failure, page_class, family_adapter_id, False)
+            # v12 wave-20: _looks_like_measurement already proved the row
+            # carries a real value token.  Value-bearing derived rows are
+            # supported; only label-only derived rows get the unbound penalty
+            # (handled by the later _is_derived branch when
+            # _looks_like_measurement returns False).
+            return _classification("derived_analyte_row", "derived", "supported", None, page_class, family_adapter_id, False)
         return _classification("measured_analyte_row", "dual_unit" if _looks_dual_unit(text) else "numeric", "supported", None, page_class, family_adapter_id, False)
     if _is_threshold(text, lower):
         return _classification("threshold_reference_row", "reference_table", "excluded", "threshold_reference_row", page_class, family_adapter_id, True)
@@ -443,8 +459,17 @@ def _parse_candidate_payload(
     support_code = classification["support_code"]
     source_observation_ids = fields["source_observation_ids"]
     if classification["row_type"] == "derived_analyte_row" and not source_observation_ids:
-        failure_code = failure_code or "derived_observation_unbound"
-        support_code = "partial"
+        # v12 wave-20: if the classifier already set failure_code=None and
+        # support_code="supported" (meaning the row is value-bearing), do not
+        # downgrade it to partial.  Only apply the unbound fallback when the
+        # classifier itself flagged the row as unbound.
+        if classification["failure_code"] is None:
+            # The classifier decided this derived row is supported (value-bearing).
+            # Keep the classifier's decision.
+            pass
+        else:
+            failure_code = failure_code or "derived_observation_unbound"
+            support_code = "partial"
 
     return {
         "parser_version": PARSER_VERSION,
@@ -834,9 +859,12 @@ def _is_reference_only_line(lower: str) -> bool:
 
 
 def _is_vitals_or_body_metrics(lower: str) -> bool:
-    if any(hint in lower for hint in _VITALS_HINTS):
+    # v12: word-boundary matching so hints like "weight" do not match inside
+    # BMI category labels like "overweight", allowing those rows to reach
+    # threshold_reference_row classification instead of admin_metadata_row.
+    if any(re.search(r"\b" + re.escape(hint) + r"\b", lower) for hint in _VITALS_HINTS):
         return True
-    if "height" in lower and "weight" in lower:
+    if re.search(r"\bheight\b", lower) and re.search(r"\bweight\b", lower):
         return True
     if re.match(r"^bp\b", lower):
         return True
@@ -870,6 +898,37 @@ def _is_threshold_measurement_label(text: str, lower: str) -> bool:
         return False
     label = " ".join(_clean_token(token).lower() for token in tokens[:index]).strip()
     return label in _THRESHOLD_LABELS
+
+
+def _is_threshold_comparator_row(text: str, lower: str) -> bool:
+    """v12: Catch threshold/risk-table rows with comparators before measurement classification.
+
+    Rows like "Intermediate", "Moderate CV Risk <2.6", "Very High CV Risk <=1.4"
+    contain comparators or numeric cutoffs that make ``_looks_like_measurement``
+    return True, causing them to leak as measured_analyte_row or unit_parse_fail.
+
+    This function detects the combination of threshold/risk keywords with
+    comparator symbols or cutoff-like numeric suffixes.
+    """
+    if any(ch in text for ch in "<>≤≥"):
+        # Has a comparator symbol - check if the text carries risk/threshold
+        # vocabulary rather than a real analyte measurement.
+        if any(hint in lower for hint in ("risk", "cv risk", "cut off", "atherogenic")):
+            return True
+        if any(hint in lower for hint in ("intermediate", "recurrent cv events", "biochem", "aip")):
+            return True
+    # Label-only threshold rows that are standalone category names
+    standalone_categories = {"intermediate", "low", "high", "very high", "very low", "borderline",
+                             "atherogenic low", "atherogenic high"}
+    tokens = lower.split()
+    if lower.strip() in standalone_categories:
+        return True
+    # Multi-word risk categories without comparators but with threshold semantics
+    if "cv risk" in lower or "cardiovascular risk" in lower:
+        return True
+    if any(hint in lower for hint in ("cut off low", "cut off high", "risk cut off")):
+        return True
+    return False
 
 
 def _looks_like_measurement(text: str) -> bool:
@@ -1231,3 +1290,118 @@ def _join_texts(*values: str | None) -> str | None:
 
 def _normalize_text(value: str | None) -> str:
     return " ".join(str(value).split()).strip() if value is not None else ""
+
+
+# ---------------------------------------------------------------------------
+# v12 trusted parser bridge: BornDigitalParser -> RowAssemblerV2 -> rows
+# ---------------------------------------------------------------------------
+
+def _parse_trusted_pdf_v12(
+    file_bytes: bytes,
+    *,
+    max_pages: int | None = None,
+) -> list[dict[str, Any]]:
+    """V12 trusted PDF parse using the PyMuPDF-backed BornDigitalParser.
+
+    This replaces the pdfplumber-first ``_parse_trusted_pdf`` as the primary
+    extraction path while preserving the existing downstream row contract.
+    pdfplumber is no longer used for row extraction in this function.
+
+    Pipeline:
+        file_bytes -> BornDigitalParser -> PageParseArtifactV3[]
+        PageParseArtifactV3 -> RowAssemblerV2 -> candidate row dicts
+        candidate row dicts -> dedup + materialize -> final row dicts
+    """
+    if not file_bytes:
+        raise ValueError("unsupported_pdf: empty input")
+
+    checksum = sha256(file_bytes).hexdigest()
+    document_id = uuid5(NAMESPACE_URL, f"trusted-pdf:{checksum}")
+
+    from app.services.parser.born_digital_parser import BornDigitalParser
+    from app.services.row_assembler.v2 import RowAssemblerV2
+
+    bd_parser = BornDigitalParser()
+    assembler = RowAssemblerV2()
+
+    artifacts = bd_parser.parse(file_bytes, max_pages=max_pages)
+
+    rows: list[dict[str, Any]] = []
+    seen_hashes: set[str] = set()
+
+    for artifact in artifacts:
+        family_adapter_id = _select_adapter(artifact.raw_text).family_adapter_id
+        artifact_rows = assembler.assemble(artifact, family_adapter_id=family_adapter_id)
+        for row in artifact_rows:
+            row_hash = sha256(
+                f"{checksum}:{row['source_page']}:{row['row_type']}:{row['raw_text']}".encode("utf-8")
+            ).hexdigest()
+            if row_hash in seen_hashes:
+                continue
+            seen_hashes.add(row_hash)
+            rows.append(_materialize_v12_row(row, document_id=document_id, checksum=checksum))
+
+    if rows:
+        return rows
+
+    # Fallback: if the new path yields nothing but text exists, fall through
+    # to the old pdfplumber path for backwards compatibility.
+    # This is a safety valve, not the primary path.
+    return _parse_trusted_pdf(file_bytes, max_pages=max_pages)
+
+
+def _materialize_v12_row(
+    assembled_row: dict[str, Any],
+    *,
+    document_id: UUID,
+    checksum: str,
+) -> dict[str, Any]:
+    """Materialize a RowAssemblerV2 output into the downstream row contract.
+
+    This adds document_id, a stable row_hash, and v12 parser lineage fields
+    that downstream consumers (ExtractionQA, ObservationBuilder) expect.
+    """
+    from app.services.parser.born_digital_parser import BACKEND_ID, BACKEND_VERSION
+
+    row_type = assembled_row.get("row_type", "unparsed_row")
+    raw_text = assembled_row.get("raw_text", "")
+    source_page = assembled_row.get("source_page", 1)
+
+    row_hash = sha256(
+        f"{checksum}:{source_page}:{row_type}:{raw_text}".encode("utf-8")
+    ).hexdigest()
+
+    # Use the artifact's backend metadata when present; fall back to module constants.
+    parser_backend = assembled_row.get("parser_backend", BACKEND_ID)
+    parser_backend_version = assembled_row.get("parser_backend_version", BACKEND_VERSION)
+
+    return {
+        "document_id": document_id,
+        "source_page": source_page,
+        "block_id": assembled_row.get("block_id", ""),
+        "row_hash": row_hash,
+        "raw_text": raw_text,
+        "raw_analyte_label": assembled_row.get("raw_analyte_label", ""),
+        "raw_value_string": assembled_row.get("raw_value_string"),
+        "raw_unit_string": assembled_row.get("raw_unit_string"),
+        "raw_reference_range": assembled_row.get("raw_reference_range"),
+        "parsed_numeric_value": assembled_row.get("parsed_numeric_value"),
+        "parsed_locale": assembled_row.get("parsed_locale", {}),
+        "parsed_comparator": assembled_row.get("parsed_comparator"),
+        "row_type": row_type,
+        "measurement_kind": assembled_row.get("measurement_kind"),
+        "support_code": assembled_row.get("support_code", "excluded"),
+        "failure_code": assembled_row.get("failure_code"),
+        "family_adapter_id": assembled_row.get("family_adapter_id", "generic_layout"),
+        "page_class": assembled_row.get("page_class", "unknown"),
+        "source_kind": assembled_row.get("source_kind", "block"),
+        "source_bounds": assembled_row.get("source_bounds"),
+        "candidate_trace": assembled_row.get("candidate_trace", {}),
+        "source_observation_ids": assembled_row.get("source_observation_ids", []),
+        "secondary_result": assembled_row.get("secondary_result"),
+        "extraction_confidence": assembled_row.get("extraction_confidence", 0.0),
+        # v12 parser lineage
+        "parser_backend": parser_backend,
+        "parser_backend_version": parser_backend_version,
+        "row_assembly_version": assembled_row.get("row_assembly_version", "row-assembly-v2"),
+    }

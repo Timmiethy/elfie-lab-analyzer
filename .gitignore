@@ -18,6 +18,7 @@ frontend/dist/
 
 # Environment
 .env
+/.venv/*
 
 # Local agent workflow scratch files
 tasks/

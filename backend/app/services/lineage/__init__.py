@@ -29,6 +29,8 @@ class LineageLogger:
             "id": lineage_id,
             "job_id": job_uuid,
             "source_checksum": payload.get("source_checksum", ""),
+            "parser_backend": payload.get("parser_backend"),
+            "parser_backend_version": payload.get("parser_backend_version"),
             "parser_version": payload.get("parser_version", ""),
             "adapter_version": payload.get(
                 "adapter_version",

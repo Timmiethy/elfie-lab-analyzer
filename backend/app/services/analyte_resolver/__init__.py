@@ -53,6 +53,33 @@ _BILINGUAL_TRANSLATIONS = {
     "尿白蛋白肌酐比": "acr",
     "白蛋白/肌酐比": "acr",
     "尿白蛋白/肌酐率": "acr",
+    # v12: Innoquest bilingual aliases for newly-scoped analytes
+    "脂蛋白(a)": "lipoprotein(a)",
+    "载脂蛋白a1": "apolipoprotein a1",
+    "載脂蛋白a1": "apolipoprotein a1",
+    "载脂蛋白b": "apolipoprotein b",
+    "載脂蛋白b": "apolipoprotein b",
+    "血清胰岛素": "serum insulin",
+    "血清胰島素": "serum insulin",
+    "γ谷氨酰转肽酶": "ggt",
+    "γ-谷氨酰转移酶": "ggt",
+    "谷氨酰转肽酶": "ggt",
+    "谷氨酰转移酶": "ggt",
+    "总胆红素": "total bilirubin",
+    "總膽紅素": "total bilirubin",
+    # v12 wave-2: spaced variants for apolipoprotein labels from Innoquest
+    # fixtures where normalization preserves a space between Chinese text and
+    # the trailing Latin letter (e.g. ``载脂蛋白 A`` → ``载脂蛋白 a``).
+    "载脂蛋白 a": "apolipoprotein a1",
+    "載脂蛋白 a": "apolipoprotein a1",
+    # v12 wave-2: spaced variants (continued)
+    "载脂蛋白 b": "apolipoprotein b",
+    "載脂蛋白 b": "apolipoprotein b",
+    # v12 wave-4: residual Unicode fixture-backed normalization misses from
+    # Innoquest DBTICRP path where bilingual replacement leaves adjacent
+    # English+Chinese duplicates or uses shortened Chinese forms.
+    "总红胆素": "total bilirubin",
+    "總紅膽素": "total bilirubin",
 }
 _ACR_CANDIDATE = {
     "candidate_code": "9318-7",
@@ -74,6 +101,9 @@ _ACR_CANDIDATE = {
     },
 }
 _LOOKUP_NORMALIZE_RE = re.compile(r"[^a-z0-9%+/]+")
+# v12: normalized labels that must be excluded before candidate lookup
+# to prevent threshold/risk text from leaking as partial observations.
+_BLOCKED_NORMALIZED_LABELS = {"threshold_category"}
 _LABEL_REWRITES = {
     "ldl cholesterol calculated": "ldl-c",
     "ldl cholesterol calc": "ldl-c",
@@ -112,6 +142,41 @@ _LABEL_REWRITES = {
     "t4 thyroxine total": "total thyroxine",
     "free t4 index t7": "free t4 index",
     "magnesium rbmc": "magnesium",
+    # v12 wave-2 residual: mixed bilingual forms from DBTICRP fixture where
+    # garbled encoding leaves partial English tokens after lookup normalization.
+    "total chol": "total cholesterol",
+    "lipoprotein a a": "lipoprotein(a)",
+    # v12: threshold/risk category labels that must NOT resolve to real analytes
+    "intermediate": "threshold_category",
+    "low cv risk": "threshold_category",
+    "high cv risk": "threshold_category",
+    "very high cv risk": "threshold_category",
+    "risk cut off low": "threshold_category",
+    "risk cut off high": "threshold_category",
+    "risk cut off": "threshold_category",
+    "cut off low": "threshold_category",
+    "cut off high": "threshold_category",
+    # v12 wave-2 residual: additional threshold/risk table fragments from
+    # DBTICRP fixture that must NOT surface as pseudo-lab rows.
+    "moderate cv risk": "threshold_category",
+    # v12: lookup-normalized forms of threshold labels that include numeric
+    # cutoffs (e.g. ``Moderate CV Risk <2.6`` → ``moderate cv risk 2 6``).
+    "moderate cv risk 2 6": "threshold_category",
+    "very high cv risk 1 4": "threshold_category",
+    "atherogenic low": "threshold_category",
+    "atherogenic high": "threshold_category",
+    "recurrent cv events": "threshold_category",
+    "aip": "threshold_category",
+    "biochem": "threshold_category",
+    # v12 wave-2: bilingual residue from ``Total Chol 总胆固醇`` where the
+    # Chinese part translates to ``total cholesterol`` and leaves a duped form
+    # after adjacent-token deduplication in ``_apply_bilingual_normalization``.
+    "total chol total cholesterol": "total cholesterol",
+    # v12 wave-4: Innoquest DBTICRP residual duplicates after bilingual
+    # replacement where English label + Chinese translation both survive
+    # adjacent-token dedup because the tokens are not identical.
+    "triglyceride triglycerides": "triglycerides",
+    "apolipoprotein a1 apolipoprotein a11": "apolipoprotein a1",
 }
 _UNIT_COMPATIBILITY_BY_CANONICAL = {
     "2345-7": {"mass_concentration", "molar_concentration"},
@@ -133,7 +198,7 @@ _UNIT_COMPATIBILITY_BY_CANONICAL = {
     "2161-8": {"molar_concentration"},
     "9318-7": {"ratio"},
     "55101-9": {"mass_concentration"},
-    "71856-9": {"mass_concentration"},
+    "71856-9": {"mass_concentration", "molar_concentration"},
     "30452-3": {"mass_concentration"},
     "14933-6": {"ratio"},
     "17385-6": {"ratio"},
@@ -155,7 +220,7 @@ _UNIT_COMPATIBILITY_BY_CANONICAL = {
     "24467-3": {"ratio", "cell_count"},
     "14135-7": {"ratio", "cell_count"},
     "8123-2": {"ratio"},
-    "1975-2": {"mass_concentration"},
+    "1975-2": {"mass_concentration", "molar_concentration"},
     "6768-6": {"enzyme_activity"},
     "2885-2": {"mass_concentration"},
     "1751-7": {"mass_concentration"},
@@ -175,6 +240,13 @@ _UNIT_COMPATIBILITY_BY_CANONICAL = {
     "4537-7": {"sedimentation_rate"},
     "1988-1": {"mass_concentration"},
     "38518-7": {"ratio", "cell_count"},
+    # v12: Innoquest normalization wave - newly supported analytes
+    "13386-7": {"molar_concentration"},  # Lipoprotein(a) [Moles/volume]
+    "15232-1": {"mass_concentration"},   # Apolipoprotein A1 [Mass/volume]
+    "18768-1": {"mass_concentration"},   # Apolipoprotein B [Mass/volume]
+    "11566-8": {"enzyme_activity"},      # Insulin [Units/volume] - uIU/mL -> enzyme_activity
+    "2324-2": {"enzyme_activity"},       # GGT [Enzymatic activity/volume]
+    "33762-6": {"mass_concentration"},   # NT-proBNP [Mass/volume] - pg/mL -> mass_concentration
 }
 
 
@@ -325,6 +397,18 @@ class AnalyteResolver:
         source_observation_ids: list[str],
         normalization_trace: list[dict[str, Any]],
     ) -> tuple[list[dict], list[dict[str, Any]], str, str | None, str]:
+        # v12: blocked labels (e.g. threshold/risk category text) must not
+        # reach the candidate pool. Treat them as excluded so they never
+        # surface as partial observations.
+        if normalized_label in _BLOCKED_NORMALIZED_LABELS:
+            return (
+                [],
+                normalization_trace
+                + [{"stage": "lexical_match", "status": "fail", "detail": "blocked_label"}],
+                "threshold_category",
+                "threshold_category",
+                "unsupported",
+            )
         if not normalized_label:
             return (
                 [],

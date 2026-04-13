@@ -13,6 +13,8 @@ class LineageBundleSchema(BaseModel):
     id: UUID
     job_id: UUID
     source_checksum: str
+    parser_backend: str | None = None
+    parser_backend_version: str | None = None
     parser_version: str
     adapter_version: str | None = None
     row_assembly_version: str | None = None

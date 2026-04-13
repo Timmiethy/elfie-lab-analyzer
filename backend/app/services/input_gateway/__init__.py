@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 from hashlib import sha256
-from io import BytesIO
 from pathlib import Path
 from typing import Any, TypedDict
 
-import pdfplumber
-from pdfminer.pdfdocument import PDFPasswordIncorrect
-from pdfminer.pdfparser import PDFSyntaxError
-from pdfplumber.utils.exceptions import PdfminerException
+import fitz  # PyMuPDF
 
 from app.config import settings
 from app.services.ocr import OcrAdapter
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class InputGatewayError(ValueError):
@@ -49,7 +48,12 @@ class InputGatewayPreflight(TypedDict, total=False):
 
 
 class InputGateway:
-    """Classify input into trusted PDF, image beta, or structured lanes."""
+    """Classify input into trusted PDF, image beta, or structured lanes.
+
+    v12: Uses PyMuPDF (fitz) as the primary PDF preflight backend.
+    pdfplumber is debug/forensic-only and must NOT be used for production
+    lane routing.
+    """
 
     _SUPPORTED_MIME_BY_EXTENSION = {
         ".pdf": {"application/pdf"},
@@ -162,47 +166,90 @@ class InputGateway:
             raise InputGatewayError(str(promotion_status))
         return dict(result)
 
+    # ------------------------------------------------------------------
+    # v12: PyMuPDF-based PDF preflight (pdfplumber is debug-only)
+    # ------------------------------------------------------------------
+
     def _preflight_pdf(self, file_bytes: bytes) -> InputGatewayPreflight:
+        """Open a PDF with PyMuPDF and run preflight measurements.
+
+        Returns typed failure preflight for password-protected and corrupt
+        PDFs, and measured preflight for valid documents.
+        """
         try:
-            with pdfplumber.open(BytesIO(file_bytes)) as pdf:
-                page_count = len(pdf.pages)
-                if page_count == 0:
-                    return self._unsupported_pdf_preflight(
-                        file_bytes=file_bytes,
-                        failure_code="pdf_corrupt",
-                        promotion_status="blocked_corrupt",
-                    )
-                return self._measure_pdf_preflight(
-                    pdf,
-                    page_count=page_count,
-                    file_bytes=file_bytes,
-                )
-        except PdfminerException as exc:
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+        except fitz.FileDataError:
             return self._unsupported_pdf_preflight(
                 file_bytes=file_bytes,
-                failure_code=self._pdf_failure_code_from_exception(exc),
-                promotion_status=self._pdf_promotion_status_from_exception(exc),
-            )
-        except (PDFPasswordIncorrect, PDFSyntaxError) as exc:
-            return self._unsupported_pdf_preflight(
-                file_bytes=file_bytes,
-                failure_code=self._pdf_failure_code_from_exception(exc),
-                promotion_status=self._pdf_promotion_status_from_exception(exc),
+                failure_code="pdf_corrupt",
+                promotion_status="blocked_corrupt",
             )
         except Exception as exc:  # pragma: no cover - defensive fallback
+            _LOGGER.warning("PyMuPDF open failed: %s", exc)
             return self._unsupported_pdf_preflight(
                 file_bytes=file_bytes,
                 failure_code=self._pdf_failure_code_from_exception(exc),
                 promotion_status=self._pdf_promotion_status_from_exception(exc),
             )
 
+        try:
+            # PyMuPDF opens password-protected files but marks them encrypted
+            # and returns empty pages. Detect via encryption flag.
+            if doc.is_encrypted:
+                doc.close()
+                return self._unsupported_pdf_preflight(
+                    file_bytes=file_bytes,
+                    failure_code="pdf_password_protected",
+                    promotion_status="blocked_password_protected",
+                )
+
+            page_count = doc.page_count
+            if page_count == 0:
+                doc.close()
+                return self._unsupported_pdf_preflight(
+                    file_bytes=file_bytes,
+                    failure_code="pdf_corrupt",
+                    promotion_status="blocked_corrupt",
+                )
+
+            return self._measure_pdf_preflight(
+                doc,
+                page_count=page_count,
+                file_bytes=file_bytes,
+            )
+        except fitz.FileDataError:
+            return self._unsupported_pdf_preflight(
+                file_bytes=file_bytes,
+                failure_code="pdf_corrupt",
+                promotion_status="blocked_corrupt",
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            _LOGGER.warning("PyMuPDF preflight failed: %s", exc)
+            return self._unsupported_pdf_preflight(
+                file_bytes=file_bytes,
+                failure_code=self._pdf_failure_code_from_exception(exc),
+                promotion_status=self._pdf_promotion_status_from_exception(exc),
+            )
+        finally:
+            try:
+                doc.close()
+            except Exception:  # noqa: BLE001 - defensive
+                pass
+
     def _measure_pdf_preflight(
         self,
-        pdf: Any,
+        doc: Any,
         *,
         page_count: int,
-        file_bytes: bytes,
+        file_bytes: bytes,  # noqa: ARG002 - retained for interface compatibility
     ) -> InputGatewayPreflight:
+        """Measure text and image density using PyMuPDF page APIs.
+
+        v12 repair: image density is based on actual on-page image coverage
+        via ``page.get_image_rects(xref)`` rather than raw embedded pixel
+        dimensions.  This prevents text PDFs with tiny embedded thumbnails
+        from being falsely classified as image-heavy.
+        """
         total_page_area = 0.0
         total_image_area = 0.0
         total_text_chars = 0
@@ -210,28 +257,40 @@ class InputGateway:
         has_text_layer = False
         has_image_layer = False
 
-        for page in pdf.pages:
-            page_area = float(getattr(page, "width", 0.0) or 0.0) * float(
-                getattr(page, "height", 0.0) or 0.0
-            )
+        for page_idx in range(page_count):
+            page = doc[page_idx]
+            page_area = float(page.rect.width) * float(page.rect.height)
             total_page_area += page_area
 
+            # v12: Image density via actual rendered placement rects
             page_image_area = 0.0
-            for image in getattr(page, "images", []):
+            images = page.get_images(full=True) or []
+            if images:
                 has_image_layer = True
-                image_width = float(image.get("width", 0.0) or 0.0)
-                image_height = float(image.get("height", 0.0) or 0.0)
-                page_image_area += max(0.0, image_width * image_height)
+                for img_ref in images:
+                    xref = self._extract_image_xref(img_ref)
+                    if xref is None:
+                        continue
+                    try:
+                        rects = page.get_image_rects(xref) or []
+                    except Exception:  # noqa: BLE001 - defensive
+                        rects = []
+                    for rect in rects:
+                        rect_width = float(getattr(rect, "x1", 0) - getattr(rect, "x0", 0))
+                        rect_height = float(getattr(rect, "y1", 0) - getattr(rect, "y0", 0))
+                        page_image_area += max(0.0, rect_width * rect_height)
 
             total_image_area += min(page_area, page_image_area) if page_area else 0.0
 
-            text = page.extract_text() or ""
+            # Text extraction
+            text = page.get_text("text") or ""
             cleaned_text = text.strip()
             if cleaned_text:
                 has_text_layer = True
                 total_text_chars += len(cleaned_text)
 
-            total_text_words += len(page.extract_words() or [])
+            words = page.get_text("words") or []
+            total_text_words += len(words)
 
         image_density = round(
             min(1.0, total_image_area / total_page_area) if total_page_area else 0.0,
@@ -269,7 +328,7 @@ class InputGateway:
     def _unsupported_pdf_preflight(
         self,
         *,
-        file_bytes: bytes,
+        file_bytes: bytes,  # noqa: ARG002 - retained for interface compatibility
         failure_code: str,
         promotion_status: str,
     ) -> InputGatewayPreflight:
@@ -321,15 +380,38 @@ class InputGateway:
         return "blocked_no_ocr_backend"
 
     @staticmethod
+    def _extract_image_xref(img_ref: Any) -> int | None:
+        """Return the xref of an image reference from PyMuPDF get_images()."""
+        if isinstance(img_ref, dict):
+            xref = img_ref.get("xref")
+            if xref is not None:
+                try:
+                    return int(xref)
+                except (ValueError, TypeError):
+                    return None
+            # Some versions use "name" for xref
+            name = img_ref.get("name")
+            if name is not None:
+                try:
+                    return int(name)
+                except (ValueError, TypeError):
+                    return None
+            return None
+        if isinstance(img_ref, (list, tuple)) and len(img_ref) >= 1:
+            try:
+                return int(img_ref[0])
+            except (ValueError, TypeError):
+                return None
+        return None
+
+    @staticmethod
     def _pdf_failure_code_from_exception(exc: Exception) -> str:
-        for candidate in InputGateway._iter_pdf_exceptions(exc):
-            if isinstance(candidate, PDFPasswordIncorrect):
-                return "pdf_password_protected"
-            if isinstance(candidate, PDFSyntaxError):
-                return "pdf_corrupt"
-            message = str(candidate).strip().lower()
-            if "password" in message:
-                return "pdf_password_protected"
+        """Derive a typed failure code from an arbitrary exception."""
+        message = str(exc).strip().lower()
+        if "password" in message or "encrypted" in message:
+            return "pdf_password_protected"
+        if "corrupt" in message or "invalid" in message or "damaged" in message:
+            return "pdf_corrupt"
         return "pdf_corrupt"
 
     @staticmethod
@@ -338,18 +420,6 @@ class InputGateway:
         if failure_code == "pdf_password_protected":
             return "blocked_password_protected"
         return "blocked_corrupt"
-
-    @staticmethod
-    def _iter_pdf_exceptions(exc: Exception) -> list[Exception]:
-        candidates: list[Exception] = [exc]
-        for nested in exc.args:
-            if isinstance(nested, Exception):
-                candidates.append(nested)
-        if exc.__cause__ is not None and isinstance(exc.__cause__, Exception):
-            candidates.append(exc.__cause__)
-        if exc.__context__ is not None and isinstance(exc.__context__, Exception):
-            candidates.append(exc.__context__)
-        return candidates
 
     @classmethod
     def _sanitize_filename(cls, filename: str) -> str:

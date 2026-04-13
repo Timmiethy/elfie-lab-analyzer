@@ -49,7 +49,10 @@ def test_phase_28_trusted_pdf_lane_keeps_render_and_lineage_contracts(monkeypatc
     patient = PatientArtifactSchema.model_validate(result["patient_artifact"])
 
     assert patient.trust_status is TrustStatus.TRUSTED
-    assert result["lineage"]["parser_version"] == "trusted-pdf-v1"
+    assert result["lineage"]["parser_version"] == "pymupdf-1.27.x"
+    assert result["lineage"]["parser_backend"] == "pymupdf"
+    assert result["lineage"]["parser_backend_version"] == "pymupdf-1.27.x"
+    assert result["lineage"]["row_assembly_version"] == "row-assembly-v2"
     assert result["lineage"]["ocr_version"] is None
     assert result["lineage"]["terminology_release"] == "loinc-phase-28"
 
@@ -85,8 +88,8 @@ def test_phase_28_image_beta_lane_keeps_beta_render_and_lineage_contracts(monkey
 
     assert patient.trust_status is TrustStatus.NON_TRUSTED_BETA
     assert clinician.trust_status is TrustStatus.NON_TRUSTED_BETA
-    assert result["lineage"]["parser_version"] == "image-beta-bypass"
-    assert result["lineage"]["ocr_version"] == "beta-adapter-v1"
+    assert result["lineage"]["parser_version"] == "qwen-vl-ocr-2025-11-20"
+    assert result["lineage"]["ocr_version"] == "qwen-vl-ocr-2025-11-20"
     assert result["lineage"]["terminology_release"] == "loinc-phase-28"
 
 

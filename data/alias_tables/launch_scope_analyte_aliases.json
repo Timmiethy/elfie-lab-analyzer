@@ -550,6 +550,68 @@
       "aliases": ["magnesium", "magnesium rbmc", "mg"],
       "panel_key": "chemistry",
       "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "lipoprotein(a)",
+      "candidate_display": "Lipoprotein(a) [Moles/volume] in Serum or Plasma",
+      "codes": ["13386-7"],
+      "aliases": [
+        "lipoprotein(a)", "lipoprotein a", "lpa", "lp(a)",
+        "lipoprotein little a", "lpa(moles)"
+      ],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "apolipoprotein a1",
+      "candidate_display": "Apolipoprotein A1 [Mass/volume] in Serum or Plasma",
+      "codes": ["15232-1"],
+      "aliases": ["apolipoprotein a1", "apolipoprotein a-1", "apo a1", "apoa1", "apo a-1"],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "apolipoprotein b",
+      "candidate_display": "Apolipoprotein B [Mass/volume] in Serum or Plasma",
+      "codes": ["18768-1"],
+      "aliases": ["apolipoprotein b", "apolipoprotein b-100", "apo b", "apob", "apo b100", "apo b-100"],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "serum insulin",
+      "candidate_display": "Insulin [Units/volume] in Serum or Plasma",
+      "codes": ["11566-8"],
+      "aliases": [
+        "serum insulin", "fasting insulin", "insulin fasting", "insulin",
+        "insulin serum", "insulin fast"
+      ],
+      "panel_key": "glycemia",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ggt",
+      "candidate_display": "Gamma glutamyl transferase [Enzymatic activity/volume] in Serum or Plasma",
+      "codes": ["2324-2"],
+      "aliases": [
+        "ggt", "gamma glutamyltransferase", "gamma-glutamyl transferase",
+        "gamma glutamyl transpeptidase", "gamma gt", "ggtp",
+        "gamma gt serum", "gamma glutamyl transferase serum"
+      ],
+      "panel_key": "liver",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "nt-probnp",
+      "candidate_display": "NT-proBNP [Mass/volume] in Serum or Plasma",
+      "codes": ["33762-6"],
+      "aliases": [
+        "nt-probnp", "nt probnp", "n-terminal pro bnp",
+        "n-terminal pro-bnp", "nt-pro b type natriuretic peptide",
+        "nt-pro bnp", "n terminal pro bnp", "nt-probtype natriuretic peptide"
+      ],
+      "panel_key": "cardiac",
+      "threshold_used": 0.9
     }
   ]
 }

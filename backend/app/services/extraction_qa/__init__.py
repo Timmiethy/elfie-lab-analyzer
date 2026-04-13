@@ -10,6 +10,11 @@ from app.services.parser import classify_candidate_text
 
 _ALLOWED_ROW_TYPES = {"measured_analyte_row", "derived_analyte_row"}
 
+# v12: accepted parser backends that may appear on extraction rows.
+# These are passive fields; unknown backends are recorded but not hard-rejected
+# so older or experimental extraction paths do not silently break the funnel.
+_KNOWN_PARSER_BACKENDS = {"pymupdf", "qwen_vl_ocr", "pdfplumber_debug"}
+
 
 class ExtractionQA:
     """Validate extraction results before observation building."""

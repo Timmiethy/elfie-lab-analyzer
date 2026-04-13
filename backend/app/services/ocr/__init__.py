@@ -3,22 +3,103 @@
 This module intentionally stays conservative:
 - it never pretends OCR succeeded when the optional stack is unavailable
 - it can normalize injected OCR text/rows into downstream QA-compatible rows
-- it discovers a real OCR backend with surya primary and doctr fallback
+- it uses qwen-vl-ocr-2025-11-20 as the primary production OCR backend
+- surya and docTR are NOT auto-discovered or used in v12
 - it derives stable identifiers when callers do not provide them
 """
 
 from __future__ import annotations
 
 import inspect
+import logging
 import re
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from copy import deepcopy
 from hashlib import sha256
-from importlib import import_module
 from importlib.util import find_spec
 from io import BytesIO
+from pathlib import Path
 from typing import Any, TypedDict
 from uuid import NAMESPACE_URL, UUID, uuid5
+
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+_LINE_VALUE_PATTERN = re.compile(
+    r"^\s*(?P<label>.*?)(?:\s+|[:=\-\u2013\u2014|])"
+    r"(?P<value>[+-]?\d+(?:\.\d+)?)\b(?P<unit>.*\S)?\s*$"
+)
+_DEFAULT_OCR_ENGINE = "qwen_ocr"
+_IMAGE_BETA_PARSER_BACKEND = "qwen_ocr"
+_IMAGE_BETA_PARSER_VERSION = "qwen-vl-ocr-2025-11-20"
+_IMAGE_BETA_ROW_ASSEMBLY_VERSION = "row-assembly-v2"
+
+# v12 wave-18: row-shape ceilings to prevent pathological OCR narrative rows
+# from reaching persistence and causing StringDataRightTruncationError.
+_MAX_RAW_VALUE_STRING = 64
+_MAX_RAW_UNIT_STRING = 64
+_MAX_RAW_REFERENCE_RANGE = 128
+_MAX_SOURCE_BLOCK_ID = 128
+_MAX_NORMALIZABLE_TEXT_TOKENS = 32
+
+
+def _enforce_row_shape_ceilings(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Filter out image-beta rows that exceed v12 persistence field-length ceilings.
+
+    Rows violating the ceilings are logged and silently dropped rather than
+    allowing them to reach persistence and cause asyncpg
+    ``StringDataRightTruncationError``.
+
+    Enforced ceilings (from the v12 proof gates):
+    - ``raw_value_string`` <= 64
+    - ``raw_unit_string`` <= 64
+    - ``raw_reference_range`` <= 128
+    - ``source_block_id`` <= 128
+    - normalizable ``raw_text`` token count <= 32
+    """
+    kept: list[dict[str, Any]] = []
+    for row in rows:
+        reason = _check_row_shape_violation(row)
+        if reason is not None:
+            logger.warning(
+                "ocr_row_shape_ceiling_exceeded: %s | raw_text=%r | raw_unit_string=%r",
+                reason,
+                (row.get("raw_text") or "")[:80],
+                (row.get("raw_unit_string") or "")[:40],
+            )
+            continue
+        kept.append(row)
+    return kept
+
+
+def _check_row_shape_violation(row: dict[str, Any]) -> str | None:
+    """Return a human-readable violation reason, or None if the row is within ceilings."""
+    raw_value = row.get("raw_value_string") or ""
+    if len(str(raw_value)) > _MAX_RAW_VALUE_STRING:
+        return "raw_value_string_too_long"
+
+    raw_unit = row.get("raw_unit_string") or ""
+    if len(str(raw_unit)) > _MAX_RAW_UNIT_STRING:
+        return "raw_unit_string_too_long"
+
+    raw_ref = row.get("raw_reference_range") or ""
+    if len(str(raw_ref)) > _MAX_RAW_REFERENCE_RANGE:
+        return "raw_reference_range_too_long"
+
+    block_id = row.get("source_block_id") or row.get("block_id") or ""
+    if len(str(block_id)) > _MAX_SOURCE_BLOCK_ID:
+        return "source_block_id_too_long"
+
+    raw_text = row.get("raw_text") or ""
+    if raw_text:
+        token_count = len(raw_text.split())
+        if token_count > _MAX_NORMALIZABLE_TEXT_TOKENS:
+            return f"raw_text_token_count_exceeded({token_count}>{_MAX_NORMALIZABLE_TEXT_TOKENS})"
+
+    return None
 
 
 def _module_available(module_name: str) -> bool:
@@ -26,18 +107,6 @@ def _module_available(module_name: str) -> bool:
         return find_spec(module_name) is not None
     except (ImportError, ValueError):  # pragma: no cover - defensive import guard
         return False
-
-
-_SURYA_STACK_AVAILABLE = _module_available("surya")
-_DOCTR_STACK_AVAILABLE = _module_available("doctr")
-
-_LINE_VALUE_PATTERN = re.compile(
-
-        r"^\s*(?P<label>.*?)(?:\s+|[:=\-\u2013\u2014|])"
-        r"(?P<value>[+-]?\d+(?:\.\d+)?)\b(?P<unit>.*\S)?\s*$"
-
-)
-_DEFAULT_OCR_ENGINE = "beta_adapter"
 
 
 class OcrPromotionDecision(TypedDict):
@@ -50,10 +119,12 @@ class OcrPromotionDecision(TypedDict):
 class OcrAdapter:
     """Safe adapter for image-beta OCR.
 
+    v12: Uses qwen-vl-ocr-2025-11-20 as the primary production OCR backend.
     The adapter accepts an injected OCR backend or pre-extracted OCR text/rows.
     When neither is available, it raises a clear runtime error instead of
-    silently fabricating OCR output. When optional OCR stacks are present, it
-    prefers surya and falls back to doctr.
+    silently fabricating OCR output.
+
+    surya and docTR are no longer auto-discovered as primary backends.
     """
 
     def __init__(
@@ -68,12 +139,10 @@ class OcrAdapter:
 
     def is_available(self) -> bool:
         """Return whether this adapter can run with a real OCR backend."""
-
         return bool(self._candidate_backends())
 
     def promotion_decision(self) -> OcrPromotionDecision:
         """Report whether image-beta OCR is eligible for promotion."""
-
         backend_candidates = [name for name, _ in self._candidate_backends()]
         backend_available = bool(backend_candidates)
         if not self._image_beta_enabled:
@@ -106,7 +175,6 @@ class OcrAdapter:
         adapter to normalize already-extracted text/rows. Otherwise the method
         fails loudly and keeps the lane visibly beta.
         """
-
         if not isinstance(image_bytes, (bytes, bytearray)):
             raise TypeError("image_bytes must be bytes")
         if not image_bytes:
@@ -141,8 +209,8 @@ class OcrAdapter:
         backend_candidates = self._candidate_backends()
         if not backend_candidates:
             raise RuntimeError(
-                "image_beta_ocr_unavailable: install the optional OCR extras with "
-                '`pip install -e ".[dev,image-beta]"` or inject pre-extracted OCR '
+                "image_beta_ocr_unavailable: the Qwen OCR backend is not configured. "
+                "Set ELFIE_QWEN_OCR_API_KEY or inject pre-extracted OCR "
                 "rows/text into OcrAdapter.extract()"
             )
 
@@ -175,66 +243,102 @@ class OcrAdapter:
         return candidates
 
     def _build_auto_backend_candidates(self) -> list[tuple[str, Callable[[bytes], Any]]]:
+        """Build the list of auto-discovered OCR backends.
+
+        v12: Only qwen-vl-ocr is a production backend.
+        surya and docTR are no longer auto-discovered here.
+        """
         candidates: list[tuple[str, Callable[[bytes], Any]]] = []
 
-        surya_backend = self._build_surya_backend()
-        if surya_backend is not None:
-            candidates.append(("surya", surya_backend))
-
-        doctr_backend = self._build_doctr_backend()
-        if doctr_backend is not None:
-            candidates.append(("doctr", doctr_backend))
+        qwen_backend = self._build_qwen_vl_ocr_backend()
+        if qwen_backend is not None:
+            candidates.append(("qwen_vl_ocr", qwen_backend))
 
         return candidates
 
-    def _build_surya_backend(self) -> Callable[[bytes], Any] | None:
-        if not _SURYA_STACK_AVAILABLE:
+    def _build_qwen_vl_ocr_backend(self) -> Callable[[bytes], Any] | None:
+        """Build a Qwen VL OCR backend if the API key is configured.
+
+        Returns a callable that accepts image bytes and returns OCR results,
+        or None if the API key is not configured.
+        """
+        api_key = settings.qwen_ocr_api_key
+        if not api_key:
             return None
 
-        for module_name in ("surya", "surya.ocr"):
-            try:
-                module = import_module(module_name)
-            except Exception:
-                continue
-
-            runner = self._locate_callable(
-                module,
-                ("run_ocr", "ocr", "extract", "predict"),
-            )
-            if runner is None:
-                continue
-
-            return lambda image_bytes, runner=runner: self._invoke_backend_callable(
-                runner,
-                image_bytes,
-            )
-
-        return None
-
-    def _build_doctr_backend(self) -> Callable[[bytes], Any] | None:
-        if not _DOCTR_STACK_AVAILABLE:
+        try:
+            from app.services.ocr.qwen_vl_adapter import QwenVLClient
+        except ImportError:
+            logger.warning("Qwen VL OCR adapter module not available")
             return None
 
-        for module_name in ("doctr", "doctr.models", "doctr.io"):
-            try:
-                module = import_module(module_name)
-            except Exception:
-                continue
-
-            factory = self._locate_callable(
-                module,
-                ("ocr_predictor", "predictor", "run_ocr", "ocr", "extract"),
+        try:
+            client = QwenVLClient(
+                api_key=api_key,
+                base_url=settings.qwen_ocr_api_base,
+                model=settings.qwen_ocr_model,
+                timeout=settings.qwen_ocr_timeout_seconds,
             )
-            if factory is None:
-                continue
+            if not client.is_configured:
+                return None
+        except Exception:  # pragma: no cover - defensive
+            return None
 
-            backend_callable = self._instantiate_backend_factory(factory)
-            def backend(image_bytes: bytes, backend_callable=backend_callable) -> Any:
-                return self._invoke_backend_callable(backend_callable, image_bytes)
+        def backend(image_bytes: bytes, client=client) -> Any:
+            """Run Qwen OCR on image bytes, detecting PDF vs image input.
 
-            return backend
+            v12: If the input is a PDF (magic bytes %PDF), render pages to
+            images via PyMuPDF and OCR each page through ocr_pdf.  Otherwise
+            treat the bytes as a single image and call ocr_image.
 
-        return None
+            Multi-page PDF results are returned as a list of per-page dicts,
+            each with ``text``, ``blocks``, and ``source_page``.  Single-image
+            results are returned as a list with one entry so the caller can
+            always iterate uniformly.
+            """
+            import tempfile
+
+            if image_bytes.startswith(b"%PDF"):
+                # PDF input: render pages to images and OCR each page
+                page_results = client.ocr_pdf(image_bytes)
+                pages: list[dict[str, Any]] = []
+
+                # v12 wave-17: accept both QwenOCRResult (with .pages) and
+                # plain list mocks from existing unit tests.
+                if hasattr(page_results, "pages"):
+                    page_iter = page_results.pages
+                elif isinstance(page_results, list):
+                    page_iter = page_results
+                else:
+                    page_iter = [page_results]
+
+                for page_result in page_iter:
+                    pages.append({
+                        "text": page_result.full_text,
+                        "blocks": page_result.blocks,
+                        "source_page": page_result.page + 1,  # 1-based
+                    })
+                return pages
+
+            # Image input: write to temp file and OCR as a single image
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                tmp.write(image_bytes)
+                tmp_path = Path(tmp.name)
+
+            try:
+                page_result = client.ocr_image(tmp_path)
+                return [{
+                    "text": page_result.full_text,
+                    "blocks": page_result.blocks,
+                    "source_page": 1,
+                }]
+            finally:
+                try:
+                    tmp_path.unlink()
+                except OSError:
+                    pass
+
+        return backend
 
     @staticmethod
     def _locate_callable(module: Any, candidate_names: Sequence[str]) -> Callable[..., Any] | None:
@@ -371,6 +475,33 @@ class OcrAdapter:
                     ocr_engine=ocr_engine,
                 )
             if all(isinstance(item, Mapping) for item in backend_output):
+                # v12: Multi-page PDF OCR results are a list of per-page dicts
+                # with keys like "text", "blocks", "source_page".  Detect this
+                # shape so we preserve per-page source_page instead of collapsing
+                # everything to page 1.  Route through PageParseArtifactV3 ->
+                # RowAssemblerV2 so the image lane uses the same parser-output
+                # contract as the trusted PDF lane.
+                has_page_shape = all(
+                    "text" in item and "source_page" in item
+                    for item in backend_output
+                )
+                if has_page_shape:
+                    rows: list[dict[str, Any]] = []
+                    for page_item in backend_output:
+                        page_num = int(page_item.get("source_page", source_page))
+                        page_text = str(page_item.get("text", ""))
+                        if page_text:
+                            page_rows = self._rows_from_page_text(
+                                page_text,
+                                document_uuid=document_uuid,
+                                source_page=page_num,
+                                language_id=language_id,
+                                ocr_engine=ocr_engine,
+                            )
+                            rows.extend(page_rows)
+                    if rows:
+                        return _enforce_row_shape_ceilings(rows)
+                    # If text is empty, fall through to normalize as rows
                 return self._normalize_rows(
                     list(backend_output),
                     document_uuid=document_uuid,
@@ -379,7 +510,7 @@ class OcrAdapter:
                     ocr_engine=ocr_engine,
                 )
 
-            rows: list[dict[str, Any]] = []
+            rows = []
             for item in backend_output:
                 rows.extend(
                     self._normalize_backend_output(
@@ -391,7 +522,7 @@ class OcrAdapter:
                     )
                 )
             if rows:
-                return rows
+                return _enforce_row_shape_ceilings(rows)
 
         raise RuntimeError("ocr_backend_returned_unsupported_payload")
 
@@ -416,7 +547,7 @@ class OcrAdapter:
                     ocr_engine=ocr_engine,
                 )
             )
-        return normalized_rows
+        return _enforce_row_shape_ceilings(normalized_rows)
 
     def _rows_from_lines(
         self,
@@ -458,7 +589,7 @@ class OcrAdapter:
             }
             rows.append(row)
 
-        return rows
+        return _enforce_row_shape_ceilings(rows)
 
     def _normalize_row(
         self,
@@ -542,6 +673,67 @@ class OcrAdapter:
         normalized_row.setdefault("lane_type", "image_beta")
         normalized_row.setdefault("ocr_engine", ocr_engine)
         return normalized_row
+
+    def _rows_from_page_text(
+        self,
+        page_text: str,
+        *,
+        document_uuid: UUID,
+        source_page: int,
+        language_id: str | None,
+        ocr_engine: str,
+    ) -> list[dict[str, Any]]:
+        """v12: Convert raw OCR page text into candidate rows via PageParseArtifactV3 -> RowAssemblerV2.
+
+        This is the contract bridge for the image-lane OCR path so it produces
+        the same downstream row shape as the trusted PDF path.
+        """
+        from app.services.parser.page_parse_artifact_v3 import (
+            PageParseArtifactV3,
+            PageParseBlockV3,
+        )
+        from app.services.row_assembler.v2 import RowAssemblerV2
+
+        lines = [line for line in page_text.splitlines() if line.strip()]
+        block = PageParseBlockV3(
+            block_id=f"ocr-page-{source_page}",
+            block_type="result_table",
+            lines=lines,
+        )
+        artifact = PageParseArtifactV3(
+            page_id=f"ocr:{document_uuid}:page-{source_page}",
+            backend_id=_IMAGE_BETA_PARSER_BACKEND,
+            backend_version=_IMAGE_BETA_PARSER_VERSION,
+            lane_type="image_beta",
+            page_kind="unknown",
+            text_extractability="low",
+            block_count=1,
+            blocks=[block],
+            raw_text=page_text,
+            page_number=source_page,
+        )
+        assembler = RowAssemblerV2()
+        raw_rows = assembler.assemble(artifact, family_adapter_id="generic_layout")
+        return self._enrich_ocr_rows(raw_rows, document_uuid=document_uuid, ocr_engine=ocr_engine)
+
+    def _enrich_ocr_rows(
+        self,
+        rows: list[dict[str, Any]],
+        *,
+        document_uuid: UUID,
+        ocr_engine: str,
+    ) -> list[dict[str, Any]]:
+        """Enrich assembled rows with image-lane metadata."""
+        enriched: list[dict[str, Any]] = []
+        for row in rows:
+            row["document_id"] = document_uuid
+            row.setdefault("lane_type", "image_beta")
+            row.setdefault("ocr_engine", ocr_engine)
+            row.setdefault("parser_backend", _IMAGE_BETA_PARSER_BACKEND)
+            row.setdefault("parser_backend_version", _IMAGE_BETA_PARSER_VERSION)
+            row.setdefault("row_assembly_version", _IMAGE_BETA_ROW_ASSEMBLY_VERSION)
+            enriched.append(row)
+        return _enforce_row_shape_ceilings(enriched)
 
     @staticmethod
     def _collect_lines(

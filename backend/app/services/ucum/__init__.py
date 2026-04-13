@@ -57,6 +57,10 @@ _SUPPORTED_UNITS = {
     "mg/dliter": "mg/dL",
     "g/dliter": "g/dL",
     "mmol/1": "mmol/L",
+    "nmol/l": "nmol/L",
+    "nmol/ml": "nmol/mL",
+    "pmol/l": "pmol/L",
+    "pg/ml": "pg/mL",
     "mg/1": "mg/dL",
     "g/1": "g/dL",
     "u/1": "U/L",
@@ -100,6 +104,10 @@ _UNIT_FAMILY_BY_CANONICAL = {
     "mEq/L": "molar_concentration",
     "IU/mL": "enzyme_activity",
     "mU/mL": "enzyme_activity",
+    "nmol/L": "molar_concentration",
+    "nmol/mL": "molar_concentration",
+    "pmol/L": "molar_concentration",
+    "pg/mL": "mass_concentration",
     "mm/h": "sedimentation_rate",
 }
 
