@@ -4,7 +4,6 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-
 CONTRACT_VERSION = "lineage-contract-v2"
 
 

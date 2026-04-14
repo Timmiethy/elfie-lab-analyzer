@@ -26,32 +26,26 @@ import re
 from hashlib import sha256
 from typing import Any
 
-from app.services.parser import (
-    _contains_value_token,
-    _normalize_text,
+from app.services.row_grammar import (
     classify_candidate_text,
+    iter_candidates,
+    locate_value_token,
     parse_measurement_text,
 )
+from app.services.row_grammar.label_normalizer import normalize_text as _normalize_text
+from app.services.row_grammar.row_types import RowTypeV1
 
 # Valid row types for the v12 pipeline — aligned with v11 row grammar
 VALID_ROW_TYPES = {
-    "measured_analyte_row",
-    "derived_analyte_row",
-    "qualitative_result_row",
-    "admin_metadata_row",
-    "threshold_reference_row",
-    "narrative_guidance_row",
-    "header_footer_row",
-    "test_request_row",
-    "unparsed_row",
+    *(member.value for member in RowTypeV1),
     "footer_or_header_row",
 }
 
 # Row types that can continue into normalization / analyte resolution
 NORMALIZABLE_ROW_TYPES = {
-    "measured_analyte_row",
-    "derived_analyte_row",
-    "qualitative_result_row",
+    RowTypeV1.MEASURED_ANALYTE_ROW.value,
+    RowTypeV1.DERIVED_ANALYTE_ROW.value,
+    RowTypeV1.QUALITATIVE_RESULT_ROW.value,
 }
 
 # Blocks that must be fenced BEFORE any analyte mapping
@@ -247,12 +241,10 @@ def _collapse_unit_superscript_artifacts(text: str) -> str:
 
 def _contains_value_token_for_heading(text: str) -> bool:
     """Check if a line contains a measurement value token (for heading detection)."""
-    from app.services.parser import _locate_value_token as _parser_locate_value
-
     tokens = text.split()
     if not tokens:
         return False
-    idx, raw_value, _, _, _ = _parser_locate_value(tokens)
+    idx, raw_value, _, _, _ = locate_value_token(tokens)
     return idx is not None and raw_value is not None
 
 
@@ -424,9 +416,12 @@ class RowAssemblerV2:
         family_adapter_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Convert a single PageParseArtifactV3 into candidate row dicts."""
-        from app.services.parser.page_parse_artifact_v3 import PageParseArtifactV3
-
-        if not isinstance(artifact, PageParseArtifactV3):
+        if not (
+            hasattr(artifact, "blocks")
+            and hasattr(artifact, "page_number")
+            and hasattr(artifact, "page_id")
+            and hasattr(artifact, "lane_type")
+        ):
             raise TypeError(
                 f"RowAssemblerV2.assemble expects PageParseArtifactV3, "
                 f"got {type(artifact).__name__}"
@@ -703,12 +698,6 @@ class RowAssemblerV2:
         We only adapt the PyMuPDF word/table metadata into the shapes the
         legacy helper expects and materialise its yields into V2 row dicts.
         """
-        from app.services.parser import (
-            GenericLayoutAdapter,
-            InnoquestBilingualGeneralAdapter,
-            _iter_candidates,
-        )
-
         words_data = artifact.metadata.get("words") if hasattr(artifact, "metadata") else None
         tables_data = artifact.metadata.get("tables") if hasattr(artifact, "metadata") else None
         raw_text = getattr(artifact, "raw_text", "")
@@ -720,27 +709,21 @@ class RowAssemblerV2:
         # Adapt PyMuPDF tables to the legacy shape: list[list[list[str|None]]]
         tables = self._adapt_pymupdf_tables(tables_data) if tables_data else []
 
-        # Select the exact same adapter the legacy path would pick.
-        if family_adapter_id == "innoquest_bilingual_general":
-            legacy_adapter: GenericLayoutAdapter = InnoquestBilingualGeneralAdapter()
-        else:
-            legacy_adapter = GenericLayoutAdapter()
-
         rows: list[dict[str, Any]] = []
         recovered_texts: set[str] = set()
 
-        for source_kind, candidate_text, bounds, block_id, segment_index in _iter_candidates(
+        for source_kind, candidate_text, bounds, block_id, segment_index in iter_candidates(
             raw_text,
             words,
             tables,
             page_number=artifact.page_number,
             page_class=page_class,
-            adapter=legacy_adapter,
+            family_adapter_id=family_adapter_id,
         ):
             classification = classify_candidate_text(
                 candidate_text,
                 page_class=page_class,
-                family_adapter_id=legacy_adapter.family_adapter_id,
+                family_adapter_id=family_adapter_id,
             )
             if classification["row_type"] == "unparsed_row":
                 continue
@@ -750,7 +733,7 @@ class RowAssemblerV2:
                 classification=classification,
                 artifact=artifact,
                 page_class=page_class,
-                family_adapter_id=legacy_adapter.family_adapter_id,
+                family_adapter_id=family_adapter_id,
                 block_id=block_id,
                 segment_index=segment_index,
             )
@@ -1414,13 +1397,13 @@ class RowAssemblerV2:
         page_complete = [r for r in page_level if r["row_type"] in NORMALIZABLE_ROW_TYPES]
 
         # v12 wave-6: heading-prefix contamination patterns
-        _HEADING_PREFIX_KEYWORDS = {
+        heading_prefix_keywords = {
             "ref", "ref.", "ranges", "special", "chemistry", "specimen",
             "whole", "blood", "serum", "plasma", "urine", "diagnostic",
             "values", "of", "in", "adults", "ngsp", "ifcc",
         }
-        _SAMPLE_SHADOW_WORDS = {"sample"}
-        _REF_RANGE_SHADOW_WORDS = {"ref.", "ranges", "reference"}
+        sample_shadow_words = {"sample"}
+        ref_range_shadow_words = {"ref.", "ranges", "reference"}
 
         def _cleanliness_score(row: dict[str, Any]) -> tuple[int, int, int]:
             """Higher cleanliness = better.  Tuple is compared ascending
@@ -1431,12 +1414,12 @@ class RowAssemblerV2:
 
             # Penalties (lower score = more penalties = worse cleanliness)
             heading_penalty = 0
-            for kw in _HEADING_PREFIX_KEYWORDS:
+            for kw in heading_prefix_keywords:
                 if kw in combined:
                     heading_penalty += 1
 
-            sample_penalty = 1 if any(w in combined for w in _SAMPLE_SHADOW_WORDS) else 0
-            ref_range_penalty = 1 if any(w in combined for w in _REF_RANGE_SHADOW_WORDS) else 0
+            sample_penalty = 1 if any(w in combined for w in sample_shadow_words) else 0
+            ref_range_penalty = 1 if any(w in combined for w in ref_range_shadow_words) else 0
 
             # v12 wave-6: derived_observation_unbound label-row penalty
             support_code = row.get("support_code", "")
@@ -1511,7 +1494,7 @@ class RowAssemblerV2:
                     # v12 wave-5: also suppress if label is heavily heading-contaminated
                     if br_label:
                         label_words = set(br_label.lower().split())
-                        heading_overlap = label_words & _HEADING_PREFIX_KEYWORDS
+                        heading_overlap = label_words & heading_prefix_keywords
                         if len(heading_overlap) >= 3 and br_key in page_value_analytes:
                             continue
                 filtered_block.append(br)
@@ -1523,7 +1506,7 @@ class RowAssemblerV2:
         # row suppresses dirty REF. RANGES / Diagnostic Values / SAMPLE /
         # derived_observation_unbound shadows even when the first tokens differ.
 
-        _SHADOW_PATTERNS = {
+        shadow_patterns = {
             "ref. ranges", "reference ranges", "diagnostic values",
             "normal", "ifg", "prediabetes", "adults",
             "ngsp", "ifcc", "sample report", "sample",
@@ -1551,7 +1534,7 @@ class RowAssemblerV2:
                 normalized = raw_label.lower().strip()
             if not normalized:
                 return ""
-            for shadow in sorted(_SHADOW_PATTERNS, key=len, reverse=True):
+            for shadow in sorted(shadow_patterns, key=len, reverse=True):
                 shadow_norm = re.sub(r"[^a-z0-9]+", " ", shadow.lower()).strip()
                 if shadow_norm and normalized.startswith(f"{shadow_norm} "):
                     normalized = normalized[len(shadow_norm):].strip()
@@ -1617,14 +1600,14 @@ class RowAssemblerV2:
             # Shadow penalties
             has_value = 1 if row.get("raw_value_string") else 0
             heading_penalty = 0
-            for kw in _HEADING_PREFIX_KEYWORDS:
+            for kw in heading_prefix_keywords:
                 kw_tokens = [token for token in re.findall(r"[a-z0-9]+", kw.lower()) if token]
                 if kw_tokens and all(token in token_set for token in kw_tokens):
                     heading_penalty += len(kw_tokens)
             sample_penalty = 3 if "sample" in token_set else 0
             ref_range_penalty = 1 if any(
                 all(token in token_set for token in re.findall(r"[a-z0-9]+", word.lower()))
-                for word in _REF_RANGE_SHADOW_WORDS
+                for word in ref_range_shadow_words
             ) else 0
             derived_penalty = 0
             fc = row.get("failure_code") or ""
@@ -1713,17 +1696,17 @@ class RowAssemblerV2:
         Returns ``(final_page, final_block, used_indices)`` so callers can
         optionally chain further suppression logic.
         """
-        _SHADOW_PATTERNS = {
+        shadow_patterns = {
             "ref. ranges", "reference ranges", "diagnostic values",
             "normal", "ifg", "prediabetes", "adults",
             "ngsp", "ifcc", "sample report", "sample",
         }
-        _HEADING_PREFIX_KEYWORDS = {
+        heading_prefix_keywords = {
             "ref", "ref.", "ranges", "special", "chemistry", "specimen",
             "whole", "blood", "serum", "plasma", "urine", "diagnostic",
             "values", "of", "in", "adults", "ngsp", "ifcc",
         }
-        _REF_RANGE_SHADOW_WORDS = {"ref.", "ranges", "reference"}
+        ref_range_shadow_words = {"ref.", "ranges", "reference"}
 
         def _core_analyte_label(row: dict[str, Any]) -> str:
             raw_label = (row.get("raw_analyte_label") or "").strip()
@@ -1736,7 +1719,7 @@ class RowAssemblerV2:
                 normalized = raw_label.lower().strip()
             if not normalized:
                 return ""
-            for shadow in sorted(_SHADOW_PATTERNS, key=len, reverse=True):
+            for shadow in sorted(shadow_patterns, key=len, reverse=True):
                 shadow_norm = re.sub(r"[^a-z0-9]+", " ", shadow.lower()).strip()
                 if shadow_norm and normalized.startswith(f"{shadow_norm} "):
                     normalized = normalized[len(shadow_norm):].strip()
@@ -1780,14 +1763,14 @@ class RowAssemblerV2:
                 score += 2
             has_value = 1 if row.get("raw_value_string") else 0
             heading_penalty = 0
-            for kw in _HEADING_PREFIX_KEYWORDS:
+            for kw in heading_prefix_keywords:
                 kw_tokens = [token for token in re.findall(r"[a-z0-9]+", kw.lower()) if token]
                 if kw_tokens and all(token in token_set for token in kw_tokens):
                     heading_penalty += len(kw_tokens)
             sample_penalty = 3 if "sample" in token_set else 0
             ref_range_penalty = 1 if any(
                 all(token in token_set for token in re.findall(r"[a-z0-9]+", word.lower()))
-                for word in _REF_RANGE_SHADOW_WORDS
+                for word in ref_range_shadow_words
             ) else 0
             derived_penalty = 0
             fc = row.get("failure_code") or ""
@@ -1927,7 +1910,7 @@ class RowAssemblerV2:
         """Compute a stable hash for deduplication."""
         page_id = getattr(artifact, "page_id", f"page-{artifact.page_number}")
         return sha256(
-            f"{page_id}:{row_type}:{raw_text}".encode("utf-8")
+            f"{page_id}:{row_type}:{raw_text}".encode()
         ).hexdigest()
 
     # ------------------------------------------------------------------

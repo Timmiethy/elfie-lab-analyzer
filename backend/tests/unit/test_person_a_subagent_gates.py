@@ -281,7 +281,16 @@ def test_phase_5_artifact_and_provenance_outputs_are_schema_valid() -> None:
 
 
 def test_phase_6_pipeline_orchestrator_returns_completion_bundle() -> None:
-    result = asyncio.run(PipelineOrchestrator().run("job-phase-6"))
+    result = asyncio.run(
+        PipelineOrchestrator().run(
+            "job-phase-6",
+            file_bytes=build_text_pdf([
+                "Glucose 180 mg/dL 70-99",
+                "HbA1c 6.8 % <5.7",
+            ]),
+            lane_type="trusted_pdf",
+        )
+    )
 
     assert result["job_id"] == "job-phase-6"
     assert result["status"] in {"completed", "partial"}

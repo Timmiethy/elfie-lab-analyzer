@@ -47,7 +47,8 @@ def test_phase_33_preflight_routes_trusted_text_pdf_to_ready_lane() -> None:
     )
 
     assert result["lane_type"] == "trusted_pdf"
-    assert result["document_class"] == "text_pdf"
+    assert result["document_class"] == "trusted_pdf_lab"
+    assert result["route_document_class"] == "trusted_pdf_lab"
     assert result["failure_code"] is None
     assert result["promotion_status"] == "ready"
     assert result["duplicate_state"] == "not_checked"
@@ -63,22 +64,22 @@ def test_phase_33_preflight_routes_image_heavy_pdf_to_beta_and_blocks_when_disab
 
     result = asyncio.run(
         gateway.preflight(
-            _load_pdf("hard/var_hod_ultrasound_image_only_pdf.pdf"),
-            "var_hod_ultrasound_image_only_pdf.pdf",
+            _load_pdf("easy/seed_ulta_sample_alt.pdf"),
+            "seed_ulta_sample_alt.pdf",
             "application/pdf",
         )
     )
 
     assert result["lane_type"] == "image_beta"
-    assert result["document_class"] in {"mixed_pdf", "image_pdf"}
+    assert result["document_class"] == "image_pdf_lab"
     assert result["promotion_status"] == "blocked_image_beta_disabled"
     assert result["image_density"] > 0.5
 
     with pytest.raises(InputGatewayError) as exc_info:
         asyncio.run(
             gateway.classify(
-                _load_pdf("hard/var_hod_ultrasound_image_only_pdf.pdf"),
-                "var_hod_ultrasound_image_only_pdf.pdf",
+                _load_pdf("easy/seed_ulta_sample_alt.pdf"),
+                "seed_ulta_sample_alt.pdf",
                 "application/pdf",
             )
         )

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import Iterable
 
 from .contracts import (
     DocumentPacketV1,
@@ -70,7 +70,7 @@ class DocumentSplitter:
                 )
             )
 
-        packet_id = sha256(f"packet:{checksum}:{route_decision.lane_type.value}".encode("utf-8")).hexdigest()[:24]
+        packet_id = sha256(f"packet:{checksum}:{route_decision.lane_type.value}".encode()).hexdigest()[:24]
         return DocumentPacketV1(
             packet_id=packet_id,
             parent_checksum=checksum,

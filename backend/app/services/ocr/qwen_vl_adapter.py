@@ -21,7 +21,6 @@ import base64
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +34,8 @@ class QwenOCRTextBlock:
 
     text: str
     page: int
-    confidence: Optional[float] = None
-    bbox: Optional[tuple[float, float, float, float]] = None  # (x0, y0, x1, y1)
+    confidence: float | None = None
+    bbox: tuple[float, float, float, float] | None = None  # (x0, y0, x1, y1)
 
 
 @dataclass(frozen=True)
@@ -45,8 +44,8 @@ class QwenOCRPageResult:
 
     page: int
     blocks: list[QwenOCRTextBlock]
-    image_width: Optional[int] = None
-    image_height: Optional[int] = None
+    image_width: int | None = None
+    image_height: int | None = None
 
     @property
     def full_text(self) -> str:
@@ -60,7 +59,7 @@ class QwenOCRResult:
 
     pages: list[QwenOCRPageResult] = field(default_factory=list)
     model: str = "qwen-vl-ocr-2025-11-20"
-    error: Optional[str] = None
+    error: str | None = None
 
     @property
     def full_text(self) -> str:
@@ -92,7 +91,7 @@ class QwenVLClient:
         self._timeout = timeout
         self._api_key = api_key
         self._base_url = base_url
-        self._client: Optional[object] = None
+        self._client: object | None = None
 
     @property
     def is_configured(self) -> bool:

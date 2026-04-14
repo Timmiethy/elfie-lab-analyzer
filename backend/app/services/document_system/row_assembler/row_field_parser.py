@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 
-from app.services.parser import parse_measurement_text
+from app.services.row_grammar import parse_measurement_text
 
 from ..contracts import CandidateRowTypeV3, CandidateRowV3
 

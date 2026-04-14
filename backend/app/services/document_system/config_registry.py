@@ -8,7 +8,6 @@ from typing import Any
 
 from app.config import settings
 
-
 _DEFAULT_REGISTRY_PATH = Path(__file__).resolve().parents[4] / "data" / "family_configs" / "document_family_registry_v1.json"
 
 
@@ -22,7 +21,7 @@ class FamilyConfigRegistry:
     artifact_policy: dict[str, Any]
 
     @classmethod
-    def load(cls, file_path: Path | None = None) -> "FamilyConfigRegistry":
+    def load(cls, file_path: Path | None = None) -> FamilyConfigRegistry:
         path = file_path or _resolve_registry_path()
         payload = json.loads(path.read_text(encoding="utf-8"))
         return cls(

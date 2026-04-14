@@ -7,15 +7,57 @@
     "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
   },
   "benchmark_contract_version": "benchmark-contract-v1",
-  "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
+  "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
   "contract_version": "benchmark-proof-pack-v1",
   "family_benchmarks": {},
   "lineage": {
     "adapter_version": "family-adapter-v1",
-    "build_commit": "local-dev",
+    "build_commit": "unknown",
+    "completeness_telemetry": {
+      "contract_version": "completeness-telemetry-v1",
+      "counts": {
+        "clean_pages": 1,
+        "clean_rows": 2,
+        "extracted_pages": 1,
+        "extracted_rows": 2,
+        "partial_observations": 0,
+        "reference_bound_observations": 2,
+        "result_observations": 2,
+        "supported_observations": 2,
+        "unsupported_observations": 0
+      },
+      "ratios": {
+        "observation_supported_ratio": 1.0,
+        "reference_coverage_ratio": 1.0,
+        "structural_clean_row_ratio": 1.0,
+        "structural_page_coverage_ratio": 1.0
+      },
+      "semantic_success_shadow": {
+        "confidence": 1.0,
+        "contract_version": "semantic-success-shadow-v1",
+        "finding_counts": {
+          "actionable": 0,
+          "suppressed": 0,
+          "threshold_conflicts": 0,
+          "total": 2
+        },
+        "lane_type": "trusted_pdf",
+        "limiting_factors": [],
+        "observation_gate_pass": true,
+        "reference_gate_pass": true,
+        "semantic_state": "shadow_fully_recoverable",
+        "structural_gate_pass": true,
+        "support_banner": "fully_supported"
+      },
+      "states": {
+        "observation": "complete",
+        "reference": "complete",
+        "structural": "complete"
+      }
+    },
     "family_adapter_version": "family-adapter-v1",
     "formula_version": "formula-v1",
-    "id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+    "id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
     "job_id": "c347b7de-d811-5d7e-ad58-c3d0374b0d99",
     "mapping_threshold_config": {
       "default": 0.9
@@ -24,31 +66,46 @@
     "nextstep_policy_version": "nextstep-v1",
     "ocr_version": null,
     "parser_backend": "pymupdf",
-    "parser_backend_version": "pymupdf-1.27.x",
+    "parser_backend_version": "1.27.2.2",
     "parser_version": "pymupdf-1.27.x",
     "row_assembly_version": "row-assembly-v2",
     "row_type_rule_set_version": "row-type-rules-v1",
     "rule_pack_version": "rules-v1",
     "severity_policy_version": "severity-v1",
-    "source_checksum": "source:phase-9-job",
+    "source_checksum": "unknown:phase-9-job",
     "template_version": "templates-v1",
-    "terminology_release": "loinc-2026.04-dev",
+    "terminology_release": "loinc-2026.05",
     "unit_engine_version": "ucum-v1"
   },
-  "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+  "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
   "metrics": {
     "clean_rows": 2,
+    "completeness_observation_state": "complete",
+    "completeness_page_coverage_ratio": 1.0,
+    "completeness_reference_coverage_ratio": 1.0,
+    "completeness_reference_state": "complete",
+    "completeness_structural_ratio": 1.0,
+    "completeness_structural_state": "complete",
+    "completeness_supported_ratio": 1.0,
     "extracted_rows": 2,
-    "extraction_ms": 0,
+    "extraction_ms": 7,
     "findings": 2,
     "panels": 1,
     "parser_backend": "pymupdf",
-    "parser_backend_version": "pymupdf-1.27.x",
-    "processing_ms": 11,
-    "row_assembly_version": "row-assembly-v2"
+    "parser_backend_version": "1.27.2.2",
+    "processing_ms": 12,
+    "row_assembly_version": "row-assembly-v2",
+    "semantic_shadow_actionable_findings": 0,
+    "semantic_shadow_confidence": 1.0,
+    "semantic_shadow_observation_gate_pass": 1,
+    "semantic_shadow_reference_gate_pass": 1,
+    "semantic_shadow_state": "shadow_fully_recoverable",
+    "semantic_shadow_structural_gate_pass": 1,
+    "semantic_shadow_support_banner": "fully_supported",
+    "semantic_shadow_threshold_conflicts": 0
   },
   "regression_tags": [],
-  "report_type": "truth_engine_seeded_pipeline",
+  "report_type": "truth_engine_pipeline",
   "reports": {
     "ablation_report.json": {
       "artifact_refs": {
@@ -58,12 +115,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -74,15 +131,15 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
         "regression_tags": [],
-        "report_type": "truth_engine_seeded_pipeline"
+        "report_type": "truth_engine_pipeline"
       },
       "report_name": "ablation_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     },
     "clinician_scan_report.json": {
       "artifact_refs": {
@@ -92,12 +149,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -108,14 +165,14 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "clinician_scan_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     },
     "coverage_report.json": {
       "artifact_refs": {
@@ -125,12 +182,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -141,23 +198,38 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
         "metrics": {
           "clean_rows": 2,
+          "completeness_observation_state": "complete",
+          "completeness_page_coverage_ratio": 1.0,
+          "completeness_reference_coverage_ratio": 1.0,
+          "completeness_reference_state": "complete",
+          "completeness_structural_ratio": 1.0,
+          "completeness_structural_state": "complete",
+          "completeness_supported_ratio": 1.0,
           "extracted_rows": 2,
           "findings": 2,
           "panels": 1,
           "parser_backend": "pymupdf",
-          "parser_backend_version": "pymupdf-1.27.x",
-          "row_assembly_version": "row-assembly-v2"
+          "parser_backend_version": "1.27.2.2",
+          "row_assembly_version": "row-assembly-v2",
+          "semantic_shadow_actionable_findings": 0,
+          "semantic_shadow_confidence": 1.0,
+          "semantic_shadow_observation_gate_pass": 1,
+          "semantic_shadow_reference_gate_pass": 1,
+          "semantic_shadow_state": "shadow_fully_recoverable",
+          "semantic_shadow_structural_gate_pass": 1,
+          "semantic_shadow_support_banner": "fully_supported",
+          "semantic_shadow_threshold_conflicts": 0
         },
         "regressed_metrics": []
       },
       "report_name": "coverage_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     },
     "explanation_report.json": {
       "artifact_refs": {
@@ -167,12 +239,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -183,7 +255,7 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
@@ -191,7 +263,7 @@
         "template_version": "templates-v1"
       },
       "report_name": "explanation_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     },
     "mapping_report.json": {
       "artifact_refs": {
@@ -201,12 +273,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -217,7 +289,7 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
@@ -226,18 +298,33 @@
         },
         "metrics": {
           "clean_rows": 2,
+          "completeness_observation_state": "complete",
+          "completeness_page_coverage_ratio": 1.0,
+          "completeness_reference_coverage_ratio": 1.0,
+          "completeness_reference_state": "complete",
+          "completeness_structural_ratio": 1.0,
+          "completeness_structural_state": "complete",
+          "completeness_supported_ratio": 1.0,
           "extracted_rows": 2,
-          "extraction_ms": 0,
+          "extraction_ms": 7,
           "findings": 2,
           "panels": 1,
           "parser_backend": "pymupdf",
-          "parser_backend_version": "pymupdf-1.27.x",
-          "processing_ms": 11,
-          "row_assembly_version": "row-assembly-v2"
+          "parser_backend_version": "1.27.2.2",
+          "processing_ms": 12,
+          "row_assembly_version": "row-assembly-v2",
+          "semantic_shadow_actionable_findings": 0,
+          "semantic_shadow_confidence": 1.0,
+          "semantic_shadow_observation_gate_pass": 1,
+          "semantic_shadow_reference_gate_pass": 1,
+          "semantic_shadow_state": "shadow_fully_recoverable",
+          "semantic_shadow_structural_gate_pass": 1,
+          "semantic_shadow_support_banner": "fully_supported",
+          "semantic_shadow_threshold_conflicts": 0
         }
       },
       "report_name": "mapping_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     },
     "parser_report.json": {
       "artifact_refs": {
@@ -247,12 +334,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -263,18 +350,18 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
         "regression_tags": [],
         "timing": {
-          "extraction_ms": 0,
-          "processing_ms": 11
+          "extraction_ms": 7,
+          "processing_ms": 12
         }
       },
       "report_name": "parser_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     },
     "partial_support_report.json": {
       "artifact_refs": {
@@ -284,12 +371,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -300,7 +387,7 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
@@ -310,7 +397,7 @@
         }
       },
       "report_name": "partial_support_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     },
     "patient_comprehension_report.json": {
       "artifact_refs": {
@@ -320,12 +407,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -336,14 +423,14 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "patient_comprehension_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     },
     "policy_report.json": {
       "artifact_refs": {
@@ -353,12 +440,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26c6bc2d-09f1-5e02-92e5-350dd5b8a9d0",
-      "build_commit": "local-dev",
+      "benchmark_id": "9c472778-d8f3-5d9b-8326-65451229e0b2",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
-      "language_id": "en",
-      "lineage_id": "d4aecfb2-3600-5f7a-a50a-d8dd786ef673",
+      "language_id": "und",
+      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -369,7 +456,7 @@
         "rule_pack_version": "rules-v1",
         "severity_policy_version": "severity-v1",
         "template_version": "templates-v1",
-        "terminology_release": "loinc-2026.04-dev",
+        "terminology_release": "loinc-2026.05",
         "unit_engine_version": "ucum-v1"
       },
       "payload": {
@@ -379,7 +466,7 @@
         "severity_policy_version": "severity-v1"
       },
       "report_name": "policy_report.json",
-      "timestamp": "2026-04-13T09:11:01.981235Z"
+      "timestamp": "2026-04-14T13:24:49.362319Z"
     }
   },
   "summary": {
@@ -387,18 +474,33 @@
     "family_benchmarks": {},
     "metrics": {
       "clean_rows": 2,
+      "completeness_observation_state": "complete",
+      "completeness_page_coverage_ratio": 1.0,
+      "completeness_reference_coverage_ratio": 1.0,
+      "completeness_reference_state": "complete",
+      "completeness_structural_ratio": 1.0,
+      "completeness_structural_state": "complete",
+      "completeness_supported_ratio": 1.0,
       "extracted_rows": 2,
       "findings": 2,
       "panels": 1,
       "parser_backend": "pymupdf",
-      "parser_backend_version": "pymupdf-1.27.x",
-      "row_assembly_version": "row-assembly-v2"
+      "parser_backend_version": "1.27.2.2",
+      "row_assembly_version": "row-assembly-v2",
+      "semantic_shadow_actionable_findings": 0,
+      "semantic_shadow_confidence": 1.0,
+      "semantic_shadow_observation_gate_pass": 1,
+      "semantic_shadow_reference_gate_pass": 1,
+      "semantic_shadow_state": "shadow_fully_recoverable",
+      "semantic_shadow_structural_gate_pass": 1,
+      "semantic_shadow_support_banner": "fully_supported",
+      "semantic_shadow_threshold_conflicts": 0
     },
     "regressed_metrics": [],
     "regression_tags": [],
     "timing": {
-      "extraction_ms": 0,
-      "processing_ms": 11
+      "extraction_ms": 7,
+      "processing_ms": 12
     },
     "trace_refs": {}
   },

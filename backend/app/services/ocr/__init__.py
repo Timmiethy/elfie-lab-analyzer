@@ -116,6 +116,23 @@ class OcrPromotionDecision(TypedDict):
     positioned_output: bool
 
 
+class OcrBlockArtifactV1(TypedDict):
+    block_id: str
+    text: str
+    bbox: dict[str, float] | None
+
+
+class OcrPageArtifactV1(TypedDict):
+    page_number: int
+    backend_id: str
+    backend_version: str
+    model: str
+    lane_type: str
+    trust_status: str
+    degraded_mode: bool
+    degraded_reason_codes: list[str]
+
+
 class OcrAdapter:
     """Safe adapter for image-beta OCR.
 
@@ -164,7 +181,7 @@ class OcrAdapter:
         *,
         document_id: UUID | str | None = None,
         source_page: int = 1,
-        language_id: str | None = "en",
+        language_id: str | None = None,
         ocr_text: str | None = None,
         ocr_lines: Sequence[str] | None = None,
         ocr_rows: Sequence[Mapping[str, Any]] | None = None,
@@ -193,12 +210,18 @@ class OcrAdapter:
             )
 
         if normalized_lines:
-            return self._rows_from_lines(
-                normalized_lines,
+            return self._enrich_ocr_rows(
+                self._rows_from_lines(
+                    normalized_lines,
+                    document_uuid=document_uuid,
+                    source_page=source_page,
+                    language_id=language_id,
+                    ocr_engine=_DEFAULT_OCR_ENGINE,
+                ),
                 document_uuid=document_uuid,
-                source_page=source_page,
-                language_id=language_id,
                 ocr_engine=_DEFAULT_OCR_ENGINE,
+                degraded_mode=True,
+                degraded_reason_codes=["free_text_line_fallback"],
             )
 
         if not self._image_beta_enabled:
@@ -417,6 +440,19 @@ class OcrAdapter:
                 )
 
         if isinstance(backend_output, Mapping):
+            if (
+                ("text" in backend_output or "blocks" in backend_output)
+                and "rows" not in backend_output
+                and "lines" not in backend_output
+            ):
+                return self._rows_from_page_payload(
+                    backend_output,
+                    document_uuid=document_uuid,
+                    source_page=int(backend_output.get("source_page") or source_page),
+                    language_id=language_id,
+                    ocr_engine=ocr_engine,
+                )
+
             for key in ("rows", "lines", "text", "pages", "blocks", "predictions", "result"):
                 if key not in backend_output:
                     continue
@@ -438,8 +474,11 @@ class OcrAdapter:
                         ocr_engine=ocr_engine,
                     )
                 if key == "text":
-                    return self._rows_from_lines(
-                        self._collect_lines(ocr_text=str(value)),
+                    return self._rows_from_page_payload(
+                        {
+                            "text": str(value),
+                            "source_page": source_page,
+                        },
                         document_uuid=document_uuid,
                         source_page=source_page,
                         language_id=language_id,
@@ -454,12 +493,18 @@ class OcrAdapter:
                 )
 
         if isinstance(backend_output, str):
-            return self._rows_from_lines(
-                self._collect_lines(ocr_text=backend_output),
+            return self._enrich_ocr_rows(
+                self._rows_from_lines(
+                    self._collect_lines(ocr_text=backend_output, ocr_lines=None),
+                    document_uuid=document_uuid,
+                    source_page=source_page,
+                    language_id=language_id,
+                    ocr_engine=ocr_engine,
+                ),
                 document_uuid=document_uuid,
-                source_page=source_page,
-                language_id=language_id,
                 ocr_engine=ocr_engine,
+                degraded_mode=True,
+                degraded_reason_codes=["free_text_line_fallback"],
             )
 
         if isinstance(backend_output, Sequence) and not isinstance(
@@ -467,12 +512,18 @@ class OcrAdapter:
             (bytes, bytearray, str),
         ):
             if all(isinstance(item, str) for item in backend_output):
-                return self._rows_from_lines(
-                    list(backend_output),
+                return self._enrich_ocr_rows(
+                    self._rows_from_lines(
+                        list(backend_output),
+                        document_uuid=document_uuid,
+                        source_page=source_page,
+                        language_id=language_id,
+                        ocr_engine=ocr_engine,
+                    ),
                     document_uuid=document_uuid,
-                    source_page=source_page,
-                    language_id=language_id,
                     ocr_engine=ocr_engine,
+                    degraded_mode=True,
+                    degraded_reason_codes=["free_text_line_fallback"],
                 )
             if all(isinstance(item, Mapping) for item in backend_output):
                 # v12: Multi-page PDF OCR results are a list of per-page dicts
@@ -482,23 +533,21 @@ class OcrAdapter:
                 # RowAssemblerV2 so the image lane uses the same parser-output
                 # contract as the trusted PDF lane.
                 has_page_shape = all(
-                    "text" in item and "source_page" in item
+                    "source_page" in item and ("text" in item or "blocks" in item)
                     for item in backend_output
                 )
                 if has_page_shape:
                     rows: list[dict[str, Any]] = []
                     for page_item in backend_output:
                         page_num = int(page_item.get("source_page", source_page))
-                        page_text = str(page_item.get("text", ""))
-                        if page_text:
-                            page_rows = self._rows_from_page_text(
-                                page_text,
-                                document_uuid=document_uuid,
-                                source_page=page_num,
-                                language_id=language_id,
-                                ocr_engine=ocr_engine,
-                            )
-                            rows.extend(page_rows)
+                        page_rows = self._rows_from_page_payload(
+                            page_item,
+                            document_uuid=document_uuid,
+                            source_page=page_num,
+                            language_id=language_id,
+                            ocr_engine=ocr_engine,
+                        )
+                        rows.extend(page_rows)
                     if rows:
                         return _enforce_row_shape_ceilings(rows)
                     # If text is empty, fall through to normalize as rows
@@ -547,7 +596,11 @@ class OcrAdapter:
                     ocr_engine=ocr_engine,
                 )
             )
-        return _enforce_row_shape_ceilings(normalized_rows)
+        return self._enrich_ocr_rows(
+            normalized_rows,
+            document_uuid=document_uuid,
+            ocr_engine=ocr_engine,
+        )
 
     def _rows_from_lines(
         self,
@@ -683,12 +736,27 @@ class OcrAdapter:
         language_id: str | None,
         ocr_engine: str,
     ) -> list[dict[str, Any]]:
-        """v13: Convert raw OCR page text into candidate rows via
-        PageParseArtifactV4 -> BlockGraphV1 -> RowAssemblerV3.
+        return self._rows_from_page_payload(
+            {
+                "text": page_text,
+                "source_page": source_page,
+            },
+            document_uuid=document_uuid,
+            source_page=source_page,
+            language_id=language_id,
+            ocr_engine=ocr_engine,
+        )
 
-        This is the contract bridge for the image-lane OCR path so it produces
-        the same downstream row shape as the trusted PDF path.
-        """
+    def _rows_from_page_payload(
+        self,
+        page_payload: Mapping[str, Any],
+        *,
+        document_uuid: UUID,
+        source_page: int,
+        language_id: str | None,
+        ocr_engine: str,
+    ) -> list[dict[str, Any]]:
+        """Convert OCR page payloads into candidate rows via the v4 contract."""
         from app.services.document_system.block_graph_builder import BlockGraphBuilder
         from app.services.document_system.ocr_substrate import OcrSubstrate
         from app.services.document_system.row_assembler import (
@@ -697,16 +765,25 @@ class OcrAdapter:
         )
 
         substrate = OcrSubstrate()
-        artifact_v4 = substrate.artifact_from_text(
-            page_text=page_text,
-            page_number=source_page,
+        artifact_v4 = substrate.artifact_from_backend_result(
+            backend_result=dict(page_payload),
+            page_number=int(page_payload.get("source_page") or source_page),
             document_id=str(document_uuid),
             backend_id=_IMAGE_BETA_PARSER_BACKEND,
             backend_version=_IMAGE_BETA_PARSER_VERSION,
         )
+        page_artifact = _build_ocr_page_artifact(
+            page_number=artifact_v4.page_number,
+            backend_id=artifact_v4.backend_id,
+            backend_version=artifact_v4.backend_version,
+            degraded_mode=False,
+            degraded_reason_codes=[],
+        )
+        block_artifacts_by_id = _build_ocr_block_artifacts(artifact_v4)
 
         block_graph = BlockGraphBuilder().build(artifact_v4)
         assembler = RowAssemblerV3()
+        family_adapter_id = _family_adapter_for_languages(artifact_v4.language_candidates)
         page_class = {
             "lab_results": "analyte_table_page",
             "threshold_reference": "threshold_page",
@@ -720,20 +797,54 @@ class OcrAdapter:
         candidate_rows, suppression_report = assembler.assemble(
             block_graph=block_graph,
             artifact=artifact_v4,
-            family_adapter_id="generic_layout",
+            family_adapter_id=family_adapter_id,
             page_class=page_class,
         )
+        primary_language = language_id or _primary_language_from_candidates(artifact_v4.language_candidates)
+
+        if not candidate_rows:
+            fallback_rows = self._rows_from_lines(
+                self._collect_lines(ocr_text=artifact_v4.raw_text, ocr_lines=None),
+                document_uuid=document_uuid,
+                source_page=int(page_payload.get("source_page") or source_page),
+                language_id=primary_language,
+                ocr_engine=ocr_engine,
+            )
+            return self._enrich_ocr_rows(
+                fallback_rows,
+                document_uuid=document_uuid,
+                ocr_engine=ocr_engine,
+                degraded_mode=True,
+                degraded_reason_codes=["structured_ocr_rows_unavailable"],
+                page_artifact=_build_ocr_page_artifact(
+                    page_number=artifact_v4.page_number,
+                    backend_id=artifact_v4.backend_id,
+                    backend_version=artifact_v4.backend_version,
+                    degraded_mode=True,
+                    degraded_reason_codes=["structured_ocr_rows_unavailable"],
+                ),
+                block_artifacts_by_id=block_artifacts_by_id,
+            )
+
         raw_rows = []
         for candidate_row in candidate_rows:
             legacy_row = candidate_row_to_legacy(candidate_row, trust_level=artifact_v4.lane_type)
-            legacy_row["source_page"] = source_page
+            legacy_row["source_page"] = int(page_payload.get("source_page") or source_page)
+            if primary_language:
+                legacy_row["language_id"] = primary_language
             legacy_row["candidate_trace"] = {
                 **(legacy_row.get("candidate_trace") or {}),
                 "suppression_record_count": len(suppression_report.suppression_records),
             }
             raw_rows.append(legacy_row)
 
-        return self._enrich_ocr_rows(raw_rows, document_uuid=document_uuid, ocr_engine=ocr_engine)
+        return self._enrich_ocr_rows(
+            raw_rows,
+            document_uuid=document_uuid,
+            ocr_engine=ocr_engine,
+            page_artifact=page_artifact,
+            block_artifacts_by_id=block_artifacts_by_id,
+        )
 
     def _enrich_ocr_rows(
         self,
@@ -741,9 +852,16 @@ class OcrAdapter:
         *,
         document_uuid: UUID,
         ocr_engine: str,
+        degraded_mode: bool = False,
+        degraded_reason_codes: list[str] | None = None,
+        page_artifact: OcrPageArtifactV1 | None = None,
+        block_artifacts_by_id: dict[str, OcrBlockArtifactV1] | None = None,
     ) -> list[dict[str, Any]]:
         """Enrich assembled rows with image-lane metadata."""
         enriched: list[dict[str, Any]] = []
+        reason_codes = list(degraded_reason_codes or [])
+        block_artifacts = dict(block_artifacts_by_id or {})
+
         for row in rows:
             row["document_id"] = document_uuid
             row.setdefault("lane_type", "image_beta")
@@ -751,6 +869,25 @@ class OcrAdapter:
             row.setdefault("parser_backend", _IMAGE_BETA_PARSER_BACKEND)
             row.setdefault("parser_backend_version", _IMAGE_BETA_PARSER_VERSION)
             row.setdefault("row_assembly_version", _IMAGE_BETA_ROW_ASSEMBLY_VERSION)
+            row.setdefault("trust_status", "non_trusted")
+            row["trusted_promotion_allowed"] = False
+            row["degraded_mode"] = bool(degraded_mode)
+            row["degraded_reason_codes"] = reason_codes
+
+            effective_page_artifact = page_artifact or _build_ocr_page_artifact(
+                page_number=int(row.get("source_page") or 1),
+                backend_id=str(row.get("parser_backend") or _IMAGE_BETA_PARSER_BACKEND),
+                backend_version=str(row.get("parser_backend_version") or _IMAGE_BETA_PARSER_VERSION),
+                degraded_mode=bool(degraded_mode),
+                degraded_reason_codes=reason_codes,
+            )
+            row["ocr_page_artifact"] = effective_page_artifact
+
+            source_block_id = str(row.get("block_id") or row.get("source_block_id") or "")
+            block_artifact = block_artifacts.get(source_block_id)
+            if block_artifact is not None:
+                row["ocr_block_artifact"] = block_artifact
+
             enriched.append(row)
         return _enforce_row_shape_ceilings(enriched)
 
@@ -817,4 +954,64 @@ class OcrAdapter:
         return sha256(payload.encode("utf-8")).hexdigest()
 
 
-__all__ = ["OcrAdapter", "OcrPromotionDecision"]
+def _family_adapter_for_languages(language_candidates: list[str]) -> str:
+    languages = {str(language).lower() for language in language_candidates}
+    if "zh" in languages and "en" in languages:
+        return "innoquest_bilingual_general"
+    return "generic_layout"
+
+
+def _primary_language_from_candidates(language_candidates: list[str]) -> str | None:
+    for language in language_candidates:
+        normalized = str(language).strip().lower()
+        if not normalized or normalized == "und":
+            continue
+        return normalized
+    return None
+
+
+def _build_ocr_page_artifact(
+    *,
+    page_number: int,
+    backend_id: str,
+    backend_version: str,
+    degraded_mode: bool,
+    degraded_reason_codes: list[str],
+) -> OcrPageArtifactV1:
+    return {
+        "page_number": page_number,
+        "backend_id": backend_id,
+        "backend_version": backend_version,
+        "model": _IMAGE_BETA_PARSER_VERSION,
+        "lane_type": "image_beta",
+        "trust_status": "non_trusted",
+        "degraded_mode": degraded_mode,
+        "degraded_reason_codes": list(degraded_reason_codes),
+    }
+
+
+def _build_ocr_block_artifacts(artifact_v4: Any) -> dict[str, OcrBlockArtifactV1]:
+    block_artifacts: dict[str, OcrBlockArtifactV1] = {}
+    for block in list(getattr(artifact_v4, "blocks", []) or []):
+        bbox = None
+        if getattr(block, "bbox", None) is not None:
+            bbox = {
+                "x0": float(block.bbox.x0),
+                "y0": float(block.bbox.y0),
+                "x1": float(block.bbox.x1),
+                "y1": float(block.bbox.y1),
+            }
+        block_artifacts[str(block.block_id)] = {
+            "block_id": str(block.block_id),
+            "text": str(block.raw_text or ""),
+            "bbox": bbox,
+        }
+    return block_artifacts
+
+
+__all__ = [
+    "OcrAdapter",
+    "OcrPromotionDecision",
+    "OcrPageArtifactV1",
+    "OcrBlockArtifactV1",
+]

@@ -1,15 +1,13 @@
-"""Trusted PDF parser using pdfplumber for machine-generated PDFs."""
+"""Trusted PDF parser using the PyMuPDF-backed v12 substrate."""
 
 from __future__ import annotations
 
 import re
+from enum import StrEnum
 from hashlib import sha256
-from io import BytesIO
 from statistics import median
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
-
-import pdfplumber
 
 PARSER_VERSION = "trusted-pdf-v11-row-core"
 _PAGE_RE = re.compile(r"^page\s*\d+(?:\s*(?:of|/)\s*\d+)?$", re.I)
@@ -42,7 +40,15 @@ _NOTE_WORDS = {"see", "note", "notes", "comment", "comments"}
 _ANNOTATION_WORDS = {"calc", "calculated"}
 _REFERENCE_FILLER_WORDS = {"or", "="}
 _REFERENCE_ONLY_PREFIXES = ("reference range", "reference interval", "ref range", "normal range", "desirable range")
+_US_STATE_CODES = {
+    "al", "ak", "az", "ar", "ca", "co", "ct", "de", "fl", "ga", "hi", "id", "il", "in", "ia", "ks",
+    "ky", "la", "me", "md", "ma", "mi", "mn", "ms", "mo", "mt", "ne", "nv", "nh", "nj", "nm", "ny",
+    "nc", "nd", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "vt", "va", "wa", "wv",
+    "wi", "wy", "dc",
+}
 _VITALS_HINTS = (
+    "patient height",
+    "patient weight",
     "height feet",
     "height inches",
     "weight",
@@ -57,7 +63,7 @@ _VITALS_HINTS = (
     "respiratory rate",
     "temperature",
 )
-_LOCATION_HINTS = ("room ", " floor", "ward ", " flr", " flr.", " jalan ")
+_LOCATION_HINTS = ("room ", " floor", "ward ", " flr", " flr.", " jalan ", "wisma ", "petaling ")
 _UNIT_PREFIX_CANONICAL = {
     "%": "%",
     "mg/dl": "mg/dL",
@@ -104,6 +110,7 @@ ADMIN_HINTS = (
     "signed by", "authorized by", "electronic signature",
     "performed by", "tested by", "analyzed by",
     "client id", "client name", "facility name",
+    "client services",
     "report to", "send to", "address", "phone",
     "fax :", "email :", "website",
     "test date", "received date", "received on",
@@ -190,9 +197,31 @@ HEADER_HINTS = (
 )
 INNOQUEST_HINTS = ("dbticbm", "dbtic1dm", "dbticcm", "dbticrp", "general screening", "special chemistry", "hba1c", "igf-1", "cortisol studies")
 VALUE_WORDS = {"positive", "negative", "detected", "not detected", "reactive", "nonreactive", "normal", "abnormal", "present", "absent", "trace", "none"}
+_QUALITATIVE_VALUE_PATTERNS: tuple[tuple[str, ...], ...] = (
+    ("not", "detected"),
+    ("non", "reactive"),
+    ("nonreactive",),
+    ("positive",),
+    ("negative",),
+    ("reactive",),
+    ("detected",),
+    ("present",),
+    ("absent",),
+    ("trace",),
+    ("none",),
+)
 DERIVED_SOURCE_REQUIRED = {"egfr", "acr", "albumin creatinine ratio", "body mass index"}
 NOISE_WORDS = {"analyte", "comment", "comments", "date", "flag", "method", "patient", "range", "reference", "report", "result", "results", "specimen", "test", "unit", "units", "value"}
 UNIT_HINTS = ("mg/dl", "g/dl", "g/l", "mg/l", "mmol/l", "umol/l", "nmol/l", "pmol/l", "u/l", "iu/l", "ml/min", "kg/sqm", "/cmm", "pg", "fl", "kg", "cm", "mm", "ml", "%")
+
+
+class TrustedPdfParseFailureCode(StrEnum):
+    EMPTY_INPUT = "trusted_pdf_empty_input"
+    EMPTY_PDF = "trusted_pdf_empty_pdf"
+    PAGE_LIMIT_EXCEEDED = "trusted_pdf_page_limit_exceeded"
+    NO_EMBEDDED_TEXT = "trusted_pdf_no_embedded_text"
+    NO_PARSABLE_ROWS = "trusted_pdf_no_parsable_rows"
+    AMBIGUOUS_PAGE_CLASSIFICATION = "trusted_pdf_ambiguous_page_classification"
 
 
 class TrustedPdfParser:
@@ -200,8 +229,8 @@ class TrustedPdfParser:
 
     The public ``parse`` signature is unchanged for backwards compatibility.
     Internally it now uses BornDigitalParser + RowAssemblerV2 instead of
-    pdfplumber-first extraction.  pdfplumber is still imported for debug
-    helpers but is NOT used as the primary trusted extraction path.
+    pdfplumber-first extraction.  pdfplumber is available only through the
+    explicit debug helper path and is NOT used as primary trusted extraction.
     """
 
     async def parse(self, file_bytes: bytes, *, max_pages: int | None = None) -> list[dict[str, Any]]:
@@ -248,6 +277,8 @@ def classify_candidate_text(
         return _classification("test_request_row", None, "excluded", "test_request_row", page_class, family_adapter_id, True)
     if _is_narrative(text, lower):
         return _classification("narrative_guidance_row", None, "excluded", "narrative_guidance_row", page_class, family_adapter_id, True)
+    if _is_status_index_row(lower):
+        return _classification("admin_metadata_row", None, "excluded", "admin_metadata_row", page_class, family_adapter_id, True)
     if _is_threshold_measurement_label(text, lower):
         return _classification("threshold_reference_row", "reference_table", "excluded", "threshold_table_row", page_class, family_adapter_id, True)
     if _is_reference_only_line(lower):
@@ -335,6 +366,11 @@ def _parse_measurement_text(
 
 
 def _parse_trusted_pdf(file_bytes: bytes, *, max_pages: int | None = None) -> list[dict[str, Any]]:
+    # Debug/forensic helper only; production trusted parsing uses _parse_trusted_pdf_v12.
+    from io import BytesIO
+
+    import pdfplumber
+
     if not file_bytes:
         raise ValueError("unsupported_pdf: empty input")
 
@@ -356,7 +392,7 @@ def _parse_trusted_pdf(file_bytes: bytes, *, max_pages: int | None = None) -> li
                 saw_text = saw_text or has_text
                 for row in page_rows:
                     row_hash = sha256(
-                        f"{page_number}:{row['row_type']}:{row['raw_text']}".encode("utf-8")
+                        f"{page_number}:{row['row_type']}:{row['raw_text']}".encode()
                     ).hexdigest()
                     if row_hash in seen_rows:
                         continue
@@ -524,7 +560,35 @@ def _parse_value_fields(raw_text: str, *, row_type: str) -> dict[str, Any]:
     if index is None or raw_value_string is None:
         return _parse_categorical_value_fields(tokens, raw_text)
 
-    label = _normalize_label_tokens(tokens[:index]) or _label_from_text(raw_text)
+    prefix_tokens = tokens[:index]
+    qualitative_prefix = _extract_qualitative_prefix_value(prefix_tokens)
+    if qualitative_prefix is not None and (
+        comparator is not None
+        or raw_value_string.startswith(("<", ">", "≤", "≥"))
+    ):
+        label_tokens, qualitative_value, qualitative_unit = qualitative_prefix
+        label = _normalize_label_tokens(label_tokens) or _label_from_text(raw_text)
+        label = _normalize_measurement_label(
+            label,
+            raw_unit_string=qualitative_unit,
+        )
+        reference_tokens = tokens[index:]
+        raw_reference_range = _normalize_reference_range(reference_tokens) or _extract_reference_range(raw_text)
+        return {
+            "raw_analyte_label": label,
+            "raw_value_string": qualitative_value,
+            "raw_unit_string": qualitative_unit,
+            "raw_reference_range": raw_reference_range,
+            "parsed_numeric_value": None,
+            "parsed_locale": {"decimal_separator": None, "thousands_separator": None, "normalized": None},
+            "parsed_comparator": None,
+            "secondary_result": None,
+            "source_observation_ids": [],
+            "extraction_confidence": 0.9,
+        }
+
+    label_tokens, prevalue_tail_tokens = _split_label_and_prevalue_tail(prefix_tokens)
+    label = _normalize_label_tokens(label_tokens) or _label_from_text(raw_text)
     tail_start = index + 1
     if (
         comparator is not None
@@ -534,8 +598,17 @@ def _parse_value_fields(raw_text: str, *, row_type: str) -> dict[str, Any]:
         tail_start = index + 2
     tail = tokens[tail_start:]
     raw_unit_string, raw_reference_range, secondary_result = _split_measurement_tail(tail)
+    prevalue_unit, prevalue_reference = _parse_prevalue_measurement_tail(prevalue_tail_tokens)
+    if raw_unit_string is None:
+        raw_unit_string = prevalue_unit
     if raw_unit_string is None:
         raw_unit_string = _infer_inline_unit(raw_value_string)
+    label = _normalize_measurement_label(
+        label,
+        raw_unit_string=raw_unit_string,
+    )
+    if not raw_reference_range:
+        raw_reference_range = prevalue_reference
     if not raw_reference_range:
         raw_reference_range = _extract_reference_range(raw_text)
     return {
@@ -553,11 +626,18 @@ def _parse_value_fields(raw_text: str, *, row_type: str) -> dict[str, Any]:
 
 
 def _parse_categorical_value_fields(tokens: list[str], raw_text: str) -> dict[str, Any]:
-    label = _normalize_text(" ".join(tokens[:-1])) if len(tokens) > 1 else _normalize_text(tokens[0] if tokens else "")
+    label_tokens, value_tokens = _split_categorical_label_and_value(tokens)
+    label_tokens, raw_unit_string = _detach_trailing_unit_token(label_tokens)
+    label = _normalize_label_tokens(label_tokens) or _label_from_text(raw_text)
+    raw_value_string = _normalize_value_phrase(value_tokens) if value_tokens else None
+    label = _normalize_measurement_label(
+        label,
+        raw_unit_string=raw_unit_string,
+    )
     return {
         "raw_analyte_label": label or _label_from_text(raw_text),
-        "raw_value_string": _normalize_text(tokens[-1]) if tokens else None,
-        "raw_unit_string": _normalize_text(" ".join(tokens[1:])) if len(tokens) > 1 else None,
+        "raw_value_string": raw_value_string,
+        "raw_unit_string": raw_unit_string,
         "raw_reference_range": _extract_reference_range(raw_text),
         "parsed_numeric_value": None,
         "parsed_locale": {"decimal_separator": None, "thousands_separator": None, "normalized": None},
@@ -566,6 +646,158 @@ def _parse_categorical_value_fields(tokens: list[str], raw_text: str) -> dict[st
         "source_observation_ids": [],
         "extraction_confidence": 0.84,
     }
+
+
+def _split_categorical_label_and_value(tokens: list[str]) -> tuple[list[str], list[str]]:
+    if not tokens:
+        return [], []
+
+    trimmed_tokens = list(tokens)
+    while trimmed_tokens and _clean_token(trimmed_tokens[-1]) in {"", ":"}:
+        trimmed_tokens.pop()
+    if not trimmed_tokens:
+        return [], []
+
+    lowered_tokens = [_clean_token(token).lower().rstrip(".:") for token in trimmed_tokens]
+    for pattern in sorted(_QUALITATIVE_VALUE_PATTERNS, key=len, reverse=True):
+        pattern_len = len(pattern)
+        if len(lowered_tokens) <= pattern_len:
+            continue
+        if tuple(lowered_tokens[-pattern_len:]) != pattern:
+            continue
+        return trimmed_tokens[:-pattern_len], trimmed_tokens[-pattern_len:]
+
+    if len(trimmed_tokens) == 1:
+        return trimmed_tokens, []
+    return trimmed_tokens[:-1], [trimmed_tokens[-1]]
+
+
+def _extract_qualitative_prefix_value(prefix_tokens: list[str]) -> tuple[list[str], str, str | None] | None:
+    if len(prefix_tokens) < 2:
+        return None
+
+    trimmed_tokens = list(prefix_tokens)
+    while trimmed_tokens and _clean_token(trimmed_tokens[-1]) in {"", ":"}:
+        trimmed_tokens.pop()
+    if len(trimmed_tokens) < 2:
+        return None
+
+    lowered_tokens = [_clean_token(token).lower().rstrip(".:") for token in trimmed_tokens]
+    for pattern in sorted(_QUALITATIVE_VALUE_PATTERNS, key=len, reverse=True):
+        pattern_len = len(pattern)
+        if len(lowered_tokens) <= pattern_len:
+            continue
+        if tuple(lowered_tokens[-pattern_len:]) != pattern:
+            continue
+
+        label_tokens = trimmed_tokens[:-pattern_len]
+        label_tokens, raw_unit_string = _detach_trailing_unit_token(label_tokens)
+        if not label_tokens:
+            return None
+
+        return label_tokens, _normalize_value_phrase(trimmed_tokens[-pattern_len:]), raw_unit_string
+
+    return None
+
+
+def _normalize_value_phrase(tokens: list[str]) -> str:
+    cleaned_tokens = [_clean_token(token) for token in tokens if _clean_token(token)]
+    value = _normalize_text(" ".join(cleaned_tokens))
+    normalized_value = value.lower().replace(" ", "")
+    if normalized_value == "nonreactive":
+        return "Non Reactive"
+    if normalized_value == "notdetected":
+        return "Not Detected"
+    return value
+
+
+def _detach_trailing_unit_token(tokens: list[str]) -> tuple[list[str], str | None]:
+    if len(tokens) < 2:
+        return tokens, None
+
+    trimmed_tokens = list(tokens)
+    while trimmed_tokens and _clean_token(trimmed_tokens[-1]) in {"", ":"}:
+        trimmed_tokens.pop()
+    if len(trimmed_tokens) < 2:
+        return trimmed_tokens, None
+
+    candidate = _clean_token(trimmed_tokens[-1])
+    if not candidate or not _looks_like_unit_token(candidate):
+        return trimmed_tokens, None
+
+    raw_unit_string = _normalize_measurement_unit_string(candidate)
+    if raw_unit_string is None:
+        return trimmed_tokens, None
+    return trimmed_tokens[:-1], raw_unit_string
+
+
+def _split_label_and_prevalue_tail(tokens: list[str]) -> tuple[list[str], list[str]]:
+    if len(tokens) < 2:
+        return tokens, []
+
+    cue_index: int | None = None
+    for idx in range(1, len(tokens)):
+        clean = _clean_token(tokens[idx])
+        if not clean:
+            continue
+        if _looks_like_unit_token(clean) or _is_reference_token(clean) or _starts_reference_expression(tokens, idx):
+            cue_index = idx
+            break
+
+    if cue_index is None:
+        return tokens, []
+
+    prevalue_tail = tokens[cue_index:]
+    has_measurement_signal = any(
+        (
+            _looks_like_unit_token(_clean_token(token))
+            or _is_reference_token(_clean_token(token))
+            or parse_numeric_token(_clean_token(token))[0] is not None
+        )
+        for token in prevalue_tail
+        if _clean_token(token)
+    )
+    if not has_measurement_signal:
+        return tokens, []
+
+    label_tokens = tokens[:cue_index]
+    if not label_tokens:
+        return tokens, []
+    return label_tokens, prevalue_tail
+
+
+def _parse_prevalue_measurement_tail(tokens: list[str]) -> tuple[str | None, str | None]:
+    if not tokens:
+        return None, None
+
+    unit_tokens: list[str] = []
+    reference_tokens: list[str] = []
+
+    for idx, token in enumerate(tokens):
+        clean = _clean_token(token)
+        if not clean:
+            continue
+        if _starts_note_expression(tokens, idx):
+            break
+        if _is_annotation_token(clean) or _is_flag_token(clean):
+            continue
+        if _is_reference_token(clean) or _starts_reference_expression(tokens, idx):
+            reference_tokens = tokens[idx:]
+            break
+        if _looks_like_unit_token(clean):
+            unit_tokens.append(clean)
+
+    raw_unit_string = _normalize_measurement_unit_string(_normalize_text(" ".join(unit_tokens)) or None)
+    if raw_unit_string is None and reference_tokens:
+        raw_unit_string = _normalize_measurement_unit_string(_extract_unit_from_reference_tokens(reference_tokens))
+
+    raw_reference_range = None
+    if reference_tokens:
+        raw_reference_range = _extract_reference_range(_normalize_text(" ".join(reference_tokens)))
+        if raw_reference_range is None:
+            raw_reference_range = _normalize_reference_range(reference_tokens)
+
+    return raw_unit_string, raw_reference_range
 
 
 def _split_measurement_tail(tokens: list[str]) -> tuple[str | None, str | None, dict[str, Any] | None]:
@@ -816,6 +1048,8 @@ def _is_noise_line(text: str) -> bool:
 
 def _is_admin(lower: str) -> bool:
     normalized = lower.replace(" :", ":").replace(": ", ":")
+    if re.match(r"^(?:male|female)\s*/\s*\d", lower):
+        return True
     return _looks_like_date_or_time(lower) or any(
         hint in lower or hint.replace(" :", ":").replace(": ", ":") in normalized
         for hint in ADMIN_HINTS
@@ -824,6 +1058,8 @@ def _is_admin(lower: str) -> bool:
 
 def _is_narrative(text: str, lower: str) -> bool:
     if any(hint in lower for hint in NARRATIVE_HINTS):
+        return True
+    if lower.startswith("comments ") or lower.startswith("comment ") or lower.startswith("comments:") or lower.startswith("comment:"):
         return True
     if lower.startswith("code "):
         return True
@@ -862,6 +1098,8 @@ def _is_vitals_or_body_metrics(lower: str) -> bool:
     # v12: word-boundary matching so hints like "weight" do not match inside
     # BMI category labels like "overweight", allowing those rows to reach
     # threshold_reference_row classification instead of admin_metadata_row.
+    if any(hint in lower for hint in ("身高体重指数", "体重指数", "身体质量指数")):
+        return True
     if any(re.search(r"\b" + re.escape(hint) + r"\b", lower) for hint in _VITALS_HINTS):
         return True
     if re.search(r"\bheight\b", lower) and re.search(r"\bweight\b", lower):
@@ -872,11 +1110,26 @@ def _is_vitals_or_body_metrics(lower: str) -> bool:
 
 
 def _is_location_line(lower: str) -> bool:
+    zip_match = re.match(r"^([a-z .,'-]+)\s+([a-z]{2})\s+(\d{5}(?:-\d{4})?)$", lower)
+    if zip_match and zip_match.group(2) in _US_STATE_CODES:
+        return True
+    city_state_match = re.match(r"^([a-z .,'-]+)\s+([a-z]{2})$", lower)
+    if city_state_match and city_state_match.group(2) in _US_STATE_CODES:
+        return True
     if "date entered" in lower:
         return True
     if "room" in lower and "floor" in lower:
         return True
     return any(hint in lower for hint in _LOCATION_HINTS) and any(ch.isdigit() for ch in lower)
+
+
+def _is_status_index_row(lower: str) -> bool:
+    return bool(
+        re.match(
+            r"^(?:positive|negative|reactive|nonreactive|detected|not detected)(?:\s*%)?\s+\d{1,3}(?:\s+[a-z%]{1,6})?$",
+            lower,
+        )
+    )
 
 
 def _is_threshold_measurement_label(text: str, lower: str) -> bool:
@@ -920,7 +1173,6 @@ def _is_threshold_comparator_row(text: str, lower: str) -> bool:
     # Label-only threshold rows that are standalone category names
     standalone_categories = {"intermediate", "low", "high", "very high", "very low", "borderline",
                              "atherogenic low", "atherogenic high"}
-    tokens = lower.split()
     if lower.strip() in standalone_categories:
         return True
     # Multi-word risk categories without comparators but with threshold semantics
@@ -945,7 +1197,63 @@ def _looks_like_measurement(text: str) -> bool:
         return True
     tail = tokens[index + 1 :]
     if not tail:
-        return False
+        clean_value = _clean_token(raw_value_string)
+        if re.fullmatch(r"(?:19|20)\d{2}", clean_value):
+            return False
+        if re.fullmatch(r"0\d+", clean_value):
+            return False
+
+        label_tokens = [_clean_token(token) for token in tokens[:index] if _clean_token(token)]
+        label_compact = " ".join(token.lower() for token in label_tokens)
+        if re.search(r"\bcd\s*[0-9]+\b", label_compact):
+            return True
+        alpha_tokens = [token for token in label_tokens if re.search(r"[A-Za-z]", token)]
+        if not alpha_tokens:
+            return False
+
+        uppercase_ratio = (
+            sum(1 for token in alpha_tokens if token.upper() == token) / len(alpha_tokens)
+        )
+        if uppercase_ratio >= 0.6:
+            return True
+
+        label_lower = " ".join(token.lower() for token in alpha_tokens)
+        analyte_markers = (
+            "glucose",
+            "creatinine",
+            "sodium",
+            "potassium",
+            "chloride",
+            "cd3",
+            "cd4",
+            "cd8",
+            "calcium",
+            "protein",
+            "albumin",
+            "globulin",
+            "bilirubin",
+            "phosphatase",
+            "ast",
+            "alt",
+            "hemoglobin",
+            "hematocrit",
+            "platelet",
+            "white blood",
+            "red blood",
+            "wbc",
+            "neutrophil",
+            "lymphocyte",
+            "monocyte",
+            "eosinophil",
+            "basophil",
+            "magnesium",
+            "c-reactive",
+            "troponin",
+            "probnp",
+            "egfr",
+            "sed rate",
+        )
+        return any(marker in label_lower for marker in analyte_markers)
     if any(_is_reference_token(token) for token in tail):
         return True
     if any("/" in token or "%" in token or any(hint in token.lower() for hint in UNIT_HINTS) for token in tail):
@@ -989,6 +1297,51 @@ def _normalize_label_tokens(tokens: list[str]) -> str:
     while cleaned_tokens and _FOOTNOTE_SUFFIX_RE.fullmatch(cleaned_tokens[-1]):
         cleaned_tokens.pop()
     return _normalize_text(" ".join(cleaned_tokens))
+
+
+def _normalize_measurement_label(
+    label: str,
+    *,
+    raw_unit_string: str | None,
+) -> str:
+    normalized = _normalize_text(label)
+    if not normalized:
+        return normalized
+
+    normalized = _collapse_repeated_label_prefix(normalized)
+
+    # Harmonize immunology labels so lookup aliases can match reliably.
+    normalized = re.sub(r"\bcd\s+([0-9])\b", r"cd\1", normalized, flags=re.I)
+    normalized = re.sub(r"\babs\.?\s+cd([0-9])\b", r"absolute cd\1", normalized, flags=re.I)
+
+    # LabTestingAPI compatibility: downstream resolver expects RBMC spelling.
+    normalized = re.sub(r"\bmagnesium\s*,?\s*rbc\b", "MAGNESIUM RBMC", normalized, flags=re.I)
+
+    # Differential percentage compatibility: preserve BASOPHILS P label form.
+    if re.fullmatch(r"basophils?", normalized, flags=re.I):
+        normalized = "BASOPHILS P"
+    elif (raw_unit_string or "") == "%" and re.search(r"\bbasophils?\b", normalized, flags=re.I):
+        normalized = re.sub(r"\bbasophils?\b", "BASOPHILS P", normalized, count=1, flags=re.I)
+
+    return _normalize_text(normalized)
+
+
+def _collapse_repeated_label_prefix(label: str) -> str:
+    tokens = label.split()
+    if len(tokens) < 4:
+        return label
+
+    lowered = [re.sub(r"[^a-z0-9]", "", token.lower()) for token in tokens]
+    max_prefix = len(tokens) // 2
+
+    for prefix_len in range(max_prefix, 1, -1):
+        left = lowered[:prefix_len]
+        right = lowered[prefix_len : prefix_len * 2]
+        if left and left == right:
+            collapsed = tokens[:prefix_len] + tokens[prefix_len * 2 :]
+            return " ".join(collapsed)
+
+    return label
 
 
 def _infer_inline_unit(raw_value_string: str | None) -> str | None:
@@ -1240,7 +1593,7 @@ def _split_band(words: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _materialize_row(parsed_row: dict[str, Any], *, document_id: UUID, checksum: str, page_number: int) -> dict[str, Any]:
     row_hash = sha256(
-        f"{checksum}:{page_number}:{parsed_row['row_type']}:{parsed_row['raw_text']}".encode("utf-8")
+        f"{checksum}:{page_number}:{parsed_row['row_type']}:{parsed_row['raw_text']}".encode()
     ).hexdigest()
     return {
         "parser_version": PARSER_VERSION,
@@ -1293,7 +1646,7 @@ def _normalize_text(value: str | None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# v12 trusted parser bridge: BornDigitalParser -> RowAssemblerV2 -> rows
+# v12 trusted parser bridge: BornDigitalSubstrate V4 -> BlockGraphV1 -> RowAssemblerV3 -> rows
 # ---------------------------------------------------------------------------
 
 def _parse_trusted_pdf_v12(
@@ -1301,40 +1654,63 @@ def _parse_trusted_pdf_v12(
     *,
     max_pages: int | None = None,
 ) -> list[dict[str, Any]]:
-    """V12 trusted PDF parse using the PyMuPDF-backed BornDigitalParser.
+    """V12 trusted PDF parse using the PyMuPDF-backed v4 parser substrate.
 
-    This replaces the pdfplumber-first ``_parse_trusted_pdf`` as the primary
-    extraction path while preserving the existing downstream row contract.
-    pdfplumber is no longer used for row extraction in this function.
+    This path keeps parser backends extraction-only and runs typed row assembly
+    through the modular document system. Legacy pdfplumber parsing remains
+    debug-only and is not used as runtime fallback here.
 
     Pipeline:
-        file_bytes -> BornDigitalParser -> PageParseArtifactV3[]
-        PageParseArtifactV3 -> RowAssemblerV2 -> candidate row dicts
-        candidate row dicts -> dedup + materialize -> final row dicts
+        file_bytes -> BornDigitalSubstrate -> PageParseArtifactV4[]
+        PageParseArtifactV4 -> BlockGraphV1 -> RowAssemblerV3
+        CandidateRowV3 -> legacy row contract materialization
     """
     if not file_bytes:
-        raise ValueError("unsupported_pdf: empty input")
+        raise ValueError(TrustedPdfParseFailureCode.EMPTY_INPUT.value)
 
     checksum = sha256(file_bytes).hexdigest()
     document_id = uuid5(NAMESPACE_URL, f"trusted-pdf:{checksum}")
 
-    from app.services.parser.born_digital_parser import BornDigitalParser
-    from app.services.row_assembler.v2 import RowAssemblerV2
+    from app.services.document_system.block_graph_builder import BlockGraphBuilder
+    from app.services.document_system.born_digital_substrate import BornDigitalSubstrate
+    from app.services.document_system.row_assembler import RowAssemblerV3, candidate_row_to_legacy
 
-    bd_parser = BornDigitalParser()
-    assembler = RowAssemblerV2()
+    substrate = BornDigitalSubstrate()
+    block_graph_builder = BlockGraphBuilder()
+    assembler = RowAssemblerV3()
 
-    artifacts = bd_parser.parse(file_bytes, max_pages=max_pages)
+    artifacts = substrate.parse(
+        file_bytes,
+        source_file_path="trusted_pdf",
+        max_pages=max_pages,
+    )
 
     rows: list[dict[str, Any]] = []
     seen_hashes: set[str] = set()
+    saw_text = False
 
     for artifact in artifacts:
+        if bool((artifact.metadata or {}).get("page_classification_ambiguous")):
+            raise ValueError(TrustedPdfParseFailureCode.AMBIGUOUS_PAGE_CLASSIFICATION.value)
+
+        saw_text = saw_text or bool(str(artifact.raw_text or "").strip())
         family_adapter_id = _select_adapter(artifact.raw_text).family_adapter_id
-        artifact_rows = assembler.assemble(artifact, family_adapter_id=family_adapter_id)
-        for row in artifact_rows:
+        block_graph = block_graph_builder.build(artifact)
+        page_class = _page_class_from_v4_kind(getattr(artifact.page_kind, "value", "unknown"))
+        candidate_rows, suppression_report = assembler.assemble(
+            block_graph=block_graph,
+            artifact=artifact,
+            family_adapter_id=family_adapter_id,
+            page_class=page_class,
+        )
+        for candidate_row in candidate_rows:
+            row = candidate_row_to_legacy(candidate_row, trust_level=artifact.lane_type)
+            row["candidate_trace"] = {
+                **(row.get("candidate_trace") or {}),
+                "suppression_record_count": len(suppression_report.suppression_records),
+            }
             row_hash = sha256(
-                f"{checksum}:{row['source_page']}:{row['row_type']}:{row['raw_text']}".encode("utf-8")
+                f"{checksum}:{row['source_page']}:{row['row_type']}:{row['raw_text']}".encode()
             ).hexdigest()
             if row_hash in seen_hashes:
                 continue
@@ -1344,8 +1720,9 @@ def _parse_trusted_pdf_v12(
     if rows:
         return rows
 
-    # Safety valve for rare parse misses.
-    return _parse_trusted_pdf(file_bytes, max_pages=max_pages)
+    if not saw_text:
+        raise ValueError(TrustedPdfParseFailureCode.NO_EMBEDDED_TEXT.value)
+    raise ValueError(TrustedPdfParseFailureCode.NO_PARSABLE_ROWS.value)
 
 
 def _page_class_from_v4_kind(page_kind: str) -> str:
@@ -1367,7 +1744,7 @@ def _materialize_v12_row(
     document_id: UUID,
     checksum: str,
 ) -> dict[str, Any]:
-    """Materialize a RowAssemblerV2 output into the downstream row contract.
+    """Materialize assembled row output into the downstream row contract.
 
     This adds document_id, a stable row_hash, and v12 parser lineage fields
     that downstream consumers (ExtractionQA, ObservationBuilder) expect.
@@ -1379,7 +1756,7 @@ def _materialize_v12_row(
     source_page = assembled_row.get("source_page", 1)
 
     row_hash = sha256(
-        f"{checksum}:{source_page}:{row_type}:{raw_text}".encode("utf-8")
+        f"{checksum}:{source_page}:{row_type}:{raw_text}".encode()
     ).hexdigest()
 
     # Use the artifact's backend metadata when present; fall back to module constants.

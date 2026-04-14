@@ -1,9 +1,24 @@
 from __future__ import annotations
 
+import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from .line_classifier import LineClassification
+
+_HEADING_HINTS = {
+    "biochemistry",
+    "haematology",
+    "hematology",
+    "chemistry",
+    "analytes",
+    "results",
+    "reference",
+    "ranges",
+    "ratio",
+    "profile",
+    "section",
+}
 
 
 @dataclass(frozen=True)
@@ -34,6 +49,9 @@ def group_lines(
 
         if item.line_type == "value":
             if has_value and current_lines:
+                if _is_value_sidecar_line(item.line):
+                    current_lines.append(item.line)
+                    continue
                 groups.append(GroupedRowLines(lines=current_lines, has_value=True))
                 current_lines = [item.line]
             else:
@@ -77,6 +95,42 @@ def group_lines(
             pending_labels = []
             continue
 
+        if _is_heading_label_group(group.lines):
+            pending_labels = []
+            continue
+
         pending_labels.extend(group.lines)
 
     return merged
+
+
+def _is_heading_label_group(lines: list[str]) -> bool:
+    if not lines:
+        return False
+    normalized = " ".join(" ".join(lines).lower().split())
+    if not normalized:
+        return False
+    if any(ch.isdigit() for ch in normalized):
+        return False
+    if any(hint in normalized for hint in _HEADING_HINTS):
+        return True
+    return all(str(line).strip().isupper() for line in lines) and len(normalized.split()) <= 6
+
+
+def _is_value_sidecar_line(line: str) -> bool:
+    normalized = " ".join(str(line or "").lower().split())
+    if not normalized:
+        return False
+
+    if re.fullmatch(r"\d{1,2}", normalized):
+        return True
+
+    if re.fullmatch(r"%(?:\s+\d{1,2})?", normalized):
+        return True
+
+    return bool(
+        re.match(
+            r"^(?:<\s*or\s*=|>\s*or\s*=|<=|>=|<|>|≤|≥)?\s*\d",
+            normalized,
+        )
+    )

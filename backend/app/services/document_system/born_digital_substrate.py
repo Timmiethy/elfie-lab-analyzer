@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import importlib.metadata
+from dataclasses import asdict
 from typing import Any
 
 from .config_registry import FamilyConfigRegistry, get_family_config_registry
 from .contracts import BlockRoleV1, PageParseArtifactV4, PageParseBlockV4, SourceSpanV1
 from .page_classifier import PageClassifier
-
 
 BACKEND_ID = "pymupdf"
 
@@ -82,12 +82,21 @@ class BornDigitalSubstrate:
         words = _safe_extract_words(page)
         tables = _extract_tables(page)
 
-        blocks = self._extract_blocks(page_dict, page_number=page_number)
+        page_height = float(page.rect.height)
+        blocks = self._extract_blocks(
+            page_dict,
+            page_number=page_number,
+            page_height=page_height,
+        )
         block_texts = [block.raw_text for block in blocks]
-        page_kind = self._page_classifier.classify(raw_text, block_texts=block_texts).page_kind
+        page_classification = self._page_classifier.classify(raw_text, block_texts=block_texts)
+        page_kind = page_classification.page_kind
 
         text_chars = len(raw_text.strip())
         text_extractability = 1.0 if text_chars >= 100 else (0.5 if text_chars > 0 else 0.0)
+        warnings: list[str] = []
+        if page_classification.ambiguous:
+            warnings.append("ambiguous_page_classification")
 
         return PageParseArtifactV4(
             page_id=f"{source_file_path}:page-{page_number}",
@@ -102,19 +111,32 @@ class BornDigitalSubstrate:
             tables=tables,
             images=_extract_images(page),
             raw_text=raw_text,
-            warnings=[],
+            warnings=warnings,
             metadata={
                 "source_file_path": source_file_path,
                 "width": float(page.rect.width),
                 "height": float(page.rect.height),
                 "rotation": int(page.rotation),
                 "words": words,
+                "page_classification_reason_codes": page_classification.reason_codes,
+                "page_classification_ambiguous": page_classification.ambiguous,
+                "page_classification_evidence": asdict(page_classification.evidence),
             },
         )
 
-    def _extract_blocks(self, page_dict: dict[str, Any], *, page_number: int) -> list[PageParseBlockV4]:
+    def _extract_blocks(
+        self,
+        page_dict: dict[str, Any],
+        *,
+        page_number: int,
+        page_height: float,
+    ) -> list[PageParseBlockV4]:
         blocks: list[PageParseBlockV4] = []
         raw_blocks = page_dict.get("blocks", []) if isinstance(page_dict, dict) else []
+        total_blocks = max(
+            1,
+            sum(1 for entry in raw_blocks if entry.get("type") == 0),
+        )
 
         for block_index, block in enumerate(raw_blocks):
             if block.get("type") != 0:
@@ -122,8 +144,7 @@ class BornDigitalSubstrate:
             lines = _block_lines(block)
             if not lines:
                 continue
-            raw_text = " ".join(lines).strip()
-            block_role = _classify_block_role(raw_text, self._registry)
+            raw_text = "\n".join(lines).strip()
             bbox_value = block.get("bbox")
             bbox = None
             if isinstance(bbox_value, (list, tuple)) and len(bbox_value) == 4:
@@ -134,17 +155,30 @@ class BornDigitalSubstrate:
                     y1=float(bbox_value[3]),
                 )
 
+            block_classification = self._page_classifier.classify_block(
+                raw_text,
+                bbox=bbox,
+                page_height=page_height,
+                reading_order=block_index,
+                total_blocks=total_blocks,
+            )
+
             blocks.append(
                 PageParseBlockV4(
                     block_id=f"page-{page_number}:block-{block_index:03d}",
-                    block_role=block_role,
+                    block_role=block_classification.block_role,
                     raw_text=raw_text,
                     lines=lines,
                     bbox=bbox,
                     reading_order=block_index,
                     language_tags=_detect_languages(raw_text),
                     source_spans=[bbox] if bbox is not None else [],
-                    metadata={"source": "pymupdf"},
+                    metadata={
+                        "source": "pymupdf",
+                        "block_classification_reason_codes": block_classification.reason_codes,
+                        "block_classification_ambiguous": block_classification.ambiguous,
+                        "block_classification_evidence": asdict(block_classification.evidence),
+                    },
                 )
             )
 
@@ -158,34 +192,14 @@ class BornDigitalSubstrate:
                     reading_order=0,
                     language_tags=["en"],
                     source_spans=[],
-                    metadata={"source": "pymupdf-empty-fallback"},
+                    metadata={
+                        "source": "pymupdf-empty-fallback",
+                        "block_classification_ambiguous": True,
+                    },
                 )
             )
 
         return blocks
-
-
-def _classify_block_role(text: str, registry: FamilyConfigRegistry) -> BlockRoleV1:
-    normalized = " ".join(text.lower().split())
-    if not normalized:
-        return BlockRoleV1.UNKNOWN_BLOCK
-
-    scores = {
-        BlockRoleV1.RESULT_BLOCK: _keyword_score(normalized, registry.block_keywords("result_block")),
-        BlockRoleV1.THRESHOLD_BLOCK: _keyword_score(normalized, registry.block_keywords("threshold_block")),
-        BlockRoleV1.ADMIN_BLOCK: _keyword_score(normalized, registry.block_keywords("admin_block")),
-        BlockRoleV1.NARRATIVE_BLOCK: _keyword_score(normalized, registry.block_keywords("narrative_block")),
-        BlockRoleV1.HEADER_FOOTER_BLOCK: _keyword_score(normalized, registry.block_keywords("header_footer_block")),
-    }
-
-    best_role = max(scores, key=scores.get)
-    if scores[best_role] == 0:
-        return BlockRoleV1.UNKNOWN_BLOCK
-    return best_role
-
-
-def _keyword_score(text: str, keywords: tuple[str, ...]) -> int:
-    return sum(1 for keyword in keywords if keyword in text)
 
 
 def _safe_get_text_dict(page: Any) -> dict[str, Any]:

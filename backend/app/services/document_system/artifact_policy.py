@@ -27,15 +27,23 @@ class ArtifactPolicy:
         grouped = Counter()
 
         for item in items:
-            raw_label = _normalize(str(item.get("raw_label") or "unknown"))
+            raw_label_original = _clean(str(item.get("raw_label") or "unknown"))
+            raw_label = _normalize(raw_label_original)
             raw_reason = _normalize(str(item.get("reason") or "unreadable_value"))
+            canonical_reason = visible_reason_map.get(raw_reason, raw_reason)
 
             if _contains_hidden_marker(raw_label, hidden_markers):
-                continue
-            if _contains_hidden_marker(raw_reason, hidden_markers):
+                if canonical_reason == "threshold_conflict":
+                    raw_label_original = "threshold_conflict"
+                    raw_label = "threshold_conflict"
+                else:
+                    continue
+            if _contains_hidden_marker(raw_reason, hidden_markers) and canonical_reason not in {
+                *visible_reason_map.keys(),
+                *visible_reason_map.values(),
+            }:
                 continue
 
-            canonical_reason = visible_reason_map.get(raw_reason, raw_reason)
             if not canonical_reason:
                 canonical_reason = "unreadable_value"
 
@@ -46,7 +54,7 @@ class ArtifactPolicy:
 
             sanitized.append(
                 {
-                    "raw_label": raw_label,
+                    "raw_label": raw_label_original,
                     "reason": canonical_reason,
                 }
             )
@@ -64,3 +72,7 @@ def _contains_hidden_marker(value: str, markers: tuple[str, ...]) -> bool:
 
 def _normalize(value: str) -> str:
     return " ".join(value.strip().lower().split())
+
+
+def _clean(value: str) -> str:
+    return " ".join(str(value or "").split())

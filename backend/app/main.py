@@ -1,6 +1,7 @@
+from collections.abc import Awaitable, Callable
+
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router as api_router
 from app.config import settings
@@ -42,7 +43,10 @@ def create_app() -> FastAPI:
     )
 
     @app.middleware("http")
-    async def add_correlation_id(request: Request, call_next) -> Response:
+    async def add_correlation_id(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         correlation_id = request.headers.get(CORRELATION_ID_HEADER) or generate_correlation_id()
         set_current_correlation_id(correlation_id)
         response = await call_next(request)
@@ -55,7 +59,7 @@ def create_app() -> FastAPI:
 
 
 try:
-    app = create_app()
+    app: FastAPI | None = create_app()
 except RuntimeError:
     app = None  # deferred; tests call create_app() directly with patched settings
 

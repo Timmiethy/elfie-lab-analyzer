@@ -20,18 +20,15 @@ Codex should default to orchestration, decomposition, and verification ownership
 ## Source-of-Truth Hierarchy
 Read and obey these in order:
 
-1. `labs_analyzer_v11_source_of_truth.md`
-2. `labs_analyzer_v12_delta_plan.md`
-3. `labs_analyzer_v10_parallel_distribution_rewritten.md`
-4. `labs_analyzer_v10_tests_guardrails.md`
-5. `contracts/README.md` and `contracts/examples/*`
-6. `tasks/todo.md`
-7. the active worker brief in `tasks/briefs/*.md`
-8. `tasks/lessons.md`
+1. `labs_analyzer_v13_final_architecture_definition.md`
+2. `contracts/README.md` and `contracts/examples/*`
+3. `tasks/todo.md`
+4. the active worker brief in `tasks/briefs/*.md`
+5. `tasks/lessons.md`
 
 Lower files never override higher files.
 
-`labs_analyzer_v12_delta_plan.md` is a delta on top of `labs_analyzer_v11_source_of_truth.md`. The v10 parallel split and guardrail pack still govern role boundaries and test posture until they are explicitly replaced.
+`labs_analyzer_v13_final_architecture_definition.md` is the single active architecture authority. Legacy v10/v11/v12 design docs are archival context and are ignored unless Person A explicitly asks for historical comparison.
 
 ## Link-First Documentation Index
 Use links to existing docs rather than copying their content into task briefs or handoffs:
@@ -76,16 +73,16 @@ These are hard requirements, not style preferences:
 9. The patient artifact is the must-polish surface. UI honesty beats polish.
 10. No proof is complete without a lineage bundle, benchmark pack, patient artifact, and clinician-share artifact.
 
-## Current Phase Guardrails
-These are specific to the active v12 parser-migration phase:
+## Current Guardrails
+These apply to the active architecture phase:
 
-1. Keep the v11 normalization-first architecture. The active change surface is the parser substrate, not the deterministic reasoning core.
+1. Keep the v13 final architecture boundaries. The parser substrate may evolve, but deterministic normalization/policy contracts remain closed-world.
 2. Trusted born-digital parsing uses `PyMuPDF` 1.27.x as the primary backend.
 3. Image/scanned parsing uses `qwen-vl-ocr-2025-11-20` as the primary backend and stays `image_beta` until its own gates pass.
 4. `pdfplumber` is debug and forensic-only. It is not the production primary parser in this phase.
 5. `PaddleOCR-VL-1.5` is shadow benchmark-only unless Person A explicitly changes the plan.
-6. No parser backend may emit `CanonicalObservationV2` directly. Parser backends emit `PageParseArtifactV3`.
-7. `RowAssemblerV2` owns the handoff from `PageParseArtifactV3` to typed candidate rows. Parser work must not silently bypass that contract.
+6. No parser backend may emit `CanonicalObservationV3` directly. Parser backends emit `PageParseArtifactV4`.
+7. `RowAssemblerV3` owns the handoff from `PageParseArtifactV4` to typed candidate rows. Parser work must not silently bypass that contract.
 8. Do not adopt `docling-parse`, `marker`, `surya`, `docTR`, or generic `qwen-vl-plus` / `qwen-vl-max` as the primary parser or OCR lane without Person A approval and corpus replay.
 
 ## Tracks and Ownership
@@ -177,7 +174,7 @@ Follow this exact order for any non-trivial task.
 At session start:
 
 - read `tasks/lessons.md`
-- read the relevant v11/v12 source docs
+- read `labs_analyzer_v13_final_architecture_definition.md`
 - inspect existing contracts and examples if the task touches payloads
 - inspect current code and current diff before planning
 
@@ -337,11 +334,11 @@ In addition, manually confirm that changed contract examples still match backend
 ## Required Output Definitions
 Every agent must optimize for these outputs from the active source stack:
 
-1. `PageParseArtifactV3`
-2. `CandidateRowArtifactV2`
-3. `NormalizationTraceV3`
-4. `CanonicalObservationV2`
-5. `SuppressionReportV2`
+1. `PageParseArtifactV4`
+2. `BlockGraphV1`
+3. `CandidateRowV3`
+4. `CanonicalObservationV3`
+5. `SuppressionReportV1`
 6. `PatientArtifactV2`
 7. `ClinicianArtifactV2`
 8. `CorpusBenchmarkReportV2`

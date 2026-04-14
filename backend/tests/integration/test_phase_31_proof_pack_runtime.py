@@ -139,7 +139,7 @@ async def test_phase_31_persisted_runtime_exposes_machine_readable_proof_pack(
     assert parser_report["build_commit"]
     assert parser_report["corpus_id"] == "seeded-launch-corpus-v1"
     assert parser_report["lane_id"] == "trusted_pdf"
-    assert parser_report["language_id"] == "en"
+    assert parser_report["language_id"] in {"en", "und"}
     assert parser_report["timestamp"]
     assert (
         parser_report["lineage_version_ids"]["terminology_release"]

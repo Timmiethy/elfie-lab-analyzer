@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -29,7 +29,7 @@ class Document(Base):
     mime_type: Mapped[str] = mapped_column(String(64), nullable=False)
     file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     page_count: Mapped[int | None] = mapped_column(Integer)
-    lane_type: Mapped[str] = mapped_column(String(32), nullable=False)  # trusted_pdf | image_beta | structured
+    lane_type: Mapped[str] = mapped_column(String(32), nullable=False)  # trusted_pdf | image_beta | unsupported
     document_class: Mapped[str | None] = mapped_column(String(64))
     preflight_failure_code: Mapped[str | None] = mapped_column(String(64))
     duplicate_state: Mapped[str | None] = mapped_column(String(32))

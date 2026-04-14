@@ -36,7 +36,6 @@ class PanelReconstructor:
     def _panel_key(observation: dict) -> str:
         analyte_code = str(observation.get("accepted_analyte_code") or "").strip()
         analyte_label = str(observation.get("raw_analyte_label") or "").strip().lower()
-        specimen_context = str(observation.get("specimen_context") or "").strip().lower()
 
         metadata = _load_panel_metadata()
         if analyte_code in metadata["codes_by_panel"].get("glycemia", set()) or analyte_label in metadata["aliases_by_panel"].get("glycemia", set()):

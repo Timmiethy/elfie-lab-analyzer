@@ -51,6 +51,15 @@ def _json_clone(value: Any) -> Any:
     return value
 
 
+def _bounded_str(value: object | None, *, max_length: int) -> str | None:
+    if value is None:
+        return None
+    rendered = str(value)
+    if len(rendered) <= max_length:
+        return rendered
+    return rendered[:max_length]
+
+
 async def _add_and_flush(session: AsyncSession, entity: T) -> T:
     """Add an entity to the session, flush, and return it."""
     session.add(entity)
@@ -353,18 +362,18 @@ class TopLevelLifecycleStore:
             document_id=_coerce_uuid(document_id),
             job_id=_coerce_uuid(job_id),
             source_page=source_page,
-            row_hash=row_hash,
+            row_hash=_bounded_str(row_hash, max_length=128) or row_hash,
             raw_text=raw_text,
             raw_analyte_label=raw_analyte_label,
-            raw_value_string=raw_value_string,
-            raw_unit_string=raw_unit_string,
-            raw_reference_range=raw_reference_range,
-            source_block_id=source_block_id,
-            source_row_id=source_row_id,
-            row_type=row_type,
-            block_type=block_type,
-            family_adapter_id=family_adapter_id,
-            failure_code=failure_code,
+            raw_value_string=_bounded_str(raw_value_string, max_length=64),
+            raw_unit_string=_bounded_str(raw_unit_string, max_length=64),
+            raw_reference_range=_bounded_str(raw_reference_range, max_length=128),
+            source_block_id=_bounded_str(source_block_id, max_length=128),
+            source_row_id=_bounded_str(source_row_id, max_length=128),
+            row_type=_bounded_str(row_type, max_length=64),
+            block_type=_bounded_str(block_type, max_length=64),
+            family_adapter_id=_bounded_str(family_adapter_id, max_length=64),
+            failure_code=_bounded_str(failure_code, max_length=64),
             extraction_confidence=extraction_confidence,
         )
         return await _add_and_flush(self.session, extracted_row)
@@ -414,36 +423,36 @@ class TopLevelLifecycleStore:
             job_id=_coerce_uuid(job_id),
             extracted_row_id=_coerce_uuid(extracted_row_id),
             source_page=source_page,
-            row_hash=row_hash,
+            row_hash=_bounded_str(row_hash, max_length=128) or row_hash,
             raw_analyte_label=raw_analyte_label,
-            raw_value_string=raw_value_string,
-            raw_unit_string=raw_unit_string,
+            raw_value_string=_bounded_str(raw_value_string, max_length=64),
+            raw_unit_string=_bounded_str(raw_unit_string, max_length=64),
             parsed_numeric_value=parsed_numeric_value,
-            source_block_id=source_block_id,
-            source_row_id=source_row_id,
-            row_type=row_type,
-            measurement_kind=measurement_kind,
-            support_code=support_code,
-            failure_code=failure_code,
-            family_adapter_id=family_adapter_id,
-            parsed_locale=parsed_locale,
-            parsed_comparator=parsed_comparator,
+            source_block_id=_bounded_str(source_block_id, max_length=128),
+            source_row_id=_bounded_str(source_row_id, max_length=128),
+            row_type=_bounded_str(row_type, max_length=64),
+            measurement_kind=_bounded_str(measurement_kind, max_length=64),
+            support_code=_bounded_str(support_code, max_length=64),
+            failure_code=_bounded_str(failure_code, max_length=64),
+            family_adapter_id=_bounded_str(family_adapter_id, max_length=64),
+            parsed_locale=_bounded_str(parsed_locale, max_length=32),
+            parsed_comparator=_bounded_str(parsed_comparator, max_length=16),
             primary_result=_json_clone(primary_result) if primary_result is not None else None,
             secondary_result=_json_clone(secondary_result) if secondary_result is not None else None,
             candidate_trace=_json_clone(candidate_trace) if candidate_trace is not None else None,
-            derived_formula_id=derived_formula_id,
+            derived_formula_id=_bounded_str(derived_formula_id, max_length=64),
             source_observation_ids=[_coerce_uuid(value) for value in source_observation_ids]
             if source_observation_ids is not None
             else None,
-            accepted_analyte_code=accepted_analyte_code,
-            accepted_analyte_display=accepted_analyte_display,
-            specimen_context=specimen_context,
-            method_context=method_context,
-            raw_reference_range=raw_reference_range,
-            canonical_unit=canonical_unit,
+            accepted_analyte_code=_bounded_str(accepted_analyte_code, max_length=32),
+            accepted_analyte_display=_bounded_str(accepted_analyte_display, max_length=256),
+            specimen_context=_bounded_str(specimen_context, max_length=128),
+            method_context=_bounded_str(method_context, max_length=128),
+            raw_reference_range=_bounded_str(raw_reference_range, max_length=128),
+            canonical_unit=_bounded_str(canonical_unit, max_length=32),
             canonical_value=canonical_value,
-            language_id=language_id,
-            support_state=support_state,
+            language_id=_bounded_str(language_id, max_length=8),
+            support_state=_bounded_str(support_state, max_length=32) or support_state,
             suppression_reasons=list(suppression_reasons)
             if suppression_reasons is not None
             else None,

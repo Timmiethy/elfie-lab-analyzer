@@ -17,7 +17,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
             content_lines.append("0 -18 Td")
         content_lines.append(f"({escaped_line}) Tj")
     content_lines.append("ET")
-    stream = "\n".join(content_lines).encode("utf-8")
+    stream = "\n".join(content_lines).encode()
 
     page_object_number = next_object_number
     content_object_number = next_object_number + 1
@@ -28,10 +28,10 @@ def _build_text_pdf(lines: list[str]) -> bytes:
         "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
         f"/Resources << /Font << /F1 {next_object_number} 0 R >> >> "
         f"/Contents {content_object_number} 0 R >>\n"
-        "endobj\n".encode("utf-8")
+        "endobj\n".encode()
     )
     objects.append(
-        f"{content_object_number} 0 obj\n<< /Length {len(stream)} >>\nstream\n".encode("utf-8")
+        f"{content_object_number} 0 obj\n<< /Length {len(stream)} >>\nstream\n".encode()
         + stream
         + b"\nendstream\nendobj\n"
     )
@@ -39,28 +39,33 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     font_object_number = next_object_number
     header_objects = [
         b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
-        f"2 0 obj\n<< /Type /Pages /Count 1 /Kids [{page_object_number} 0 R] >>\nendobj\n".encode("utf-8"),
+        (
+            f"2 0 obj\n<< /Type /Pages /Count 1 /Kids [{page_object_number} 0 R] >>\n"
+            "endobj\n"
+        ).encode(),
     ]
 
     objects = header_objects + objects
     objects.append(
-        f"{font_object_number} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n".encode(
-            "utf-8"
-        )
+        (
+            f"{font_object_number} 0 obj\n"
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n"
+            "endobj\n"
+        ).encode()
     )
 
     buffer = BytesIO()
-    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode())
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
         buffer.write(obj)
 
     xref_offset = buffer.tell()
-    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode("utf-8"))
+    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode())
     buffer.write(b"0000000000 65535 f \n")
     for offset in offsets[1:]:
-        buffer.write(f"{offset:010d} 00000 n \n".encode("utf-8"))
+        buffer.write(f"{offset:010d} 00000 n \n".encode())
     buffer.write(
         (
             "trailer\n"
@@ -68,7 +73,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
             "startxref\n"
             f"{xref_offset}\n"
             "%%EOF\n"
-        ).encode("utf-8")
+        ).encode()
     )
     return buffer.getvalue()
 

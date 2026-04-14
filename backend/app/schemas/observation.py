@@ -1,11 +1,10 @@
 """Observation contract (blueprint section 3.5)."""
 
-from typing import Any
 from enum import Enum
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
-
 
 CONTRACT_VERSION = "observation-contract-v2"
 

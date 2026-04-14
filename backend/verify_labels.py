@@ -1,5 +1,6 @@
 # Verify the resolver changes work for all three problematic labels
-import sys, os
+import os
+import sys
 sys.path.insert(0, os.path.join(os.getcwd()))
 os.environ.setdefault("ELFIE_LOINC_PATH", "data/loinc")
 
@@ -13,14 +14,14 @@ ctx = {
 }
 
 # Label 1: Apolipoprotein A1 with mojibake Chinese
-label1 = "Apolipoprotein A1 è½½è"‚è›‹ç™½ A1"
+label1 = "Apolipoprotein A1 è½½è\"‚è›‹ç™½ A1"
 r1 = resolver.resolve(label1, context=ctx)
 print(f"Label1 normalized: {r1['normalized_label']!r}")
 print(f"Label1 support_state: {r1['support_state']}")
 print(f"Label1 accepted: {r1.get('accepted_candidate')}")
 
 # Label 2: Triglyceride with mojibake Chinese
-label2 = "Triglyceride ä¸‰é…¸ç"˜æ²¹é…¯"
+label2 = "Triglyceride ä¸‰é…¸ç\"˜æ²¹é…¯"
 r2 = resolver.resolve(label2, context=ctx)
 print(f"\nLabel2 normalized: {r2['normalized_label']!r}")
 print(f"Label2 support_state: {r2['support_state']}")

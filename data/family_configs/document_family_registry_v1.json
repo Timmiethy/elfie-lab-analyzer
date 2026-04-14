@@ -23,7 +23,11 @@
       "assessment",
       "recommendation",
       "clinical summary",
-      "interpretation"
+      "interpretation",
+      "executive summary",
+      "health report",
+      "summary report",
+      "action plan"
     ],
     "non_lab_medical": [
       "ultrasound",
@@ -32,14 +36,25 @@
       "x-ray",
       "radiology",
       "echocardiogram",
-      "pathology report"
+      "pathology report",
+      "pathology",
+      "histopathology",
+      "specimen",
+      "gross description",
+      "microscopic",
+      "final diagnosis",
+      "medical report"
     ],
     "composite_markers": [
       "appendix",
       "attachment",
-      "section",
-      "report printed",
-      "tests requested"
+      "tests requested",
+      "cardioiq",
+      "cardio iq",
+      "cardioiq annotation",
+      "mayo clinic",
+      "merged report",
+      "multiple reports"
     ],
     "admin_markers": [
       "dob",

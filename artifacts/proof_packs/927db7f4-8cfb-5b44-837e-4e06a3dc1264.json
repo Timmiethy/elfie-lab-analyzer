@@ -7,15 +7,60 @@
     "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
   },
   "benchmark_contract_version": "benchmark-contract-v1",
-  "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
+  "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
   "contract_version": "benchmark-proof-pack-v1",
   "family_benchmarks": {},
   "lineage": {
     "adapter_version": "family-adapter-v1",
-    "build_commit": "local-dev",
+    "build_commit": "unknown",
+    "completeness_telemetry": {
+      "contract_version": "completeness-telemetry-v1",
+      "counts": {
+        "clean_pages": 1,
+        "clean_rows": 1,
+        "extracted_pages": 1,
+        "extracted_rows": 1,
+        "partial_observations": 0,
+        "reference_bound_observations": 1,
+        "result_observations": 1,
+        "supported_observations": 1,
+        "unsupported_observations": 0
+      },
+      "ratios": {
+        "observation_supported_ratio": 1.0,
+        "reference_coverage_ratio": 1.0,
+        "structural_clean_row_ratio": 1.0,
+        "structural_page_coverage_ratio": 1.0
+      },
+      "semantic_success_shadow": {
+        "confidence": 0.33,
+        "contract_version": "semantic-success-shadow-v1",
+        "finding_counts": {
+          "actionable": 0,
+          "suppressed": 1,
+          "threshold_conflicts": 1,
+          "total": 1
+        },
+        "lane_type": "trusted_pdf",
+        "limiting_factors": [
+          "threshold_conflict_present",
+          "support_banner_could_not_assess"
+        ],
+        "observation_gate_pass": true,
+        "reference_gate_pass": true,
+        "semantic_state": "shadow_not_recoverable",
+        "structural_gate_pass": true,
+        "support_banner": "could_not_assess"
+      },
+      "states": {
+        "observation": "complete",
+        "reference": "complete",
+        "structural": "complete"
+      }
+    },
     "family_adapter_version": "family-adapter-v1",
     "formula_version": "formula-v1",
-    "id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+    "id": "40652322-cafe-5a91-9474-5f42128761c1",
     "job_id": "927db7f4-8cfb-5b44-837e-4e06a3dc1264",
     "mapping_threshold_config": {
       "default": 0.9
@@ -35,20 +80,35 @@
     "terminology_release": "loinc-2026.05",
     "unit_engine_version": "ucum-v1"
   },
-  "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+  "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
   "metrics": {
     "clean_rows": 1,
+    "completeness_observation_state": "complete",
+    "completeness_page_coverage_ratio": 1.0,
+    "completeness_reference_coverage_ratio": 1.0,
+    "completeness_reference_state": "complete",
+    "completeness_structural_ratio": 1.0,
+    "completeness_structural_state": "complete",
+    "completeness_supported_ratio": 1.0,
     "extracted_rows": 1,
     "extraction_ms": 0,
     "findings": 1,
     "panels": 1,
     "parser_backend": null,
     "parser_backend_version": null,
-    "processing_ms": 4,
-    "row_assembly_version": null
+    "processing_ms": 3,
+    "row_assembly_version": null,
+    "semantic_shadow_actionable_findings": 0,
+    "semantic_shadow_confidence": 0.33,
+    "semantic_shadow_observation_gate_pass": 1,
+    "semantic_shadow_reference_gate_pass": 1,
+    "semantic_shadow_state": "shadow_not_recoverable",
+    "semantic_shadow_structural_gate_pass": 1,
+    "semantic_shadow_support_banner": "could_not_assess",
+    "semantic_shadow_threshold_conflicts": 1
   },
   "regression_tags": [],
-  "report_type": "truth_engine_seeded_pipeline",
+  "report_type": "truth_engine_pipeline",
   "reports": {
     "ablation_report.json": {
       "artifact_refs": {
@@ -58,12 +118,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -79,10 +139,10 @@
       },
       "payload": {
         "regression_tags": [],
-        "report_type": "truth_engine_seeded_pipeline"
+        "report_type": "truth_engine_pipeline"
       },
       "report_name": "ablation_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     },
     "clinician_scan_report.json": {
       "artifact_refs": {
@@ -92,12 +152,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -115,7 +175,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "clinician_scan_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     },
     "coverage_report.json": {
       "artifact_refs": {
@@ -125,12 +185,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -147,17 +207,32 @@
       "payload": {
         "metrics": {
           "clean_rows": 1,
+          "completeness_observation_state": "complete",
+          "completeness_page_coverage_ratio": 1.0,
+          "completeness_reference_coverage_ratio": 1.0,
+          "completeness_reference_state": "complete",
+          "completeness_structural_ratio": 1.0,
+          "completeness_structural_state": "complete",
+          "completeness_supported_ratio": 1.0,
           "extracted_rows": 1,
           "findings": 1,
           "panels": 1,
           "parser_backend": null,
           "parser_backend_version": null,
-          "row_assembly_version": null
+          "row_assembly_version": null,
+          "semantic_shadow_actionable_findings": 0,
+          "semantic_shadow_confidence": 0.33,
+          "semantic_shadow_observation_gate_pass": 1,
+          "semantic_shadow_reference_gate_pass": 1,
+          "semantic_shadow_state": "shadow_not_recoverable",
+          "semantic_shadow_structural_gate_pass": 1,
+          "semantic_shadow_support_banner": "could_not_assess",
+          "semantic_shadow_threshold_conflicts": 1
         },
         "regressed_metrics": []
       },
       "report_name": "coverage_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     },
     "explanation_report.json": {
       "artifact_refs": {
@@ -167,12 +242,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -191,7 +266,7 @@
         "template_version": "templates-v1"
       },
       "report_name": "explanation_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     },
     "mapping_report.json": {
       "artifact_refs": {
@@ -201,12 +276,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -226,18 +301,33 @@
         },
         "metrics": {
           "clean_rows": 1,
+          "completeness_observation_state": "complete",
+          "completeness_page_coverage_ratio": 1.0,
+          "completeness_reference_coverage_ratio": 1.0,
+          "completeness_reference_state": "complete",
+          "completeness_structural_ratio": 1.0,
+          "completeness_structural_state": "complete",
+          "completeness_supported_ratio": 1.0,
           "extracted_rows": 1,
           "extraction_ms": 0,
           "findings": 1,
           "panels": 1,
           "parser_backend": null,
           "parser_backend_version": null,
-          "processing_ms": 4,
-          "row_assembly_version": null
+          "processing_ms": 3,
+          "row_assembly_version": null,
+          "semantic_shadow_actionable_findings": 0,
+          "semantic_shadow_confidence": 0.33,
+          "semantic_shadow_observation_gate_pass": 1,
+          "semantic_shadow_reference_gate_pass": 1,
+          "semantic_shadow_state": "shadow_not_recoverable",
+          "semantic_shadow_structural_gate_pass": 1,
+          "semantic_shadow_support_banner": "could_not_assess",
+          "semantic_shadow_threshold_conflicts": 1
         }
       },
       "report_name": "mapping_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     },
     "parser_report.json": {
       "artifact_refs": {
@@ -247,12 +337,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -270,11 +360,11 @@
         "regression_tags": [],
         "timing": {
           "extraction_ms": 0,
-          "processing_ms": 4
+          "processing_ms": 3
         }
       },
       "report_name": "parser_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     },
     "partial_support_report.json": {
       "artifact_refs": {
@@ -284,12 +374,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -310,7 +400,7 @@
         }
       },
       "report_name": "partial_support_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     },
     "patient_comprehension_report.json": {
       "artifact_refs": {
@@ -320,12 +410,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -343,7 +433,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "patient_comprehension_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     },
     "policy_report.json": {
       "artifact_refs": {
@@ -353,12 +443,12 @@
         "patient_artifact": "/api/artifacts/927db7f4-8cfb-5b44-837e-4e06a3dc1264/patient",
         "proof_pack": "/api/jobs/927db7f4-8cfb-5b44-837e-4e06a3dc1264/proof-pack"
       },
-      "benchmark_id": "027be784-b05a-51a5-8042-98f7efe90611",
-      "build_commit": "local-dev",
+      "benchmark_id": "f9fd1912-173f-5ed6-bed5-71820a914e8b",
+      "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "b2129c06-ec97-5710-92d3-f69b9a8075ad",
+      "lineage_id": "40652322-cafe-5a91-9474-5f42128761c1",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -379,7 +469,7 @@
         "severity_policy_version": "severity-v1"
       },
       "report_name": "policy_report.json",
-      "timestamp": "2026-04-13T07:18:54.232580Z"
+      "timestamp": "2026-04-14T13:21:44.118893Z"
     }
   },
   "summary": {
@@ -387,18 +477,33 @@
     "family_benchmarks": {},
     "metrics": {
       "clean_rows": 1,
+      "completeness_observation_state": "complete",
+      "completeness_page_coverage_ratio": 1.0,
+      "completeness_reference_coverage_ratio": 1.0,
+      "completeness_reference_state": "complete",
+      "completeness_structural_ratio": 1.0,
+      "completeness_structural_state": "complete",
+      "completeness_supported_ratio": 1.0,
       "extracted_rows": 1,
       "findings": 1,
       "panels": 1,
       "parser_backend": null,
       "parser_backend_version": null,
-      "row_assembly_version": null
+      "row_assembly_version": null,
+      "semantic_shadow_actionable_findings": 0,
+      "semantic_shadow_confidence": 0.33,
+      "semantic_shadow_observation_gate_pass": 1,
+      "semantic_shadow_reference_gate_pass": 1,
+      "semantic_shadow_state": "shadow_not_recoverable",
+      "semantic_shadow_structural_gate_pass": 1,
+      "semantic_shadow_support_banner": "could_not_assess",
+      "semantic_shadow_threshold_conflicts": 1
     },
     "regressed_metrics": [],
     "regression_tags": [],
     "timing": {
       "extraction_ms": 0,
-      "processing_ms": 4
+      "processing_ms": 3
     },
     "trace_refs": {}
   },

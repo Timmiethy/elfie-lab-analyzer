@@ -5,7 +5,10 @@
       "canonical_label": "fasting glucose",
       "candidate_display": "Fasting glucose [Mass/volume] in Serum or Plasma",
       "codes": ["2345-7"],
-      "aliases": ["fasting glucose", "glucose fasting", "fasting blood glucose", "fasting plasma glucose", "glucose"],
+      "aliases": [
+        "fasting glucose", "glucose fasting", "fasting blood glucose", "fasting plasma glucose",
+        "serum/plasma glucose", "glucose"
+      ],
       "panel_key": "glycemia",
       "threshold_used": 0.9
     },
@@ -348,6 +351,17 @@
       "threshold_used": 0.9
     },
     {
+      "canonical_label": "cd3 cells",
+      "candidate_display": "CD3-positive T cells [#/volume] in Blood",
+      "codes": ["8122-4"],
+      "aliases": [
+        "cd3", "cd3 cells", "cd3 count", "cd3 positive", "cd3 positive t cells",
+        "absolute cd3", "absolute cd 3", "abs cd3"
+      ],
+      "panel_key": "immunology",
+      "threshold_used": 0.9
+    },
+    {
       "canonical_label": "cd4 cells",
       "candidate_display": "CD4-positive T cells [#/volume] in Blood",
       "codes": ["24467-3"],
@@ -357,7 +371,8 @@
         "cd4+ t-lymphocytes", "cd4+ t-cells", "cd4 positive",
         "cd4 positive t cells", "cd4 percent", "cd4%",
         "cd4-positive t cells", "t-helper cells",
-        "absolute cd 4 helper", "% cd 4 pos. lymph.", "cd4 pos. lymph."
+        "absolute cd 4 helper", "absolute cd4 helper", "absolute cd4",
+        "cd4 helper t-cell", "% cd 4 pos. lymph.", "cd4 pos. lymph."
       ],
       "panel_key": "immunology",
       "threshold_used": 0.9
@@ -372,7 +387,8 @@
         "cd8+ t-lymphocytes", "cd8+ t-cells", "cd8 positive",
         "cd8 positive t cells", "cd8 percent", "cd8%",
         "cd8-positive t cells", "t-suppressor cells",
-        "abs. cd 8 suppressor", "% cd 8 pos. lymph.", "cd8 pos. lymph."
+        "abs. cd 8 suppressor", "absolute cd8 suppressor", "absolute cd8",
+        "cd8 suppressor t-cell", "% cd 8 pos. lymph.", "cd8 pos. lymph."
       ],
       "panel_key": "immunology",
       "threshold_used": 0.9
@@ -566,7 +582,10 @@
       "canonical_label": "apolipoprotein a1",
       "candidate_display": "Apolipoprotein A1 [Mass/volume] in Serum or Plasma",
       "codes": ["15232-1"],
-      "aliases": ["apolipoprotein a1", "apolipoprotein a-1", "apo a1", "apoa1", "apo a-1"],
+      "aliases": [
+        "apolipoprotein a1", "apolipoprotein a-1", "apolipoprotein a",
+        "apo a1", "apoa1", "apo a-1"
+      ],
       "panel_key": "lipid",
       "threshold_used": 0.9
     },
@@ -575,6 +594,17 @@
       "candidate_display": "Apolipoprotein B [Mass/volume] in Serum or Plasma",
       "codes": ["18768-1"],
       "aliases": ["apolipoprotein b", "apolipoprotein b-100", "apo b", "apob", "apo b100", "apo b-100"],
+      "panel_key": "lipid",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "apob/apoa1 ratio",
+      "candidate_display": "Apolipoprotein B/Apolipoprotein A1 [Mass ratio] in Serum or Plasma",
+      "codes": ["55884-4"],
+      "aliases": [
+        "apob/apoa1 ratio", "apolipoprotein b/a ratio", "apob apoa1 ratio",
+        "apo b/apo a1 ratio", "apolipoprotein b a ratio"
+      ],
       "panel_key": "lipid",
       "threshold_used": 0.9
     },
@@ -610,6 +640,14 @@
         "n-terminal pro-bnp", "nt-pro b type natriuretic peptide",
         "nt-pro bnp", "n terminal pro bnp", "nt-probtype natriuretic peptide"
       ],
+      "panel_key": "cardiac",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "troponin hs-ctnt",
+      "candidate_display": "Troponin T.cardiac [Mass/volume] in Serum or Plasma",
+      "codes": ["6598-7"],
+      "aliases": ["troponin", "troponin hs-ctnt", "troponin (hs-ctnt)", "hs-ctnt"],
       "panel_key": "cardiac",
       "threshold_used": 0.9
     }

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from uuid import UUID, NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 _ADAPTER_VERSION_DEFAULT = "family-adapter-v1"
 _ROW_ASSEMBLY_VERSION_DEFAULT = "row-assembly-v1"

@@ -7,12 +7,12 @@ import sys
 import types
 from pathlib import Path
 from types import SimpleNamespace
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 if "fastapi" not in sys.modules:
     fastapi_stub = types.ModuleType("fastapi")
 
-    class HTTPException(Exception):
+    class HTTPError(Exception):
         def __init__(self, status_code: int, detail: str) -> None:
             super().__init__(detail)
             self.status_code = status_code
@@ -34,11 +34,14 @@ if "fastapi" not in sys.modules:
 
             return decorator
 
-    def File(*_args, **_kwargs):
+    def _file(*_args, **_kwargs):
         return None
 
     class UploadFile:
         pass
+
+    HTTPException = HTTPError
+    File = _file
 
     fastapi_stub.APIRouter = APIRouter
     fastapi_stub.File = File
@@ -271,6 +274,11 @@ def test_pipeline_persists_top_level_bundle_when_db_session_is_provided(monkeypa
     result = asyncio.run(
         pipeline_module.PipelineOrchestrator().run(
             "phase-9-job",
+            file_bytes=build_text_pdf([
+                "Glucose 180 mg/dL 70-99",
+                "HbA1c 6.8 % <5.7",
+            ]),
+            lane_type="trusted_pdf",
             db_session=object(),
         )
     )

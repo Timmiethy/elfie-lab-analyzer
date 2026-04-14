@@ -1,0 +1,630 @@
+{
+  "dataset": "pdfs_by_difficulty",
+  "version": "ground_truth_v1",
+  "purpose": "Production-ready acceptance oracle for end-to-end routing, extraction, normalization, and artifact rendering.",
+  "terminal_states": [
+    "fully_normalized_supported_lab_report",
+    "partially_normalized_supported_lab_report",
+    "ocr_normalized_supported_lab_report",
+    "composite_packet_artifact",
+    "interpreted_summary_artifact",
+    "non_lab_medical_artifact",
+    "unsupported_matrix_artifact",
+    "unsupported_encrypted_artifact",
+    "production_safe_unsupported_or_matrix_report",
+    "exact_duplicate_of_seed_innoquest_standard_sample_report",
+    "exact_duplicate_of_seed_labcorp_cd4_cd8_sample",
+    "fully_normalized_supported_lab_report_with_threshold_conflict_visibility",
+    "ocr_or_trusted_mixed_language_single_analyte_report",
+    "non_lab_or_pathology_artifact"
+  ],
+  "global_must_not_surface": [
+    "admin metadata as lab findings",
+    "narrative/guideline prose as lab findings",
+    "threshold-table text as measured analytes",
+    "internal rule ids",
+    "raw support/failure codes",
+    "OCR garbage fragments",
+    "duplicate chart labels as observations"
+  ],
+  "files": [
+    {
+      "file": "pdfs_by_difficulty/easy/seed_innoquest_dbticbm.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_bilingual_chemistry_profile",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "sodium",
+        "potassium",
+        "chloride",
+        "urea",
+        "creatinine",
+        "egfr",
+        "uric acid",
+        "ast",
+        "alt",
+        "glucose",
+        "hba1c",
+        "urine albumin",
+        "urine creatinine",
+        "acr"
+      ],
+      "must_not_surface": [
+        "DOB",
+        "Collected",
+        "Referred",
+        "KDIGO narrative",
+        "IFG threshold prose"
+      ],
+      "notes": "Bilingual English+Chinese analyte labels. Dual-section diabetes/kidney chemistry profile. Must retain comparable raw and canonical values."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_innoquest_standard_sample_report.pdf",
+      "expected_terminal_state": "production_safe_unsupported_or_matrix_report",
+      "lane": "image_pdf",
+      "document_family": "innoquest_allergy_matrix",
+      "artifact_kind": "unsupported_matrix_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "fake chemistry findings",
+        "matrix legend as lab analytes"
+      ],
+      "notes": "Image-heavy allergy matrix. Success means route away from chemistry normalization and render honest unsupported/matrix classification."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_labcorp_cd4_cd8_sample.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "labcorp_immunology_cd_panel",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "cd3",
+        "cd4 helper t-cell",
+        "cd8 suppressor t-cell",
+        "cd4/cd8 ratio",
+        "absolute cd3",
+        "absolute cd4",
+        "absolute cd8"
+      ],
+      "must_not_surface": [
+        "ordering physician metadata",
+        "history text from page 2"
+      ],
+      "notes": "Must separate percentage/count/ratio rows and keep ratio as derived or reported-derived, not duplicate primary analyte."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_labtestingapi_sample_report.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "quest_style_structured_chemistry",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "cbc/chemistry core as present in file"
+      ],
+      "must_not_surface": [
+        "REPORT STATUS",
+        "CLIENT INFORMATION",
+        "repeated headers",
+        "room/floor address"
+      ],
+      "notes": "Success requires no giant hybrid rows, no duplicate pseudo-rows from repeated headers, and stable extraction across 4 pages."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_quest_cardioiq_annotation_sample.pdf",
+      "expected_terminal_state": "composite_or_interpreted_summary_artifact",
+      "lane": "trusted_pdf",
+      "document_family": "quest_cardioiq_annotated_portfolio",
+      "artifact_kind": "composite_packet_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "plaque diagram text as analytes",
+        "risk-education prose as lab findings"
+      ],
+      "notes": "This is not a raw-core lab panel. Success means split/classify pages and avoid fake normalization of educational content."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_quest_diabetes_risk_panel_sample.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "quest_diabetes_risk_panel",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "glucose",
+        "hba1c",
+        "insulin or diabetes panel analytes present in file"
+      ],
+      "must_not_surface": [
+        "chart labels duplicated as measurements",
+        "risk text as analytes"
+      ],
+      "notes": "Must deduplicate text vs chart repeats and preserve only observation rows."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_quest_vitamin_d_out_of_range_sample.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "quest_single_analyte",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "vitamin d, 25-oh, total"
+      ],
+      "must_not_surface": [
+        "patient metadata"
+      ],
+      "notes": "Clean single-analyte happy path. Output should include one flagged card if out of range."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_ulta_sample_alt.pdf",
+      "expected_terminal_state": "ocr_normalized_supported_lab_report",
+      "lane": "image_pdf",
+      "document_family": "ulta_single_analyte_image",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "alt"
+      ],
+      "must_not_surface": [
+        "watermark text",
+        "empty form labels"
+      ],
+      "notes": "OCR lane may be used. Success means one ALT observation with unit/range if recoverable."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_ulta_sample_general_2dd28.pdf",
+      "expected_terminal_state": "ocr_normalized_supported_lab_report",
+      "lane": "image_pdf",
+      "document_family": "ulta_single_analyte_image",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "ca 125"
+      ],
+      "must_not_surface": [
+        "assay method commentary as analyte"
+      ],
+      "notes": "OCR lane. One CA-125 observation."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_ulta_sample_general_ae0623.pdf",
+      "expected_terminal_state": "ocr_normalized_supported_lab_report",
+      "lane": "image_pdf",
+      "document_family": "ulta_hba1c_image",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "hba1c",
+        "estimated average glucose if present"
+      ],
+      "must_not_surface": [
+        "threshold note prose"
+      ],
+      "notes": "Dual-value/threshold-heavy OCR example."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_ulta_sample_general_b709e5.pdf",
+      "expected_terminal_state": "ocr_normalized_supported_lab_report",
+      "lane": "image_pdf",
+      "document_family": "ulta_lipid_panel_image",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "total cholesterol",
+        "hdl cholesterol",
+        "triglycerides",
+        "ldl cholesterol"
+      ],
+      "must_not_surface": [
+        "calculation note as analyte"
+      ],
+      "notes": "OCR lane multi-row lipid panel."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_ulta_sample_general_fbbed0.pdf",
+      "expected_terminal_state": "ocr_normalized_supported_lab_report",
+      "lane": "image_pdf",
+      "document_family": "ulta_general_image",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "core analyte(s) present in file"
+      ],
+      "must_not_surface": [
+        "watermark/junk"
+      ],
+      "notes": "OCR lane generic single-page image report."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_ulta_sample_hba1c_ca990c.pdf",
+      "expected_terminal_state": "ocr_normalized_supported_lab_report",
+      "lane": "image_pdf",
+      "document_family": "ulta_hba1c_image",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "hba1c",
+        "estimated average glucose if present"
+      ],
+      "must_not_surface": [
+        "threshold note prose"
+      ],
+      "notes": "OCR lane."
+    },
+    {
+      "file": "pdfs_by_difficulty/easy/seed_ulta_sample_psa_435d98.pdf",
+      "expected_terminal_state": "ocr_normalized_supported_lab_report",
+      "lane": "image_pdf",
+      "document_family": "ulta_single_analyte_image",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "psa"
+      ],
+      "must_not_surface": [
+        "watermark/junk"
+      ],
+      "notes": "OCR lane single-analyte."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_ailife_pathology_sample.pdf",
+      "expected_terminal_state": "non_lab_or_interpreted_summary_artifact",
+      "lane": "trusted_pdf",
+      "document_family": "patient_facing_pathology_summary",
+      "artifact_kind": "non_lab_medical_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "office summary prose as lab findings"
+      ],
+      "notes": "Not a raw lab report. Success means do not normalize into chemistry observations."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_cap_patient_centered_pathology_report.pdf",
+      "expected_terminal_state": "non_lab_or_interpreted_summary_artifact",
+      "lane": "image_pdf",
+      "document_family": "patient_centered_pathology_report",
+      "artifact_kind": "non_lab_medical_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "educational pathology prose as analytes"
+      ],
+      "notes": "OCR may recover text, but output should stay non-lab/pathology summary classification."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_hod_ultrasound_sample_report.pdf",
+      "expected_terminal_state": "composite_packet_artifact",
+      "lane": "trusted_pdf",
+      "document_family": "mixed_hod_lab_imaging_packet",
+      "artifact_kind": "composite_packet_artifact",
+      "must_extract_analytes": [
+        "urine r/m analytes on urinalysis page only"
+      ],
+      "must_not_surface": [
+        "ultrasound or x-ray narrative as lab rows"
+      ],
+      "notes": "Page splitting mandatory. Mixed urinalysis + imaging + narrative packet."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_innoquest_bilingual_2dbtica.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_bilingual_lab_profile",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "profile analytes present in report"
+      ],
+      "must_not_surface": [
+        "admin metadata",
+        "bilingual duplicates as separate analytes"
+      ],
+      "notes": "Bilingual alias normalization required."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_innoquest_cardiometabolic_risks.pdf",
+      "expected_terminal_state": "partially_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_cardiometabolic_portfolio",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "troponin",
+        "nt-probnp",
+        "chemistry/lipid analytes on raw-result pages"
+      ],
+      "must_not_surface": [
+        "age-stratified cutoff tables",
+        "risk guidance prose"
+      ],
+      "notes": "Only true measured-result pages should normalize. Interpretation pages must be fenced."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_innoquest_dbtic1dm.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_diabetes_profile",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "glucose",
+        "hba1c",
+        "related diabetes analytes present"
+      ],
+      "must_not_surface": [
+        "interpretation text"
+      ],
+      "notes": "Short structured diabetes profile."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_innoquest_dbticcm.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_multi_page_profile",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "profile analytes present across sections"
+      ],
+      "must_not_surface": [
+        "repeated metadata",
+        "section heading shadows"
+      ],
+      "notes": "Multi-page structured profile with repeated headers."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_innoquest_dbticrp.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_risk_profile",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "apoa1",
+        "apob",
+        "apob/apoa1 ratio",
+        "lp(a)",
+        "chemistry and hematology analytes present"
+      ],
+      "must_not_surface": [
+        "EAS/Lp(a) note text as measurement"
+      ],
+      "notes": "Needs clean handling of apolipoproteins, ratios, and narrative references."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_innoquest_pdia.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_diabetes_profile",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "profile analytes present"
+      ],
+      "must_not_surface": [
+        "interpretation block"
+      ],
+      "notes": "Structured 2-page profile."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_personal_health_report_sample.pdf",
+      "expected_terminal_state": "interpreted_summary_artifact",
+      "lane": "trusted_pdf",
+      "document_family": "synthesized_health_report",
+      "artifact_kind": "interpreted_summary_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "double-interpreted fake raw observations"
+      ],
+      "notes": "Already synthesized report. Route away from raw-lab normalization."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_roswell_sample_pathology_report.pdf",
+      "expected_terminal_state": "non_lab_or_pathology_artifact",
+      "lane": "trusted_pdf",
+      "document_family": "narrative_pathology_report",
+      "artifact_kind": "non_lab_medical_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "specimen prose as lab findings"
+      ],
+      "notes": "Native text pathology narrative."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_singapore_medical_report_sample.pdf",
+      "expected_terminal_state": "non_lab_medical_artifact",
+      "lane": "trusted_pdf",
+      "document_family": "medical_legal_report",
+      "artifact_kind": "non_lab_medical_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "patient particulars as lab rows"
+      ],
+      "notes": "Not a lab report."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/seed_sterlingaccuris_pathology_sample_report.pdf",
+      "expected_terminal_state": "partially_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "dense_lab_pathology_packet",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "cbc core",
+        "lipids",
+        "biochemistry analytes",
+        "hba1c if present"
+      ],
+      "must_not_surface": [
+        "inline method names as separate analytes",
+        "signature/watermark artifacts"
+      ],
+      "notes": "Dense packet; normalize raw lab sections, classify non-lab/pathology sections separately."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/var_innoquest_duplicate_pages.pdf",
+      "expected_terminal_state": "exact_duplicate_of_seed_innoquest_standard_sample_report",
+      "lane": "image_pdf",
+      "document_family": "duplicate_fixture",
+      "artifact_kind": "unsupported_matrix_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "duplicate-specific behavior"
+      ],
+      "notes": "Byte-identical duplicate. Output should match canonical representative exactly."
+    },
+    {
+      "file": "pdfs_by_difficulty/medium/var_labcorp_halfpage_missing_footer.pdf",
+      "expected_terminal_state": "exact_duplicate_of_seed_labcorp_cd4_cd8_sample",
+      "lane": "trusted_pdf",
+      "document_family": "duplicate_fixture",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "cd3",
+        "cd4 helper t-cell",
+        "cd8 suppressor t-cell",
+        "cd4/cd8 ratio",
+        "absolute cd3",
+        "absolute cd4",
+        "absolute cd8"
+      ],
+      "must_not_surface": [
+        "duplicate-specific behavior"
+      ],
+      "notes": "Byte-identical duplicate. Output should match canonical representative exactly."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_hod_ultrasound_image_only_pdf.pdf",
+      "expected_terminal_state": "composite_packet_artifact",
+      "lane": "image_pdf",
+      "document_family": "mixed_hod_lab_imaging_packet",
+      "artifact_kind": "composite_packet_artifact",
+      "must_extract_analytes": [
+        "urinalysis rows only if OCR confidence passes"
+      ],
+      "must_not_surface": [
+        "ultrasound narrative as lab findings"
+      ],
+      "notes": "Image-only variant of HOD packet. Composite routing still mandatory."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_innoquest_cardiometabolic_mixed_page_order.pdf",
+      "expected_terminal_state": "partially_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_cardiometabolic_portfolio",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "measured analytes on raw-result pages independent of order"
+      ],
+      "must_not_surface": [
+        "page-order assumptions",
+        "cutoff tables as analytes"
+      ],
+      "notes": "Page order scrambled; splitter and page typing must not depend on original ordering."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_innoquest_dbticbm_threshold_conflict_annotation.pdf",
+      "expected_terminal_state": "fully_normalized_supported_lab_report_with_threshold_conflict_visibility",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_bilingual_chemistry_profile_variant",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "sodium",
+        "potassium",
+        "chloride",
+        "urea",
+        "creatinine",
+        "egfr",
+        "uric acid",
+        "ast",
+        "alt",
+        "glucose",
+        "hba1c",
+        "urine albumin",
+        "urine creatinine",
+        "acr"
+      ],
+      "must_not_surface": [
+        "threshold annotation prose as analytes"
+      ],
+      "notes": "Must preserve observations and explicitly surface threshold conflict if printed range vs policy differs."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_innoquest_dbticrp_missing_demographics.pdf",
+      "expected_terminal_state": "partially_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "innoquest_risk_profile_missing_demographics",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "raw measured analytes that do not require missing demographics"
+      ],
+      "must_not_surface": [
+        "invented age/sex derived interpretations"
+      ],
+      "notes": "Missing demographics must only block dependent derived/policy logic, not raw observation normalization."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_quest_alt_mixed_en_vi_overlay.pdf",
+      "expected_terminal_state": "ocr_or_trusted_mixed_language_single_analyte_report",
+      "lane": "image_pdf",
+      "document_family": "mixed_language_overlay_single_analyte",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "alt"
+      ],
+      "must_not_surface": [
+        "overlay artifacts as separate rows"
+      ],
+      "notes": "Mixed English/Vietnamese overlay. Must still recover single ALT result or fail honestly."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_quest_cardioiq_comma_decimal_locale.pdf",
+      "expected_terminal_state": "composite_or_interpreted_summary_artifact",
+      "lane": "trusted_pdf",
+      "document_family": "quest_cardioiq_annotated_portfolio_locale_variant",
+      "artifact_kind": "composite_packet_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "comma-decimal chart annotation as raw labs"
+      ],
+      "notes": "Locale variant of annotated CardioIQ. Success means same non-raw-lab routing with correct locale-safe parsing if any numeric tables are extracted."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_quest_mayo_merged_two_reports.pdf",
+      "expected_terminal_state": "composite_packet_artifact",
+      "lane": "trusted_pdf",
+      "document_family": "merged_two_report_packet",
+      "artifact_kind": "composite_packet_artifact",
+      "must_extract_analytes": [
+        "raw-lab analytes from each subreport separately"
+      ],
+      "must_not_surface": [
+        "cross-report row merging"
+      ],
+      "notes": "Must split two reports and preserve separate document identities / page groups."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_roswell_pathology_lowres_scan.pdf",
+      "expected_terminal_state": "non_lab_or_pathology_artifact",
+      "lane": "image_pdf",
+      "document_family": "low_res_pathology_scan",
+      "artifact_kind": "non_lab_medical_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "ocr-junk pathology prose as analytes"
+      ],
+      "notes": "Low-res pathology scan. OCR lane may recover text, but output must stay non-lab/pathology."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_singapore_mr_password_protected.pdf",
+      "expected_terminal_state": "unsupported_encrypted_artifact",
+      "lane": "unsupported",
+      "document_family": "encrypted_or_protected_medical_report",
+      "artifact_kind": "unsupported_artifact",
+      "must_extract_analytes": [],
+      "must_not_surface": [
+        "partial garbage"
+      ],
+      "notes": "If actually encrypted or protected, pipeline must stop cleanly with unsupported-encrypted reason. If text is readable, route as non-lab medical report."
+    },
+    {
+      "file": "pdfs_by_difficulty/hard/var_sterling_pathology_two_column_crop.pdf",
+      "expected_terminal_state": "partially_normalized_supported_lab_report",
+      "lane": "trusted_pdf",
+      "document_family": "cropped_two_column_dense_lab_packet",
+      "artifact_kind": "patient_lab_report+clinician_summary",
+      "must_extract_analytes": [
+        "cbc/biochemistry analytes visible in crop"
+      ],
+      "must_not_surface": [
+        "cross-column row merges",
+        "method names as analytes"
+      ],
+      "notes": "Two-column crop stresses reading order and row assembly."
+    }
+  ]
+}

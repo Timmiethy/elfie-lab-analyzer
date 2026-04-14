@@ -12,19 +12,19 @@ Steps:
 9. panel reconstruction runs
 10. deterministic rules fire
 11. deterministic severity and next-step assignment runs
-12. structured patient artifact renders
+12. patient artifact renders
 13. clinician-share artifact renders
 14. lineage and benchmark telemetry persist
 """
 
 from __future__ import annotations
 
-import json
 import logging
 from datetime import UTC, datetime
 from enum import StrEnum
 from hashlib import sha256
 from time import perf_counter
+from typing import Literal, TypedDict
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,6 +46,7 @@ from app.services.ocr import OcrAdapter
 from app.services.panel_reconstructor import PanelReconstructor
 from app.services.parser import TrustedPdfParser
 from app.services.proof_pack import proof_pack_route, write_proof_pack
+from app.services.reference_selection import ReferenceSelectionService
 from app.services.rule_engine import RuleEngine
 from app.services.severity_policy import SeverityPolicyEngine
 from app.services.ucum import UcumEngine
@@ -53,7 +54,7 @@ from app.terminology import get_loaded_snapshot_metadata
 
 _JOB_RUNS: dict[str, dict] = {}
 _LOGGER = logging.getLogger(__name__)
-_SUPPORTED_LANES = {"trusted_pdf", "image_beta", "structured", "unsupported"}
+_SUPPORTED_LANES = {"trusted_pdf", "image_beta", "unsupported"}
 
 # v12 parser lineage constants
 _PARSER_VERSION_TRUSTED = "pymupdf-1.27.x"
@@ -63,20 +64,29 @@ _ADAPTER_VERSION = "family-adapter-v1"
 _ROW_ASSEMBLY_VERSION = "row-assembly-v2"
 _ROW_TYPE_RULE_SET_VERSION = "row-type-rules-v1"
 _FORMULA_VERSION = "formula-v1"
-_TERMINOLOGY_RELEASE_DEFAULT = "seeded-demo-2026-04-10"
 _MAPPING_THRESHOLD_DEFAULT = {"default": 0.9}
 _UNIT_ENGINE_VERSION = "ucum-v1"
 _RULE_PACK_VERSION = "rules-v1"
 _SEVERITY_POLICY_VERSION = "severity-v1"
 _NEXTSTEP_POLICY_VERSION = "nextstep-v1"
 _TEMPLATE_VERSION = "templates-v1"
-_BUILD_COMMIT_DEFAULT = "local-dev"
-_REPORT_TYPE = "truth_engine_seeded_pipeline"
+_REPORT_TYPE = "truth_engine_pipeline"
 _PROOF_CORPUS_ID = "seeded-launch-corpus-v1"
-_DEFAULT_AGE_YEARS = 42
-_DEFAULT_SEX = "female"
-_DEFAULT_LANGUAGE_ID = "en"
-_DEFAULT_REPORT_DATE = "2026-04-10"
+_UNKNOWN_RUNTIME_VALUE = "unknown"
+_UNDETERMINED_LANGUAGE_ID = "und"
+_COMPLETENESS_TELEMETRY_VERSION = "completeness-telemetry-v1"
+_SEMANTIC_SUCCESS_SHADOW_VERSION = "semantic-success-shadow-v1"
+_NORMALIZATION_TRACE_VERSION = "normalization-trace-v3"
+_COMPLETENESS_NON_RESULT_ROW_TYPES = {
+    "admin_metadata_row",
+    "threshold_reference_row",
+    "narrative_guidance_row",
+    "header_footer_row",
+    "test_request_row",
+    "metadata_row",
+    "heading_row",
+    "unknown_row",
+}
 
 
 class PipelineStep(StrEnum):
@@ -96,12 +106,185 @@ class PipelineStep(StrEnum):
     LINEAGE_PERSIST = "lineage_persist"
 
 
-def _build_patient_context(job_id: str, *, detected_language_id: str | None = None) -> dict:
+class ContextStatus(StrEnum):
+    EXTRACTED = "extracted"
+    MISSING = "missing"
+    CONFLICTED = "conflicted"
+
+
+class MissingContextReasonCode(StrEnum):
+    AGE_MISSING = "age_missing"
+    SEX_MISSING = "sex_missing"
+    LANGUAGE_MISSING = "language_missing"
+    REPORT_DATE_MISSING = "report_date_missing"
+    PATIENT_ID_CONFLICT = "patient_id_conflict"
+    AGE_CONFLICT = "age_conflict"
+    SEX_CONFLICT = "sex_conflict"
+    LANGUAGE_CONFLICT = "language_conflict"
+    REPORT_DATE_CONFLICT = "report_date_conflict"
+
+
+class PatientContextV1(TypedDict):
+    patient_id: str
+    age_years: int | None
+    sex: Literal["female", "male", "other", "unknown"] | None
+    language_id: str | None
+    context_status: ContextStatus
+    missing_reason_codes: list[str]
+    report_date: str | None
+
+
+class RuntimeMetadataV1(TypedDict):
+    terminology_release: str
+    build_commit: str
+
+
+def _normalize_language_id(value: object) -> str | None:
+    rendered = str(value or "").strip().lower()
+    if not rendered:
+        return None
+    return rendered.split("-", 1)[0]
+
+
+def _normalize_sex(value: object) -> Literal["female", "male", "other", "unknown"] | None:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized in {"f", "female", "woman", "w"}:
+        return "female"
+    if normalized in {"m", "male", "man"}:
+        return "male"
+    if normalized in {"other", "nonbinary", "non-binary", "x"}:
+        return "other"
+    if normalized in {"unknown", "u"}:
+        return "unknown"
+    return None
+
+
+def _normalize_report_date(value: object) -> str | None:
+    rendered = str(value or "").strip()
+    return rendered or None
+
+
+def _coerce_age_years(value: object) -> int | None:
+    if value is None:
+        return None
+    try:
+        age = int(float(str(value).strip()))
+    except (TypeError, ValueError):
+        return None
+    if age < 0 or age > 130:
+        return None
+    return age
+
+
+def _resolve_unique(values: list[str]) -> tuple[str | None, bool]:
+    if not values:
+        return None, False
+    normalized = sorted({value for value in values if value})
+    if not normalized:
+        return None, False
+    if len(normalized) > 1:
+        return None, True
+    return normalized[0], False
+
+
+def _resolve_unique_int(values: list[int]) -> tuple[int | None, bool]:
+    if not values:
+        return None, False
+    normalized = sorted(set(values))
+    if len(normalized) > 1:
+        return None, True
+    return normalized[0], False
+
+
+def _derive_patient_context(job_id: str, extracted_rows: list[dict]) -> PatientContextV1:
+    patient_ids: list[str] = []
+    ages: list[int] = []
+    sexes: list[str] = []
+    languages: list[str] = []
+    report_dates: list[str] = []
+
+    for row in extracted_rows:
+        patient_id = str(row.get("patient_id") or "").strip()
+        if patient_id:
+            patient_ids.append(patient_id)
+
+        age = _coerce_age_years(row.get("age_years"))
+        if age is not None:
+            ages.append(age)
+
+        sex = _normalize_sex(row.get("sex"))
+        if sex is not None:
+            sexes.append(sex)
+
+        language_id = _normalize_language_id(row.get("language_id"))
+        if language_id is not None:
+            languages.append(language_id)
+
+        report_date = _normalize_report_date(row.get("report_date"))
+        if report_date is not None:
+            report_dates.append(report_date)
+
+    resolved_patient_id, patient_conflict = _resolve_unique(patient_ids)
+    resolved_age, age_conflict = _resolve_unique_int(ages)
+    resolved_sex, sex_conflict = _resolve_unique(sexes)
+    resolved_language, language_conflict = _resolve_unique(languages)
+    resolved_report_date, report_date_conflict = _resolve_unique(report_dates)
+
+    missing_reason_codes: list[str] = []
+    if resolved_age is None:
+        missing_reason_codes.append(MissingContextReasonCode.AGE_MISSING.value)
+    if resolved_sex is None:
+        missing_reason_codes.append(MissingContextReasonCode.SEX_MISSING.value)
+    if resolved_language is None:
+        missing_reason_codes.append(MissingContextReasonCode.LANGUAGE_MISSING.value)
+    if resolved_report_date is None:
+        missing_reason_codes.append(MissingContextReasonCode.REPORT_DATE_MISSING.value)
+
+    if patient_conflict:
+        missing_reason_codes.append(MissingContextReasonCode.PATIENT_ID_CONFLICT.value)
+    if age_conflict:
+        missing_reason_codes.append(MissingContextReasonCode.AGE_CONFLICT.value)
+    if sex_conflict:
+        missing_reason_codes.append(MissingContextReasonCode.SEX_CONFLICT.value)
+    if language_conflict:
+        missing_reason_codes.append(MissingContextReasonCode.LANGUAGE_CONFLICT.value)
+    if report_date_conflict:
+        missing_reason_codes.append(MissingContextReasonCode.REPORT_DATE_CONFLICT.value)
+
+    if patient_conflict or age_conflict or sex_conflict or language_conflict or report_date_conflict:
+        context_status = ContextStatus.CONFLICTED
+    elif missing_reason_codes:
+        context_status = ContextStatus.MISSING
+    else:
+        context_status = ContextStatus.EXTRACTED
+
+    resolved_sex_value: Literal["female", "male", "other", "unknown"] | None = None
+    if resolved_sex in {"female", "male", "other", "unknown"}:
+        resolved_sex_value = resolved_sex
+
     return {
-        "patient_id": str(uuid5(NAMESPACE_URL, f"patient:{job_id}")),
-        "age_years": _DEFAULT_AGE_YEARS,
-        "sex": _DEFAULT_SEX,
-        "language_id": detected_language_id or _DEFAULT_LANGUAGE_ID,
+        "patient_id": resolved_patient_id or str(uuid5(NAMESPACE_URL, f"patient:{job_id}")),
+        "age_years": resolved_age,
+        "sex": resolved_sex_value,
+        "language_id": resolved_language,
+        "context_status": context_status,
+        "missing_reason_codes": sorted(set(missing_reason_codes)),
+        "report_date": resolved_report_date,
+    }
+
+
+def _build_runtime_metadata(snapshot_metadata: dict | None) -> RuntimeMetadataV1:
+    terminology_release = (
+        str(snapshot_metadata.get("release") or _UNKNOWN_RUNTIME_VALUE)
+        if snapshot_metadata
+        else _UNKNOWN_RUNTIME_VALUE
+    )
+    build_commit = str(getattr(settings, "build_commit", "") or _UNKNOWN_RUNTIME_VALUE)
+    return {
+        "terminology_release": terminology_release,
+        "build_commit": build_commit,
     }
 
 
@@ -112,6 +295,7 @@ def _build_render_context(
     lane_type: str,
     findings: list[dict],
     comparable_history: dict | None,
+    report_date: str | None,
 ) -> dict:
     return {
         "job_id": job_uuid,
@@ -122,7 +306,7 @@ def _build_render_context(
         "trust_status": (
             TrustStatus.NON_TRUSTED_BETA if lane_type == "image_beta" else TrustStatus.TRUSTED
         ),
-        "report_date": _DEFAULT_REPORT_DATE,
+        "report_date": report_date,
         "comparable_history": comparable_history,
     }
 
@@ -133,9 +317,11 @@ def _build_lineage_payload(
     source_checksum: str | None,
     lane_type: str,
     terminology_release: str,
+    build_commit: str,
     parser_backend: str | None = None,
     parser_backend_version: str | None = None,
     row_assembly_version: str | None = None,
+    completeness_telemetry: dict | None = None,
 ) -> dict:
     """Build the v12 lineage payload with parser substrate metadata.
 
@@ -152,7 +338,7 @@ def _build_lineage_payload(
     effective_row_assembly = row_assembly_version or _ROW_ASSEMBLY_VERSION
 
     return {
-        "source_checksum": source_checksum or f"source:{job_id}",
+        "source_checksum": source_checksum or f"{_UNKNOWN_RUNTIME_VALUE}:{job_id}",
         "parser_backend": effective_parser,
         "parser_backend_version": effective_parser_version,
         "parser_version": (
@@ -171,7 +357,8 @@ def _build_lineage_payload(
         "nextstep_policy_version": _NEXTSTEP_POLICY_VERSION,
         "template_version": _TEMPLATE_VERSION,
         "model_version": None,
-        "build_commit": _BUILD_COMMIT_DEFAULT,
+        "build_commit": build_commit or _UNKNOWN_RUNTIME_VALUE,
+        "completeness_telemetry": completeness_telemetry,
     }
 
 
@@ -269,7 +456,7 @@ def _build_proof_pack(
             "proof_pack": proof_pack_route(job_uuid),
         },
         report_metadata={
-            "build_commit": lineage.get("build_commit") or _BUILD_COMMIT_DEFAULT,
+            "build_commit": lineage.get("build_commit") or _UNKNOWN_RUNTIME_VALUE,
             "corpus_id": _PROOF_CORPUS_ID,
             "lane_id": lane_type,
             "language_id": language_id,
@@ -303,13 +490,13 @@ class PipelineOrchestrator:
             job_id,
             selected_lane,
         )
-        patient_context = _build_patient_context(job_id)
 
         extraction_qa = ExtractionQA()
         observation_builder = ObservationBuilder()
         analyte_resolver = AnalyteResolver()
         ucum_engine = UcumEngine()
         panel_reconstructor = PanelReconstructor()
+        reference_selector = ReferenceSelectionService()
         rule_engine = RuleEngine()
         severity_policy = SeverityPolicyEngine()
         nextstep_policy = NextStepPolicyEngine()
@@ -327,7 +514,7 @@ class PipelineOrchestrator:
                 file_bytes=file_bytes,
                 lane_type=selected_lane,
             )
-            _apply_detected_language(extracted_rows, patient_context)
+            patient_context = _derive_patient_context(job_id, extracted_rows)
             extraction_ms = int((perf_counter() - extraction_start) * 1000)
             qa_result = extraction_qa.validate(extracted_rows)
             observations = observation_builder.build(qa_result["clean_rows"])
@@ -337,6 +524,20 @@ class PipelineOrchestrator:
                 ucum_engine=ucum_engine,
             )
             normalized_observations = _attach_derived_source_links(normalized_observations)
+            normalization_trace = _build_normalization_trace(normalized_observations)
+            reference_decisions = reference_selector.select_for_observations(
+                normalized_observations,
+                patient_context,
+            )
+            normalized_observations = _attach_reference_decisions(
+                normalized_observations,
+                reference_decisions,
+            )
+            completeness_telemetry = _build_completeness_telemetry(
+                extracted_rows=extracted_rows,
+                clean_rows=qa_result["clean_rows"],
+                observations=normalized_observations,
+            )
             panels = panel_reconstructor.reconstruct(normalized_observations)
             findings = rule_engine.evaluate(normalized_observations, patient_context)
             findings = severity_policy.assign(findings, patient_context)
@@ -344,16 +545,32 @@ class PipelineOrchestrator:
             comparable_history = await comparable_history_service.build_for_artifact(
                 job_id=job_uuid,
                 observations=normalized_observations,
-                report_date=_DEFAULT_REPORT_DATE,
+                report_date=patient_context.get("report_date") or _UNKNOWN_RUNTIME_VALUE,
             )
+            support_banner_shadow = _support_banner_from_runtime(
+                normalized_observations,
+                findings,
+                comparable_history,
+            )
+            semantic_success_shadow = _build_semantic_success_shadow(
+                completeness_telemetry=completeness_telemetry,
+                findings=findings,
+                support_banner=support_banner_shadow,
+                lane_type=selected_lane,
+            )
+            completeness_telemetry = {
+                **completeness_telemetry,
+                "semantic_success_shadow": semantic_success_shadow,
+            }
 
             render_context = _build_render_context(
                 job_uuid,
-                patient_context["language_id"],
+                patient_context.get("language_id") or _UNDETERMINED_LANGUAGE_ID,
                 normalized_observations,
                 selected_lane,
                 findings,
                 comparable_history,
+                patient_context.get("report_date"),
             )
             patient_artifact = artifact_renderer.render_patient(
                 findings,
@@ -362,7 +579,7 @@ class PipelineOrchestrator:
             )
             explanation_payload = await ExplanationAdapter().generate(
                 findings,
-                patient_context["language_id"],
+                patient_context.get("language_id") or _UNDETERMINED_LANGUAGE_ID,
             )
             patient_artifact["explanation"] = explanation_payload
             clinician_artifact = artifact_renderer.render_clinician(
@@ -372,11 +589,7 @@ class PipelineOrchestrator:
             )
             write_clinician_pdf(job_uuid, clinician_artifact)
             snapshot_metadata = get_loaded_snapshot_metadata()
-            terminology_release = (
-                snapshot_metadata.get("release", _TERMINOLOGY_RELEASE_DEFAULT)
-                if snapshot_metadata
-                else _TERMINOLOGY_RELEASE_DEFAULT
-            )
+            runtime_metadata = _build_runtime_metadata(snapshot_metadata)
 
             # v12: capture parser metadata from extraction step if available
             parser_backend = _extract_parser_backend(extracted_rows)
@@ -387,10 +600,12 @@ class PipelineOrchestrator:
                 job_id,
                 source_checksum=source_checksum,
                 lane_type=selected_lane,
-                terminology_release=terminology_release,
+                terminology_release=runtime_metadata["terminology_release"],
+                build_commit=runtime_metadata["build_commit"],
                 parser_backend=parser_backend,
                 parser_backend_version=parser_backend_version,
                 row_assembly_version=row_assembly_version,
+                completeness_telemetry=completeness_telemetry,
             )
             lineage = lineage_logger.record(str(job_uuid), lineage_payload)
             # v12: merge the logger return (persisted ids) into the deterministic payload
@@ -410,6 +625,7 @@ class PipelineOrchestrator:
                 "parser_backend": parser_backend,
                 "parser_backend_version": parser_backend_version,
                 "row_assembly_version": row_assembly_version,
+                **_completeness_metrics(completeness_telemetry),
             }
             benchmark = benchmark_recorder.record(
                 lineage_id=str(lineage["id"]),
@@ -428,7 +644,7 @@ class PipelineOrchestrator:
                 benchmark=benchmark,
                 lineage=lineage,
                 lane_type=selected_lane,
-                language_id=patient_context["language_id"],
+                language_id=patient_context.get("language_id") or _UNDETERMINED_LANGUAGE_ID,
             )
             write_proof_pack(job_uuid, proof_pack)
 
@@ -444,9 +660,15 @@ class PipelineOrchestrator:
                 lineage,
                 benchmark,
             )
+            result["completeness_telemetry"] = completeness_telemetry
+            result["semantic_success_shadow"] = semantic_success_shadow
             result["proof_pack_ref"] = proof_pack_route(job_uuid)
             result["clinician_pdf_ref"] = clinician_pdf_route(job_uuid)
             result["proof_pack"] = proof_pack
+            result["patient_context"] = patient_context
+            result["runtime_metadata"] = runtime_metadata
+            result["reference_decisions"] = reference_decisions
+            result["normalization_trace"] = normalization_trace
 
             if db_session is not None:
                 store = TopLevelLifecycleStore(db_session)
@@ -572,46 +794,6 @@ def _extract_row_assembly_version(rows: list[dict]) -> str | None:
     return None
 
 
-def _seed_extracted_rows(document_id: UUID) -> list[dict]:
-    return [
-        {
-            "document_id": document_id,
-            "source_page": 1,
-            "row_hash": "row-glucose",
-            "raw_text": "Glucose 180 mg/dL",
-            "raw_analyte_label": "Glucose",
-            "raw_value_string": "180",
-            "raw_unit_string": "mg/dL",
-            "raw_reference_range": "70-99",
-            "parsed_numeric_value": 180.0,
-            "specimen_context": "serum",
-            "language_id": "en",
-            "extraction_confidence": 0.99,
-            # v12 parser lineage metadata on seed rows
-            "parser_backend": "pymupdf",
-            "parser_backend_version": _PARSER_VERSION_TRUSTED,
-            "row_assembly_version": _ROW_ASSEMBLY_VERSION,
-        },
-        {
-            "document_id": document_id,
-            "source_page": 1,
-            "row_hash": "row-hba1c",
-            "raw_text": "HbA1c 6.8 %",
-            "raw_analyte_label": "HbA1c",
-            "raw_value_string": "6.8",
-            "raw_unit_string": "%",
-            "raw_reference_range": "<5.7",
-            "parsed_numeric_value": 6.8,
-            "specimen_context": "blood",
-            "language_id": "en",
-            "extraction_confidence": 0.98,
-            "parser_backend": "pymupdf",
-            "parser_backend_version": _PARSER_VERSION_TRUSTED,
-            "row_assembly_version": _ROW_ASSEMBLY_VERSION,
-        },
-    ]
-
-
 async def _extract_rows(
     job_uuid: UUID,
     *,
@@ -620,21 +802,10 @@ async def _extract_rows(
 ) -> list[dict]:
     _validate_lane(lane_type)
 
-    if lane_type == "structured":
-        if file_bytes is None:
-            return _seed_extracted_rows(job_uuid)
-        structured_input = json.loads(file_bytes.decode("utf-8"))
-        observations = structured_input.get("observations", [])
-        return [
-            {
-                **obs,
-                "document_id": job_uuid,
-            }
-            for obs in observations
-        ]
-
     if file_bytes is None:
-        return _seed_extracted_rows(job_uuid)
+        if lane_type == "unsupported":
+            return []
+        raise ValueError("missing_file_bytes")
 
     if lane_type == "trusted_pdf":
         _enforce_pdf_page_limit(file_bytes)
@@ -646,7 +817,7 @@ async def _extract_rows(
         ).extract(
             file_bytes,
             document_id=job_uuid,
-            language_id="en",
+            language_id=None,
         )
 
     if lane_type == "unsupported":
@@ -833,6 +1004,309 @@ def _stable_identifier(value: str, *, max_length: int = 64) -> str:
     return f"{prefix}::{digest}"
 
 
+def _safe_ratio(numerator: int, denominator: int) -> float:
+    if denominator <= 0:
+        return 0.0
+    return round(numerator / denominator, 4)
+
+
+def _normalize_page(value: object) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_normalization_trace(observations: list[dict]) -> dict:
+    numeric = 0
+    qualitative = 0
+    dual_unit = 0
+    derived = 0
+    partial = 0
+    unsupported = 0
+
+    for observation in observations:
+        raw_value = str(observation.get("raw_value_string") or "").strip().lower()
+        support_state = str(observation.get("support_state") or "").strip().lower()
+        secondary_result = observation.get("secondary_result")
+        measurement_kind = str(observation.get("measurement_kind") or "").strip().lower()
+
+        if observation.get("parsed_numeric_value") is not None:
+            numeric += 1
+        elif raw_value in {
+            "positive",
+            "negative",
+            "detected",
+            "not detected",
+            "present",
+            "absent",
+            "trace",
+            "dnr",
+            "ldnr",
+            "oor",
+        }:
+            qualitative += 1
+
+        if secondary_result not in (None, {}):
+            dual_unit += 1
+
+        if measurement_kind == "derived":
+            derived += 1
+
+        if support_state == "partial":
+            partial += 1
+        if support_state == "unsupported":
+            unsupported += 1
+
+    return {
+        "contract_version": _NORMALIZATION_TRACE_VERSION,
+        "counts": {
+            "observations": len(observations),
+            "numeric": numeric,
+            "qualitative": qualitative,
+            "dual_unit": dual_unit,
+            "derived": derived,
+            "partial": partial,
+            "unsupported": unsupported,
+        },
+    }
+
+
+def _build_completeness_telemetry(
+    *,
+    extracted_rows: list[dict],
+    clean_rows: list[dict],
+    observations: list[dict],
+) -> dict:
+    extracted_pages = {
+        page for row in extracted_rows if (page := _normalize_page(row.get("source_page"))) is not None
+    }
+    clean_pages = {
+        page for row in clean_rows if (page := _normalize_page(row.get("source_page"))) is not None
+    }
+
+    result_observations = [
+        observation
+        for observation in observations
+        if str(observation.get("row_type") or "").strip().lower()
+        not in _COMPLETENESS_NON_RESULT_ROW_TYPES
+    ]
+
+    supported_count = sum(
+        1
+        for observation in result_observations
+        if str(observation.get("support_state") or "").strip().lower() == "supported"
+    )
+    partial_count = sum(
+        1
+        for observation in result_observations
+        if str(observation.get("support_state") or "").strip().lower() == "partial"
+    )
+    unsupported_count = sum(
+        1
+        for observation in result_observations
+        if str(observation.get("support_state") or "").strip().lower() == "unsupported"
+    )
+    reference_bound_count = sum(
+        1
+        for observation in result_observations
+        if str(observation.get("raw_reference_range") or "").strip()
+    )
+
+    extracted_count = len(extracted_rows)
+    clean_count = len(clean_rows)
+    result_observation_count = len(result_observations)
+
+    structural_ratio = _safe_ratio(clean_count, extracted_count)
+    page_coverage_ratio = _safe_ratio(len(clean_pages), len(extracted_pages))
+    supported_ratio = _safe_ratio(supported_count, result_observation_count)
+    reference_coverage_ratio = _safe_ratio(reference_bound_count, result_observation_count)
+
+    if extracted_count == 0 or clean_count == 0:
+        structural_state = "absent"
+    elif structural_ratio >= 0.8 and page_coverage_ratio >= 0.8:
+        structural_state = "complete"
+    elif structural_ratio >= 0.5:
+        structural_state = "partial"
+    else:
+        structural_state = "sparse"
+
+    if result_observation_count == 0:
+        observation_state = "absent"
+    elif supported_count == result_observation_count:
+        observation_state = "complete"
+    elif supported_count > 0:
+        observation_state = "partial"
+    else:
+        observation_state = "sparse"
+
+    if result_observation_count == 0:
+        reference_state = "unavailable"
+    elif reference_coverage_ratio >= 0.8:
+        reference_state = "complete"
+    elif reference_bound_count > 0:
+        reference_state = "partial"
+    else:
+        reference_state = "missing"
+
+    return {
+        "contract_version": _COMPLETENESS_TELEMETRY_VERSION,
+        "counts": {
+            "extracted_rows": extracted_count,
+            "clean_rows": clean_count,
+            "extracted_pages": len(extracted_pages),
+            "clean_pages": len(clean_pages),
+            "result_observations": result_observation_count,
+            "supported_observations": supported_count,
+            "partial_observations": partial_count,
+            "unsupported_observations": unsupported_count,
+            "reference_bound_observations": reference_bound_count,
+        },
+        "ratios": {
+            "structural_clean_row_ratio": structural_ratio,
+            "structural_page_coverage_ratio": page_coverage_ratio,
+            "observation_supported_ratio": supported_ratio,
+            "reference_coverage_ratio": reference_coverage_ratio,
+        },
+        "states": {
+            "structural": structural_state,
+            "observation": observation_state,
+            "reference": reference_state,
+        },
+    }
+
+
+def _build_semantic_success_shadow(
+    *,
+    completeness_telemetry: dict,
+    findings: list[dict],
+    support_banner: str,
+    lane_type: str,
+) -> dict:
+    counts = dict(completeness_telemetry.get("counts") or {})
+    ratios = dict(completeness_telemetry.get("ratios") or {})
+    states = dict(completeness_telemetry.get("states") or {})
+
+    result_observation_count = int(counts.get("result_observations") or 0)
+    supported_ratio = float(ratios.get("observation_supported_ratio") or 0.0)
+    structural_state = str(states.get("structural") or "absent")
+    observation_state = str(states.get("observation") or "absent")
+    reference_state = str(states.get("reference") or "unavailable")
+
+    actionable_finding_count = sum(
+        1
+        for finding in findings
+        if not bool(finding.get("suppression_active"))
+        and str(finding.get("severity_class") or "") not in {"S0", "SX"}
+    )
+    suppressed_finding_count = sum(1 for finding in findings if bool(finding.get("suppression_active")))
+    threshold_conflict_count = sum(
+        1
+        for finding in findings
+        if str(finding.get("suppression_reason") or "") == "threshold_conflict"
+    )
+
+    structural_gate_pass = structural_state == "complete"
+    observation_gate_pass = (
+        result_observation_count > 0
+        and observation_state in {"complete", "partial"}
+        and supported_ratio >= 0.5
+    )
+    reference_gate_pass = reference_state in {"complete", "partial"}
+
+    gate_pass_count = (
+        int(structural_gate_pass)
+        + int(observation_gate_pass)
+        + int(reference_gate_pass)
+    )
+    confidence = round(gate_pass_count / 3.0, 4)
+    if support_banner == "could_not_assess":
+        confidence = min(confidence, 0.33)
+    if lane_type == "unsupported":
+        confidence = min(confidence, 0.25)
+
+    limiting_factors: list[str] = []
+    if not structural_gate_pass:
+        limiting_factors.append("structural_incomplete")
+    if not observation_gate_pass:
+        limiting_factors.append("observation_incomplete")
+    if not reference_gate_pass:
+        limiting_factors.append("reference_incomplete")
+    if threshold_conflict_count > 0:
+        limiting_factors.append("threshold_conflict_present")
+    if support_banner == "could_not_assess":
+        limiting_factors.append("support_banner_could_not_assess")
+    if lane_type == "unsupported":
+        limiting_factors.append("unsupported_lane")
+
+    if (
+        lane_type != "unsupported"
+        and support_banner == "fully_supported"
+        and structural_gate_pass
+        and observation_gate_pass
+        and reference_gate_pass
+        and actionable_finding_count == 0
+    ):
+        semantic_state = "shadow_fully_recoverable"
+    elif lane_type != "unsupported" and support_banner in {"fully_supported", "partially_supported"} and observation_gate_pass:
+        semantic_state = "shadow_partially_recoverable"
+    else:
+        semantic_state = "shadow_not_recoverable"
+
+    return {
+        "contract_version": _SEMANTIC_SUCCESS_SHADOW_VERSION,
+        "semantic_state": semantic_state,
+        "confidence": confidence,
+        "support_banner": support_banner,
+        "lane_type": lane_type,
+        "structural_gate_pass": structural_gate_pass,
+        "observation_gate_pass": observation_gate_pass,
+        "reference_gate_pass": reference_gate_pass,
+        "finding_counts": {
+            "total": len(findings),
+            "actionable": actionable_finding_count,
+            "suppressed": suppressed_finding_count,
+            "threshold_conflicts": threshold_conflict_count,
+        },
+        "limiting_factors": limiting_factors,
+    }
+
+
+def _completeness_metrics(completeness_telemetry: dict) -> dict:
+    ratios = dict(completeness_telemetry.get("ratios") or {})
+    states = dict(completeness_telemetry.get("states") or {})
+    semantic_shadow = dict(completeness_telemetry.get("semantic_success_shadow") or {})
+    finding_counts = dict(semantic_shadow.get("finding_counts") or {})
+
+    return {
+        "completeness_structural_ratio": float(ratios.get("structural_clean_row_ratio") or 0.0),
+        "completeness_page_coverage_ratio": float(
+            ratios.get("structural_page_coverage_ratio") or 0.0
+        ),
+        "completeness_supported_ratio": float(ratios.get("observation_supported_ratio") or 0.0),
+        "completeness_reference_coverage_ratio": float(
+            ratios.get("reference_coverage_ratio") or 0.0
+        ),
+        "completeness_structural_state": str(states.get("structural") or "absent"),
+        "completeness_observation_state": str(states.get("observation") or "absent"),
+        "completeness_reference_state": str(states.get("reference") or "unavailable"),
+        "semantic_shadow_state": str(semantic_shadow.get("semantic_state") or "unavailable"),
+        "semantic_shadow_confidence": float(semantic_shadow.get("confidence") or 0.0),
+        "semantic_shadow_support_banner": str(semantic_shadow.get("support_banner") or "unknown"),
+        "semantic_shadow_structural_gate_pass": int(bool(semantic_shadow.get("structural_gate_pass"))),
+        "semantic_shadow_observation_gate_pass": int(
+            bool(semantic_shadow.get("observation_gate_pass"))
+        ),
+        "semantic_shadow_reference_gate_pass": int(bool(semantic_shadow.get("reference_gate_pass"))),
+        "semantic_shadow_actionable_findings": int(finding_counts.get("actionable") or 0),
+        "semantic_shadow_threshold_conflicts": int(
+            finding_counts.get("threshold_conflicts") or 0
+        ),
+    }
+
+
 def _json_safe(value: object) -> object:
     if isinstance(value, UUID):
         return str(value)
@@ -898,6 +1372,18 @@ def _normalize_observations(
         )
 
         if primary_result is not None:
+            # Keep noisy innoquest unsupported-family rows from degrading
+            # support_banner via unit parse errors, but preserve partial
+            # behavior for generic unmapped rows (e.g. MysteryMarker).
+            if accepted_candidate is None:
+                failure_code = str(updated.get("failure_code") or "").lower()
+                family_adapter_id = str(updated.get("family_adapter_id") or "").lower()
+                if (
+                    failure_code == "unsupported_family"
+                    and family_adapter_id == "innoquest_bilingual_general"
+                ):
+                    normalized_observations.append(updated)
+                    continue
             try:
                 normalized_channels = ucum_engine.normalize_dual_unit_channels(
                     primary_result,
@@ -991,10 +1477,42 @@ def _attach_derived_source_links(observations: list[dict]) -> list[dict]:
     return observations
 
 
+def _attach_reference_decisions(
+    observations: list[dict],
+    reference_decisions: dict[str, dict],
+) -> list[dict]:
+    for observation in observations:
+        observation_id = str(observation.get("id") or observation.get("row_hash") or "")
+        if not observation_id:
+            continue
+        decision = reference_decisions.get(observation_id)
+        if decision is None:
+            continue
+        observation["reference_decision"] = decision
+    return observations
+
+
 def _support_banner(observations: list[dict]) -> str:
+    def _normalized_state(observation: dict) -> str:
+        return str(observation.get("support_state") or "").lower()
+
+    def _ignorable_for_banner(observation: dict) -> bool:
+        state = _normalized_state(observation)
+        failure_code = str(observation.get("failure_code") or "").lower()
+        if state == "unsupported" and failure_code == "derived_observation_unbound":
+            return True
+        return False
+
     support_states = {
-        str(observation.get("support_state") or "").lower() for observation in observations
+        _normalized_state(observation)
+        for observation in observations
+        if not _ignorable_for_banner(observation)
     }
+    support_states.discard("")
+
+    if not support_states:
+        return "could_not_assess"
+
     if support_states == {"supported"}:
         return "fully_supported"
     if "supported" in support_states:
@@ -1037,15 +1555,3 @@ def _is_launch_scope_kidney_unit(raw_unit_string: object) -> bool:
     }
 
 
-def _apply_detected_language(extracted_rows: list[dict], patient_context: dict) -> None:
-    language_counts: dict[str, int] = {}
-    for row in extracted_rows:
-        lang = str(row.get("language_id") or "en").strip().lower()
-        if not lang:
-            lang = "en"
-        primary = lang.split("-", 1)[0]
-        language_counts[primary] = language_counts.get(primary, 0) + 1
-
-    if language_counts:
-        detected = max(language_counts, key=language_counts.get)
-        patient_context["language_id"] = detected

@@ -8,11 +8,20 @@ import logging
 import pytest
 
 from app.workers.pipeline import PipelineOrchestrator
+from tests.support.pdf_builder import build_text_pdf
 
 
 def test_pipeline_logs_job_start_and_completion_with_context(caplog) -> None:
     with caplog.at_level(logging.INFO):
-        result = asyncio.run(PipelineOrchestrator().run("phase-15-observe"))
+        result = asyncio.run(
+            PipelineOrchestrator().run(
+                "phase-15-observe",
+                file_bytes=build_text_pdf([
+                    "Glucose 180 mg/dL 70-99",
+                ]),
+                lane_type="trusted_pdf",
+            )
+        )
 
     assert result["status"] in {"completed", "partial"}
     assert any(

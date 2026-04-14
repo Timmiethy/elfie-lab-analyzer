@@ -54,7 +54,7 @@ class InputGatewayPreflight(TypedDict, total=False):
 
 
 class InputGateway:
-    """Classify input into trusted PDF, image beta, or structured lanes.
+    """Classify input into trusted PDF and image beta runtime lanes.
 
     v12: Uses PyMuPDF (fitz) as the primary PDF preflight backend.
     pdfplumber is debug/forensic-only and must NOT be used for production
@@ -126,14 +126,14 @@ class InputGateway:
         if extension == ".json":
             return {
                 **base_result,
-                "lane_type": "structured",
+                "lane_type": "unsupported",
                 "document_class": "structured_record",
                 "route_lane_type": "interpreted_summary",
-                "route_runtime_lane_type": "structured",
+                "route_runtime_lane_type": "unsupported",
                 "route_document_class": "structured_record",
                 "route_confidence": 1.0,
-                "route_reason_codes": ["structured_json_input"],
-                "promotion_status": "ready",
+                "route_reason_codes": ["structured_json_input", "structured_runtime_disabled"],
+                "promotion_status": "ready_unsupported",
                 "text_extractability": 1.0,
                 "image_density": 0.0,
                 "password_protected": False,
@@ -168,14 +168,18 @@ class InputGateway:
 
         return {
             **base_result,
-            "lane_type": "image_beta",
-            "document_class": "image_file",
+            "lane_type": route_decision.runtime_lane_type,
+            "document_class": route_decision.document_class,
             "route_lane_type": route_decision.lane_type.value,
             "route_runtime_lane_type": route_decision.runtime_lane_type,
             "route_document_class": route_decision.document_class,
             "route_confidence": route_decision.confidence,
             "route_reason_codes": route_decision.reason_codes,
-            "promotion_status": self._resolve_image_beta_promotion_status(),
+            "promotion_status": (
+                "ready_unsupported"
+                if route_decision.runtime_lane_type == "unsupported"
+                else self._resolve_image_beta_promotion_status()
+            ),
             "text_extractability": 0.0,
             "image_density": 1.0,
             "password_protected": False,
@@ -339,11 +343,6 @@ class InputGateway:
             3,
         )
         text_extractability = round(max(0.0, 1.0 - image_density), 3)
-        document_class = self._classify_document_class(image_density=image_density)
-        lane_type = self._classify_lane_type(
-            image_density=image_density,
-            text_extractability=text_extractability,
-        )
 
         route_decision = self._document_router.decide(
             DocumentRouteInput(
@@ -362,10 +361,8 @@ class InputGateway:
             )
         )
 
-        # Preserve density/text-based lane selection and only override to
-        # unsupported for explicit non-lab/interpreted routing outcomes.
-        if route_decision.runtime_lane_type == "unsupported":
-            lane_type = "unsupported"
+        lane_type = route_decision.runtime_lane_type
+        document_class = route_decision.document_class
 
         if lane_type == "trusted_pdf":
             promotion_status = "ready"

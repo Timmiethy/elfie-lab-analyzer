@@ -94,7 +94,6 @@ _UNIT_FAMILY_BY_CANONICAL = {
     "x10E6/uL": "cell_count",
     "x10E9/L": "cell_count",
     "/uL": "cell_count",
-    "/uL": "cell_count",
     "/L": "cell_count",
     "fL": "volume",
     "pg": "mass",

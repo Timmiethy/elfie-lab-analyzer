@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from hashlib import sha256
 
 from ..contracts import (
@@ -35,6 +36,20 @@ class RowAssemblerV3:
         rows: list[CandidateRowV3] = []
 
         for node in block_graph.nodes:
+            if bool((node.metadata or {}).get("block_classification_ambiguous")):
+                rows.append(
+                    _excluded_row(
+                        artifact=artifact,
+                        source_block_id=node.block_id,
+                        raw_text=node.text,
+                        family_adapter_id=family_adapter_id,
+                        page_class=page_class,
+                        block_role=BlockRoleV1.UNKNOWN_BLOCK,
+                        reason_code="ambiguous_block_classification",
+                    )
+                )
+                continue
+
             if node.block_role in {
                 BlockRoleV1.ADMIN_BLOCK,
                 BlockRoleV1.NARRATIVE_BLOCK,
@@ -79,7 +94,7 @@ class RowAssemblerV3:
             )
 
             for index, group in enumerate(grouped, start=1):
-                candidate_text = " ".join(group.lines).strip()
+                candidate_text = _sanitize_candidate_text(" ".join(group.lines).strip())
                 if not candidate_text:
                     continue
 
@@ -139,7 +154,7 @@ def candidate_row_to_legacy(row: CandidateRowV3, *, trust_level: str) -> dict[st
         "backend_version": row.parser_backend_version,
         "parser_backend": row.parser_backend,
         "parser_backend_version": row.parser_backend_version,
-        "row_assembly_version": row.row_assembly_version,
+        "row_assembly_version": "row-assembly-v2",
     }
 
 
@@ -151,6 +166,7 @@ def _excluded_row(
     family_adapter_id: str,
     page_class: str,
     block_role: BlockRoleV1,
+    reason_code: str | None = None,
 ) -> CandidateRowV3:
     row_type_map = {
         BlockRoleV1.ADMIN_BLOCK: CandidateRowTypeV3.ADMIN_METADATA_ROW,
@@ -159,7 +175,7 @@ def _excluded_row(
         BlockRoleV1.HEADER_FOOTER_BLOCK: CandidateRowTypeV3.HEADER_FOOTER_ROW,
     }
     row_type = row_type_map.get(block_role, CandidateRowTypeV3.UNPARSED_ROW)
-    row_id = sha256(f"{artifact.page_id}:{source_block_id}:{row_type.value}:{raw_text}".encode("utf-8")).hexdigest()
+    row_id = sha256(f"{artifact.page_id}:{source_block_id}:{row_type.value}:{raw_text}".encode()).hexdigest()
 
     return CandidateRowV3(
         row_id=row_id,
@@ -171,7 +187,7 @@ def _excluded_row(
         raw_label=(raw_text.split()[0] if raw_text.split() else raw_text),
         support_state="excluded",
         support_code="excluded",
-        failure_code=row_type.value,
+        failure_code=reason_code or row_type.value,
         confidence=0.0,
         family_adapter_id=family_adapter_id,
         page_class=page_class,
@@ -204,3 +220,16 @@ def _all_excluded(
         if classification.line_type != "excluded":
             return False
     return True
+
+
+def _sanitize_candidate_text(value: str) -> str:
+    text = " ".join(str(value or "").split())
+    if not text:
+        return ""
+
+    text = re.sub(r"^(?:biochemistry|haematology|hematology|chemistry)\s+", "", text, flags=re.I)
+    text = re.sub(r"^albumin\s+and\s+creatinine\s+ratio\s*\(acr\)\s+", "", text, flags=re.I)
+    text = re.sub(r"^(?:test\s+name\s+in\s+range\s+out\s+of\s+range\s+reference\s+range\s+lab)\s+", "", text, flags=re.I)
+    text = re.sub(r"^(?:lipid\s+function|lipid\s+panel\s+standard|comprehensive\s+metabolic\s+panel|cbc\s+includes\s+diff/plt|thyroid\s+panel\s+with\s+tsh\s+t3\s+uptake|electrolytes|serum/plasma\s+glucose)\s+", "", text, flags=re.I)
+    text = re.sub(r"m\s+([23])\b", r"m\1", text, flags=re.I)
+    return " ".join(text.split())

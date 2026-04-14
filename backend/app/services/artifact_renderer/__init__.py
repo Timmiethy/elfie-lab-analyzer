@@ -5,8 +5,8 @@ from __future__ import annotations
 from uuid import UUID
 
 from app.schemas.artifact import SupportBanner, TrustStatus, UnsupportedReason
-from app.services.document_system.artifact_policy import ArtifactPolicy
 from app.schemas.finding import FindingSchema, NextStepClass, SeverityClass
+from app.services.document_system.artifact_policy import ArtifactPolicy
 
 _SEVERITY_ORDER = {
     SeverityClass.S0: 0,
@@ -250,6 +250,30 @@ def _apply_comparable_history_not_assessed(
     return items
 
 
+def _observation_support_state(observation: dict) -> str:
+    support_state = observation.get("support_state")
+    if hasattr(support_state, "value"):
+        support_state = support_state.value
+    return str(support_state or "").strip().lower()
+
+
+def _build_artifact_counts(
+    observations: list[dict] | None,
+    not_assessed: list[dict],
+) -> dict:
+    observation_list = list(observations or [])
+    reviewed = len(observation_list)
+    supported = sum(1 for observation in observation_list if _observation_support_state(observation) == "supported")
+    unsupported = len(not_assessed)
+    excluded = max(reviewed - supported - unsupported, 0)
+    return {
+        "reviewed": reviewed,
+        "supported": supported,
+        "unsupported": unsupported,
+        "excluded": excluded,
+    }
+
+
 class ArtifactRenderer:
     """Render patient artifact (Screen C) and clinician-share artifact (Screen F).
 
@@ -299,6 +323,7 @@ class ArtifactRenderer:
             }[highest_nextstep],
             "nextstep_reason": context.get("nextstep_reason") or nextstep_reason,
             "not_assessed": not_assessed,
+            "artifact_counts": _build_artifact_counts(observations, not_assessed),
             "findings": normalized_findings,
             "language_id": context.get("language_id", "en"),
             "comparable_history": comparable_history,
@@ -312,6 +337,9 @@ class ArtifactRenderer:
         observations: list[dict] | None = None,
     ) -> dict:
         normalized_findings = _normalize_findings(findings)
+        not_assessed = ArtifactPolicy().sanitize_not_assessed(
+            _make_not_assessed(normalized_findings, observations)
+        ).not_assessed
         severity_classes = sorted(
             {SeverityClass(finding["severity_class"]) for finding in normalized_findings},
             key=_severity_rank,
@@ -324,7 +352,7 @@ class ArtifactRenderer:
 
         return {
             "job_id": _coerce_uuid(context["job_id"]),
-            "report_date": context.get("report_date", "1970-01-01"),
+            "report_date": context.get("report_date") or "unknown",
             "top_findings": normalized_findings,
             "severity_classes": severity_classes,
             "nextstep_classes": nextstep_classes,
@@ -332,9 +360,11 @@ class ArtifactRenderer:
                 context.get("support_banner", SupportBanner.FULLY_SUPPORTED)
             ),
             "trust_status": _coerce_trust_status(context.get("trust_status", TrustStatus.TRUSTED)),
-            "not_assessed": ArtifactPolicy().sanitize_not_assessed(
-                _make_not_assessed(normalized_findings, observations)
-            ).not_assessed,
+            "not_assessed": not_assessed,
+            "artifact_counts": _build_artifact_counts(
+                observations,
+                not_assessed,
+            ),
             "provenance_link": context.get("provenance_link"),
             "trace_refs": context.get("trace_refs"),
         }

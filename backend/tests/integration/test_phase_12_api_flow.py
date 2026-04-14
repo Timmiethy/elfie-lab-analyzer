@@ -344,7 +344,11 @@ async def test_phase_12_no_text_pdf_fails_safely_and_keeps_auditable_job(
     assert latest_job.lane_type == "trusted_pdf"
     assert latest_job.status == "failed"
     assert latest_job.operator_note is not None
-    assert "unsupported_pdf" in latest_job.operator_note
+    assert latest_job.operator_note in {
+        "trusted_pdf_ambiguous_page_classification",
+        "trusted_pdf_no_embedded_text",
+        "trusted_pdf_no_parsable_rows",
+    }
 
     status_response = await api_client.get(f"/api/jobs/{latest_job.id}/status")
     assert status_response.status_code == 200, status_response.text

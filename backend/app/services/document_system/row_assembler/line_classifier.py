@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 
-from app.services.parser import classify_candidate_text
-
-
-_COMPARATOR_RE = re.compile(r"^(?:<=|>=|<|>|<=|>=)\s*\d")
-_NUMERIC_RE = re.compile(r"(?:^|\s)(?:<=|>=|<|>)?\s*\d[\d.,]*(?:\s|$)")
-_UNIT_ONLY_RE = re.compile(r"^(?:%|[a-zA-Z]+/[a-zA-Z0-9/]+|[a-zA-Z]{1,4}\d*)$")
-_REF_RANGE_RE = re.compile(r"^[\[(]?\s*(?:<=|>=|<|>)?\s*\d[\d.,]*\s*[-–]\s*(?:<=|>=|<|>)?\s*\d[\d.,]*\s*[\])]?$")
+from app.services.row_grammar import classify_candidate_text
+from app.services.row_grammar.continuation_rules import (
+    classify_continuation,
+    is_value_bearing_line,
+)
 
 
 @dataclass(frozen=True)
@@ -60,7 +57,22 @@ class LineClassifier:
                 failure_code=parsed.get("failure_code"),
             )
 
-        if is_value_bearing_line(cleaned):
+        continuation = classify_continuation(cleaned)
+        if continuation == "sample_index" and is_value_bearing_line(cleaned):
+            continuation = None
+        if continuation is not None:
+            return LineClassification(
+                line=cleaned,
+                line_type=f"continuation:{continuation}",
+                row_type=str(parsed["row_type"]),
+                support_code=str(parsed.get("support_code") or "supported"),
+                failure_code=parsed.get("failure_code"),
+            )
+
+        if (
+            parsed.get("measurement_kind") == "categorical"
+            and parsed["row_type"] in {"measured_analyte_row", "derived_analyte_row"}
+        ):
             return LineClassification(
                 line=cleaned,
                 line_type="value",
@@ -69,11 +81,10 @@ class LineClassifier:
                 failure_code=parsed.get("failure_code"),
             )
 
-        continuation = classify_continuation(cleaned)
-        if continuation is not None:
+        if is_value_bearing_line(cleaned):
             return LineClassification(
                 line=cleaned,
-                line_type=f"continuation:{continuation}",
+                line_type="value",
                 row_type=str(parsed["row_type"]),
                 support_code=str(parsed.get("support_code") or "supported"),
                 failure_code=parsed.get("failure_code"),
@@ -86,27 +97,3 @@ class LineClassifier:
             support_code=str(parsed.get("support_code") or "supported"),
             failure_code=parsed.get("failure_code"),
         )
-
-
-def is_value_bearing_line(line: str) -> bool:
-    text = line.strip()
-    if not text:
-        return False
-    if _COMPARATOR_RE.match(text):
-        return True
-    return _NUMERIC_RE.search(text) is not None
-
-
-def classify_continuation(line: str) -> str | None:
-    text = line.strip()
-    if not text:
-        return None
-    if _UNIT_ONLY_RE.match(text):
-        return "unit"
-    if _REF_RANGE_RE.match(text):
-        return "reference_range"
-    if text.lower() in {"high", "low", "normal", "abnormal", "h", "l", "trace", "positive", "negative"}:
-        return "flag"
-    if re.match(r"^\d{1,2}$", text):
-        return "sample_index"
-    return None

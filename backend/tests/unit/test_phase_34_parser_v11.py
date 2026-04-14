@@ -563,6 +563,60 @@ class TestTabularValueSelection:
         assert result["secondary_result"] is None
 
 
+class TestPreValueAndQualitativeExtraction:
+    """Rows with pre-value metadata and qualitative result phrases should
+    produce clean label/value/unit/reference fields."""
+
+    def test_prevalue_unit_range_method_are_not_kept_in_label(self) -> None:
+        result = parse_measurement_text(
+            "Hemoglobin g/dL 13.0 - 16.5 Colorimetric 14.5",
+            page_class="analyte_table_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "measured_analyte_row"
+        assert result["raw_analyte_label"] == "Hemoglobin"
+        assert result["raw_value_string"] == "14.5"
+        assert result["parsed_numeric_value"] == pytest.approx(14.5)
+        assert result["raw_unit_string"] == "g/dL"
+        assert result["raw_reference_range"] == "13.0 - 16.5"
+
+    def test_prevalue_unit_without_reference_is_captured(self) -> None:
+        result = parse_measurement_text(
+            "Mean Blood Glucose mg/dL Calculated 157.07",
+            page_class="analyte_table_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "measured_analyte_row"
+        assert result["raw_analyte_label"] == "Mean Blood Glucose"
+        assert result["raw_value_string"] == "157.07"
+        assert result["raw_unit_string"] == "mg/dL"
+
+    def test_qualitative_result_with_trailing_comparator_range(self) -> None:
+        result = parse_measurement_text(
+            "HBsAg S/Co Non Reactive : <1.0",
+            page_class="analyte_table_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "measured_analyte_row"
+        assert result["raw_analyte_label"] == "HBsAg"
+        assert result["raw_value_string"] == "Non Reactive"
+        assert result["raw_unit_string"] == "S/Co"
+        assert result["parsed_numeric_value"] is None
+        assert result["parsed_comparator"] is None
+        assert (result["raw_reference_range"] or "").replace(" ", "") == "<1.0"
+
+    def test_categorical_row_does_not_fabricate_unit_from_label(self) -> None:
+        result = parse_measurement_text(
+            "Urine Ketones Positive",
+            page_class="analyte_table_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "measured_analyte_row"
+        assert result["raw_analyte_label"] == "Urine Ketones"
+        assert result["raw_value_string"] == "Positive"
+        assert result["raw_unit_string"] is None
+
+
 class TestExpandedAdminSuppression:
     """Real corpus admin lines must be rejected before observation building."""
 
@@ -673,9 +727,11 @@ class TestWave4ResolverAliasCoverage:
         ("cd4", "immunology"),
         ("cd4 cells", "immunology"),
         ("cd4 count", "immunology"),
+        ("% cd4 pos lymph", "immunology"),
         ("cd8", "immunology"),
         ("cd8 cells", "immunology"),
         ("cd8 count", "immunology"),
+        ("% cd8 pos lymph", "immunology"),
         ("cd4/cd8 ratio", "immunology"),
         # Quest diabetes panel lipid variants
         ("ldl-c", "lipid"),
@@ -693,6 +749,8 @@ class TestWave4ResolverAliasCoverage:
         # LabTestingAPI broad chemistry
         ("total bilirubin", "liver"),
         ("bilirubin", "liver"),
+        ("lipid panel standard cholesterol total", "lipid"),
+        ("cbc includes diff/plt white blood cell count", "cbc"),
         ("alkaline phosphatase", "liver"),
         ("alp", "liver"),
         ("total protein", "chemistry"),
@@ -832,6 +890,51 @@ class TestWave5RealCorpusSuppression:
         assert result["row_type"] == "admin_metadata_row", (
             f"Address line leaked as {result['row_type']}"
         )
+        assert result["is_excluded"] is True
+
+    def test_cd8_absolute_with_value_is_typed_as_measurement(self) -> None:
+        result = classify_candidate_text(
+            "Abs. CD 8 Suppressor 1024",
+            page_class="analyte_table_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "measured_analyte_row"
+        assert result["is_excluded"] is False
+
+    def test_male_age_fragment_is_typed_admin_metadata(self) -> None:
+        result = classify_candidate_text(
+            "Male / 41 Y",
+            page_class="mixed_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "admin_metadata_row"
+        assert result["is_excluded"] is True
+
+    def test_us_city_state_zip_line_is_typed_admin_metadata(self) -> None:
+        result = classify_candidate_text(
+            "COLLEGEVILLE, PA 19426",
+            page_class="mixed_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "admin_metadata_row"
+        assert result["is_excluded"] is True
+
+    def test_comments_value_row_is_typed_narrative(self) -> None:
+        result = classify_candidate_text(
+            "COMMENTS: TEST PATIENT LOW 21",
+            page_class="analyte_table_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "narrative_guidance_row"
+        assert result["is_excluded"] is True
+
+    def test_negative_status_index_row_is_typed_admin_metadata(self) -> None:
+        result = classify_candidate_text(
+            "NEGATIVE % 01",
+            page_class="analyte_table_page",
+            family_adapter_id="generic_layout",
+        )
+        assert result["row_type"] == "admin_metadata_row"
         assert result["is_excluded"] is True
 
 

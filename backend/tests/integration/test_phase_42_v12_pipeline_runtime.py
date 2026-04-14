@@ -17,12 +17,16 @@ import pytest
 
 from app.workers.pipeline import (
     PipelineOrchestrator,
+    _build_completeness_telemetry,
     _build_lineage_payload,
+    _build_runtime_metadata,
+    _build_semantic_success_shadow,
+    _derive_patient_context,
     _build_persistence_payloads,
+    _extract_rows,
     _extract_parser_backend,
     _extract_parser_backend_version,
     _extract_row_assembly_version,
-    _seed_extracted_rows,
 )
 
 
@@ -35,6 +39,7 @@ class TestV12LineagePayload:
             source_checksum="abc123",
             lane_type="trusted_pdf",
             terminology_release="seeded-demo-2026-04-10",
+            build_commit="unknown",
             parser_backend="pymupdf",
             parser_backend_version="pymupdf-1.27.x",
             row_assembly_version="row-assembly-v2",
@@ -52,6 +57,7 @@ class TestV12LineagePayload:
             source_checksum="abc123",
             lane_type="trusted_pdf",
             terminology_release="seeded-demo-2026-04-10",
+            build_commit="unknown",
         )
         assert payload["parser_backend"] == "pymupdf"
         assert payload["parser_backend_version"] == "pymupdf-1.27.x"
@@ -63,6 +69,7 @@ class TestV12LineagePayload:
             source_checksum="abc123",
             lane_type="image_beta",
             terminology_release="seeded-demo-2026-04-10",
+            build_commit="unknown",
         )
         assert payload["parser_backend"] == "qwen_ocr"
         assert payload["parser_backend_version"] == "qwen-vl-ocr-2025-11-20"
@@ -74,6 +81,7 @@ class TestV12LineagePayload:
             source_checksum="abc123",
             lane_type="trusted_pdf",
             terminology_release="seeded-demo-2026-04-10",
+            build_commit="unknown",
         )
         v11_keys = {
             "source_checksum", "parser_version", "adapter_version",
@@ -85,6 +93,99 @@ class TestV12LineagePayload:
             "model_version", "build_commit",
         }
         assert v11_keys.issubset(set(payload.keys()))
+
+    def test_lineage_payload_can_carry_completeness_telemetry(self):
+        payload = _build_lineage_payload(
+            "test-job-005",
+            source_checksum="abc123",
+            lane_type="trusted_pdf",
+            terminology_release="seeded-demo-2026-04-10",
+            build_commit="unknown",
+            completeness_telemetry={"contract_version": "completeness-telemetry-v1"},
+        )
+        assert payload["completeness_telemetry"] == {
+            "contract_version": "completeness-telemetry-v1"
+        }
+
+
+class TestV12CompletenessTelemetry:
+    def test_completeness_telemetry_computes_ratios_and_states(self):
+        telemetry = _build_completeness_telemetry(
+            extracted_rows=[
+                {"source_page": 1},
+                {"source_page": 2},
+                {"source_page": 2},
+            ],
+            clean_rows=[
+                {"source_page": 1},
+                {"source_page": 2},
+            ],
+            observations=[
+                {
+                    "row_type": "measured_analyte_row",
+                    "support_state": "supported",
+                    "raw_reference_range": "70-99",
+                },
+                {
+                    "row_type": "measured_analyte_row",
+                    "support_state": "partial",
+                    "raw_reference_range": None,
+                },
+                {
+                    "row_type": "admin_metadata_row",
+                    "support_state": "unsupported",
+                    "raw_reference_range": None,
+                },
+            ],
+        )
+
+        assert telemetry["contract_version"] == "completeness-telemetry-v1"
+        assert telemetry["counts"]["extracted_rows"] == 3
+        assert telemetry["counts"]["clean_rows"] == 2
+        assert telemetry["counts"]["result_observations"] == 2
+        assert telemetry["counts"]["reference_bound_observations"] == 1
+        assert telemetry["ratios"]["structural_clean_row_ratio"] == 0.6667
+        assert telemetry["ratios"]["structural_page_coverage_ratio"] == 1.0
+        assert telemetry["states"]["structural"] == "partial"
+        assert telemetry["states"]["observation"] == "partial"
+        assert telemetry["states"]["reference"] == "partial"
+
+    def test_semantic_shadow_is_additive_and_deterministic(self):
+        telemetry = _build_completeness_telemetry(
+            extracted_rows=[{"source_page": 1}, {"source_page": 2}],
+            clean_rows=[{"source_page": 1}, {"source_page": 2}],
+            observations=[
+                {
+                    "row_type": "measured_analyte_row",
+                    "support_state": "supported",
+                    "raw_reference_range": "70-99",
+                },
+                {
+                    "row_type": "measured_analyte_row",
+                    "support_state": "partial",
+                    "raw_reference_range": None,
+                },
+            ],
+        )
+        shadow = _build_semantic_success_shadow(
+            completeness_telemetry=telemetry,
+            findings=[
+                {
+                    "severity_class": "S2",
+                    "suppression_active": False,
+                    "suppression_reason": None,
+                },
+            ],
+            support_banner="partially_supported",
+            lane_type="trusted_pdf",
+        )
+
+        assert shadow["contract_version"] == "semantic-success-shadow-v1"
+        assert shadow["semantic_state"] == "shadow_partially_recoverable"
+        assert shadow["structural_gate_pass"] is True
+        assert shadow["observation_gate_pass"] is True
+        assert shadow["reference_gate_pass"] is True
+        assert shadow["finding_counts"]["actionable"] == 1
 
 
 class TestV12PersistencePayloads:
@@ -156,17 +257,58 @@ class TestV12ParserMetadataExtraction:
         assert _extract_parser_backend_version(rows) == "pymupdf-1.27.x"
 
 
-class TestV12SeedRows:
-    """Tests that seed rows carry v12 parser lineage metadata."""
+class TestV12RuntimeGuardrails:
+    """Tests for runtime truth constraints."""
 
-    def test_seed_rows_include_parser_backend(self):
-        doc_id = uuid.uuid4()
-        rows = _seed_extracted_rows(doc_id)
-        assert len(rows) >= 1
-        for row in rows:
-            assert row.get("parser_backend") == "pymupdf"
-            assert row.get("parser_backend_version") == "pymupdf-1.27.x"
-            assert row.get("row_assembly_version") == "row-assembly-v2"
+    def test_patient_context_stays_missing_when_rows_lack_demographics(self):
+        context = _derive_patient_context(
+            "phase-1-context",
+            extracted_rows=[
+                {
+                    "raw_analyte_label": "Glucose",
+                    "raw_value_string": "180",
+                    "language_id": None,
+                }
+            ],
+        )
+
+        assert context["age_years"] is None
+        assert context["sex"] is None
+        assert context["report_date"] is None
+        assert context["context_status"] == "missing"
+        assert "age_missing" in context["missing_reason_codes"]
+        assert "sex_missing" in context["missing_reason_codes"]
+        assert "report_date_missing" in context["missing_reason_codes"]
+
+    def test_runtime_metadata_uses_unknown_without_seeded_defaults(self):
+        metadata = _build_runtime_metadata(snapshot_metadata=None)
+        assert metadata["terminology_release"] == "unknown"
+        assert metadata["build_commit"] == "unknown"
+
+    @pytest.mark.asyncio
+    async def test_extract_rows_requires_file_bytes_for_runtime_lanes(self):
+        with pytest.raises(ValueError, match="missing_file_bytes"):
+            await _extract_rows(
+                uuid.uuid4(),
+                file_bytes=None,
+                lane_type="trusted_pdf",
+            )
+
+        with pytest.raises(ValueError, match="missing_file_bytes"):
+            await _extract_rows(
+                uuid.uuid4(),
+                file_bytes=None,
+                lane_type="image_beta",
+            )
+
+    @pytest.mark.asyncio
+    async def test_extract_rows_allows_unsupported_lane_without_file_bytes(self):
+        rows = await _extract_rows(
+            uuid.uuid4(),
+            file_bytes=None,
+            lane_type="unsupported",
+        )
+        assert rows == []
 
 
 class TestV12PipelineRuntimeIntegration:
@@ -251,12 +393,34 @@ class TestV12PipelineRuntimeIntegration:
                 assert lineage["parser_backend"] == "pymupdf"
                 assert lineage["parser_backend_version"] == "pymupdf-1.27.x"
                 assert lineage["row_assembly_version"] == "row-assembly-v2"
+                assert lineage["completeness_telemetry"]["contract_version"] == "completeness-telemetry-v1"
+                assert lineage["completeness_telemetry"]["semantic_success_shadow"]["contract_version"] == "semantic-success-shadow-v1"
+
+                # Runtime behavior remains unchanged while semantic scoring is shadow-only.
+                assert result["status"] == "completed"
+                assert result["patient_artifact"]["support_banner"] == "fully_supported"
+                assert result["semantic_success_shadow"]["contract_version"] == "semantic-success-shadow-v1"
 
                 # Verify benchmark metrics include v12 metadata
                 benchmark = result["benchmark"]
                 assert "parser_backend" in benchmark["metrics"]
                 assert "parser_backend_version" in benchmark["metrics"]
                 assert "row_assembly_version" in benchmark["metrics"]
+                assert "completeness_structural_ratio" in benchmark["metrics"]
+                assert "completeness_page_coverage_ratio" in benchmark["metrics"]
+                assert "completeness_supported_ratio" in benchmark["metrics"]
+                assert "completeness_reference_coverage_ratio" in benchmark["metrics"]
+                assert "completeness_structural_state" in benchmark["metrics"]
+                assert "completeness_observation_state" in benchmark["metrics"]
+                assert "completeness_reference_state" in benchmark["metrics"]
+                assert "semantic_shadow_state" in benchmark["metrics"]
+                assert "semantic_shadow_confidence" in benchmark["metrics"]
+                assert "semantic_shadow_support_banner" in benchmark["metrics"]
+                assert "semantic_shadow_structural_gate_pass" in benchmark["metrics"]
+                assert "semantic_shadow_observation_gate_pass" in benchmark["metrics"]
+                assert "semantic_shadow_reference_gate_pass" in benchmark["metrics"]
+                assert "semantic_shadow_actionable_findings" in benchmark["metrics"]
+                assert "semantic_shadow_threshold_conflicts" in benchmark["metrics"]
 
     def test_v12_does_not_alter_deterministic_policy_logic(self):
         """Verify that v12 lineage additions don't change deterministic support state logic."""

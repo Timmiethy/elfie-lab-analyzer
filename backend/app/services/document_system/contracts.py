@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-
 DOCUMENT_ROUTE_CONTRACT_VERSION = "document-route-v1"
 DOCUMENT_PACKET_CONTRACT_VERSION = "document-packet-v1"
 PAGE_PARSE_CONTRACT_VERSION = "page-parse-v4"

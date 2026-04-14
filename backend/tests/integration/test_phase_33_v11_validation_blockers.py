@@ -490,6 +490,41 @@ async def test_wave22_innoquest_analyte_resolver_accepts_new_analytes() -> None:
         assert result["support_state"] == "supported", f"{label} not supported: {result['failure_code']}"
 
 
+async def test_wave23_innoquest_noisy_labels_and_troponin_paths_resolve() -> None:
+    """V12: noisy section-prefixed labels must still resolve to launch-scope
+    analytes when they carry valid measurements."""
+    from app.services.analyte_resolver import AnalyteResolver
+
+    resolver = AnalyteResolver()
+    cases = [
+        ("Electrolytes Sodium", "2951-2", "mmol/L"),
+        ("SERUM/PLASMA GLUCOSE Glucose 葡萄糖", "2345-7", "mmol/L"),
+        ("Apolipoprotein A 载脂蛋白 A", "15232-1", "g/L"),
+        ("Apolipoprotein B/A ratio 载脂蛋白 B/A", "55884-4", ""),
+        ("Test Name In Range Out Of Range Reference Range Lab VITAMIN D,25-OH,TOTAL,IA", "62292-8", "ng/mL"),
+        ("Troponin hs-cTnT", "6598-7", "ng/L"),
+        ("NT-ProBNP", "33762-6", "pg"),
+    ]
+
+    for raw_label, expected_code, raw_unit in cases:
+        result = resolver.resolve(
+            raw_label,
+            context={
+                "family_adapter_id": "innoquest_bilingual_general",
+                "specimen_context": "serum",
+                "language_id": "en",
+                "raw_unit_string": raw_unit,
+            },
+        )
+        accepted = result.get("accepted_candidate")
+        assert accepted is not None, (
+            f"{raw_label!r} should resolve, got failure={result['failure_code']}"
+        )
+        assert accepted["candidate_code"] == expected_code, (
+            f"{raw_label!r} resolved to {accepted['candidate_code']}, expected {expected_code}"
+        )
+
+
 async def test_wave2_innoquest_mixed_bilingual_labels_resolve() -> None:
     """V12 wave-2: Mixed bilingual and garbled-encoding labels from DBTICRP
     must resolve to their canonical analytes through label rewrites."""

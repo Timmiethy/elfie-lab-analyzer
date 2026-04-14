@@ -7,6 +7,14 @@ from types import SimpleNamespace
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from app.workers import pipeline as pipeline_module
+from tests.support.pdf_builder import build_text_pdf
+
+
+def _sample_trusted_pdf_bytes() -> bytes:
+    return build_text_pdf([
+        "Glucose 180 mg/dL 70-99",
+        "HbA1c 6.8 % <5.7",
+    ])
 
 
 def test_pipeline_persists_row_level_entities_when_db_session_is_provided(monkeypatch) -> None:
@@ -55,6 +63,8 @@ def test_pipeline_persists_row_level_entities_when_db_session_is_provided(monkey
     result = asyncio.run(
         pipeline_module.PipelineOrchestrator().run(
             "phase-10-row-persist",
+            file_bytes=_sample_trusted_pdf_bytes(),
+            lane_type="trusted_pdf",
             db_session=object(),
         )
     )
@@ -108,6 +118,8 @@ def test_pipeline_policy_events_reference_created_rule_events(monkeypatch) -> No
     asyncio.run(
         pipeline_module.PipelineOrchestrator().run(
             "phase-10-policy-linkage",
+            file_bytes=_sample_trusted_pdf_bytes(),
+            lane_type="trusted_pdf",
             db_session=object(),
         )
     )

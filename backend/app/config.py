@@ -17,8 +17,10 @@ except ImportError:  # pragma: no cover
         def __init__(self, *choices: str):
             self.choices = choices
 
-    def Field(default=None, **kwargs):  # type: ignore[misc]
+    def _field(default=None, **kwargs):  # type: ignore[misc]
         return default  # noqa: ARG001
+
+    Field = _field
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]

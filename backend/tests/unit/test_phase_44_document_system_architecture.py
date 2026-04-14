@@ -7,7 +7,12 @@ from app.services.document_system.artifact_policy import ArtifactPolicy
 from app.services.document_system.block_graph_builder import BlockGraphBuilder
 from app.services.document_system.born_digital_substrate import BornDigitalSubstrate
 from app.services.document_system.config_registry import get_family_config_registry
-from app.services.document_system.contracts import BlockRoleV1, PageParseArtifactV4, PageParseBlockV4, PageKindV2
+from app.services.document_system.contracts import (
+    BlockRoleV1,
+    PageKindV2,
+    PageParseArtifactV4,
+    PageParseBlockV4,
+)
 from app.services.document_system.document_router import DocumentRouteInput, DocumentRouter
 from app.services.document_system.document_splitter import DocumentSplitter, PageRoutingHint
 from app.services.document_system.page_classifier import PageClassifier
@@ -28,7 +33,7 @@ def _build_text_pdf(lines: list[str], *, pages: int = 1) -> bytes:
                 content_lines.append("0 -18 Td")
             content_lines.append(f"({escaped_line}) Tj")
         content_lines.append("ET")
-        stream = "\n".join(content_lines).encode("utf-8")
+        stream = "\n".join(content_lines).encode()
 
         page_object_number = next_object_number
         content_object_number = next_object_number + 1
@@ -40,10 +45,10 @@ def _build_text_pdf(lines: list[str], *, pages: int = 1) -> bytes:
             "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
             f"/Resources << /Font << /F1 {next_object_number} 0 R >> >> "
             f"/Contents {content_object_number} 0 R >>\n"
-            "endobj\n".encode("utf-8")
+            "endobj\n".encode()
         )
         objects.append(
-            f"{content_object_number} 0 obj\n<< /Length {len(stream)} >>\nstream\n".encode("utf-8")
+            f"{content_object_number} 0 obj\n<< /Length {len(stream)} >>\nstream\n".encode()
             + stream
             + b"\nendstream\nendobj\n"
         )
@@ -53,28 +58,30 @@ def _build_text_pdf(lines: list[str], *, pages: int = 1) -> bytes:
 
     header_objects = [
         b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
-        f"2 0 obj\n<< /Type /Pages /Count {pages} /Kids [{kids}] >>\nendobj\n".encode("utf-8"),
+        f"2 0 obj\n<< /Type /Pages /Count {pages} /Kids [{kids}] >>\nendobj\n".encode(),
     ]
 
     objects = header_objects + objects
     objects.append(
-        f"{font_object_number} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n".encode(
-            "utf-8"
-        )
+        (
+            f"{font_object_number} 0 obj\n"
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n"
+            "endobj\n"
+        ).encode()
     )
 
     buffer = BytesIO()
-    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode())
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
         buffer.write(obj)
 
     xref_offset = buffer.tell()
-    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode("utf-8"))
+    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode())
     buffer.write(b"0000000000 65535 f \n")
     for offset in offsets[1:]:
-        buffer.write(f"{offset:010d} 00000 n \n".encode("utf-8"))
+        buffer.write(f"{offset:010d} 00000 n \n".encode())
     buffer.write(
         (
             "trailer\n"
@@ -82,7 +89,7 @@ def _build_text_pdf(lines: list[str], *, pages: int = 1) -> bytes:
             "startxref\n"
             f"{xref_offset}\n"
             "%%EOF\n"
-        ).encode("utf-8")
+        ).encode()
     )
     return buffer.getvalue()
 
@@ -136,6 +143,125 @@ def test_phase_44_document_router_detects_image_pdf_lab() -> None:
 
     assert decision.lane_type.value == "image_pdf_lab"
     assert decision.runtime_lane_type == "image_beta"
+
+
+def test_phase_44_document_router_detects_composite_packet_on_multipage_marker() -> None:
+    decision = DocumentRouter().decide(
+        DocumentRouteInput(
+            checksum="abc",
+            extension=".pdf",
+            mime_type="application/pdf",
+            page_count=8,
+            image_density=0.34,
+            text_extractability=0.66,
+            has_text_layer=True,
+            has_image_layer=True,
+            total_text_chars=15000,
+            password_protected=False,
+            corrupt=False,
+            text_sample="CardioIQ annotation report with glucose cholesterol and merged report appendix",
+        )
+    )
+
+    assert decision.lane_type.value == "composite_packet"
+
+
+def test_phase_44_document_router_keeps_scanned_composite_like_pdf_on_image_lane() -> None:
+    decision = DocumentRouter().decide(
+        DocumentRouteInput(
+            checksum="abc",
+            extension=".pdf",
+            mime_type="application/pdf",
+            page_count=12,
+            image_density=1.0,
+            text_extractability=0.0,
+            has_text_layer=True,
+            has_image_layer=True,
+            total_text_chars=120,
+            password_protected=False,
+            corrupt=False,
+            text_sample=(
+                "ultrasound pathology report glucose sodium potassium chloride "
+                "analyte result unit reference range chemistry panel"
+            ),
+        )
+    )
+
+    assert decision.lane_type.value == "image_pdf_lab"
+    assert decision.runtime_lane_type == "image_beta"
+
+
+def test_phase_44_document_router_detects_interpreted_summary_on_large_multipage_health_report() -> None:
+    decision = DocumentRouter().decide(
+        DocumentRouteInput(
+            checksum="abc",
+            extension=".pdf",
+            mime_type="application/pdf",
+            page_count=20,
+            image_density=0.05,
+            text_extractability=0.95,
+            has_text_layer=True,
+            has_image_layer=True,
+            total_text_chars=30000,
+            password_protected=False,
+            corrupt=False,
+            text_sample="Health report clinical summary action plan with glucose cholesterol and medical report sections",
+        )
+    )
+
+    assert decision.lane_type.value == "interpreted_summary"
+    assert decision.runtime_lane_type == "unsupported"
+
+
+def test_phase_44_document_router_prioritizes_synthesized_health_summary() -> None:
+    decision = DocumentRouter().decide(
+        DocumentRouteInput(
+            checksum="abc",
+            extension=".pdf",
+            mime_type="application/pdf",
+            page_count=26,
+            image_density=0.05,
+            text_extractability=0.95,
+            has_text_layer=True,
+            has_image_layer=True,
+            total_text_chars=29837,
+            password_protected=False,
+            corrupt=False,
+            text_sample=(
+                "Personal Health Report clinical summary recommendation action plan "
+                "includes glucose cholesterol hemoglobin trends and age context"
+            ),
+        )
+    )
+
+    assert decision.lane_type.value == "interpreted_summary"
+    assert decision.document_class == "interpreted_summary"
+    assert decision.runtime_lane_type == "unsupported"
+
+
+def test_phase_44_document_router_routes_scanned_composite_packet_to_image_lane() -> None:
+    decision = DocumentRouter().decide(
+        DocumentRouteInput(
+            checksum="abc",
+            extension=".pdf",
+            mime_type="application/pdf",
+            page_count=3,
+            image_density=1.0,
+            text_extractability=0.0,
+            has_text_layer=True,
+            has_image_layer=True,
+            total_text_chars=120,
+            password_protected=False,
+            corrupt=False,
+            text_sample=(
+                "ultrasound radiology x-ray report with urinalysis glucose protein result unit reference range"
+            ),
+        )
+    )
+
+    assert decision.lane_type.value == "image_pdf_lab"
+    assert decision.runtime_lane_type == "image_beta"
+    assert decision.document_class == "composite_packet"
 
 
 def test_phase_44_page_classifier_threshold_reference() -> None:
@@ -260,7 +386,10 @@ def test_phase_44_row_assembler_v3_builds_rows() -> None:
 
     assert rows
     assert suppression.contract_version == "suppression-report-v1"
-    assert any(row.row_type.value in {"measured_analyte_row", "threshold_reference_row"} for row in rows)
+    assert any(
+        row.row_type.value in {"measured_analyte_row", "threshold_reference_row"}
+        for row in rows
+    )
 
 
 def test_phase_44_artifact_policy_hides_internal_markers() -> None:

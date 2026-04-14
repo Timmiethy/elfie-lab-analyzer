@@ -22,11 +22,10 @@ Before changing code:
 4. your assigned brief under `tasks/briefs/*.md`
 5. `contracts/README.md` and relevant `contracts/examples/*` if payloads are involved
 6. the relevant sections of:
-   - `labs_analyzer_v11_source_of_truth.md`
-   - `labs_analyzer_v12_delta_plan.md`
-   - `labs_analyzer_v10_parallel_distribution_rewritten.md`
-   - `labs_analyzer_v10_tests_guardrails.md`
+   - `labs_analyzer_v13_final_architecture_definition.md`
 7. the code you will edit
+
+Legacy v10/v11/v12 architecture docs are archival and should be ignored unless Person A explicitly requests historical comparison.
 
 ## Hard Rules
 1. Do not widen scope beyond the brief.
@@ -34,7 +33,7 @@ Before changing code:
 3. Do not hide unsupported, partial-support, or not-assessed content.
 4. Do not blur trusted PDF and image-beta trust levels.
 5. In this phase, keep `PyMuPDF` as the trusted-PDF primary backend, `qwen-vl-ocr-2025-11-20` as the image-lane primary backend, and `pdfplumber` debug-only unless the brief explicitly says otherwise.
-6. If the task touches parser migration, do not bypass `PageParseArtifactV3` or `RowAssemblerV2`, and do not make a parser backend emit observations directly.
+6. If the task touches parser migration, do not bypass `PageParseArtifactV4` or `RowAssemblerV3`, and do not make a parser backend emit observations directly.
 7. Do not use an LLM to invent medical meaning, diagnosis, severity, or next-step logic.
 8. Stop and hand back to Codex if the task needs files outside the assigned scope.
 9. Report verification honestly. If you did not run it, say so.

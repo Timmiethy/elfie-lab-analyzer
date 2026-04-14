@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from dataclasses import replace
 
 from ..contracts import (
-    CandidateRowV3,
     NORMALIZABLE_ROW_TYPES_V3,
+    CandidateRowV3,
     SuppressionRecordV1,
     SuppressionReportV1,
 )
-
 
 _HEADING_SHADOW_MARKERS = {
     "reference",
@@ -41,6 +41,8 @@ class RowArbitration:
         rows: list[CandidateRowV3],
     ) -> tuple[list[CandidateRowV3], SuppressionReportV1]:
         suppression_records: list[SuppressionRecordV1] = []
+
+        rows = _merge_dual_unit_sidecars(rows, suppression_records)
 
         candidates = [
             row
@@ -144,3 +146,63 @@ def _not_giant_hybrid(row: CandidateRowV3, suppression_records: list[Suppression
         )
     )
     return False
+
+
+def _merge_dual_unit_sidecars(
+    rows: list[CandidateRowV3],
+    suppression_records: list[SuppressionRecordV1],
+) -> list[CandidateRowV3]:
+    merged_rows: list[CandidateRowV3] = []
+
+    for row in rows:
+        if _is_hba1c_dual_unit_sidecar(row):
+            target_index = _find_hba1c_target_index(merged_rows)
+            if target_index is not None:
+                target = merged_rows[target_index]
+                secondary_result = {
+                    "raw_value_string": row.raw_value,
+                    "parsed_numeric_value": row.parsed_numeric_value,
+                    "raw_unit_string": row.raw_unit,
+                    "parsed_locale": row.parsed_locale,
+                }
+                merged_rows[target_index] = replace(
+                    target,
+                    raw_text=f"{target.raw_text} {row.raw_text}".strip(),
+                    secondary_result=secondary_result,
+                    confidence=max(target.confidence, row.confidence),
+                )
+                suppression_records.append(
+                    SuppressionRecordV1(
+                        row_id=row.row_id,
+                        reason_code="dual_unit_sidecar_row",
+                        detail=f"merged_into={target.row_id}",
+                    )
+                )
+                continue
+
+        merged_rows.append(row)
+
+    return merged_rows
+
+
+def _is_hba1c_dual_unit_sidecar(row: CandidateRowV3) -> bool:
+    if row.row_type.value != "unparsed_row":
+        return False
+    if row.parsed_numeric_value is None:
+        return False
+    unit = " ".join(str(row.raw_unit or "").lower().split())
+    return unit == "mmol/mol"
+
+
+def _find_hba1c_target_index(rows: list[CandidateRowV3]) -> int | None:
+    for index in range(len(rows) - 1, -1, -1):
+        row = rows[index]
+        if row.row_type.value not in NORMALIZABLE_ROW_TYPES_V3:
+            continue
+        if row.secondary_result is not None:
+            continue
+        label = " ".join(str(row.raw_label or "").lower().split())
+        text = " ".join(str(row.raw_text or "").lower().split())
+        if "hba1c" in label or "hba1c" in text:
+            return index
+    return None

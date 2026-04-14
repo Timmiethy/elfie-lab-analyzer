@@ -61,6 +61,11 @@ _BILINGUAL_TRANSLATIONS = {
     "載脂蛋白b": "apolipoprotein b",
     "血清胰岛素": "serum insulin",
     "血清胰島素": "serum insulin",
+    "胰岛素": "insulin",
+    "胰島素": "insulin",
+    "促甲状腺激素": "thyroid stimulating hormone",
+    "身高体重指数": "body mass index",
+    "身高體重指數": "body mass index",
     "γ谷氨酰转肽酶": "ggt",
     "γ-谷氨酰转移酶": "ggt",
     "谷氨酰转肽酶": "ggt",
@@ -109,15 +114,23 @@ _LABEL_REWRITES = {
     "ldl cholesterol calc": "ldl-c",
     "ldl cholesterol": "ldl-c",
     "non hdl cholesterol": "non-hdl cholesterol",
+    "electrolytes sodium": "sodium",
+    "serum plasma glucose": "glucose",
     "absolute cd 4 helper": "cd4 cells",
     "cd 4 pos lymph": "cd4 cells",
     "cd4 pos lymph": "cd4 cells",
+    "% cd 4 pos lymph": "cd4 cells",
+    "% cd4 pos lymph": "cd4 cells",
     "cd4 positive lymphocytes": "cd4 cells",
+    "absolute cd4 helper": "cd4 cells",
     "abs cd 8 suppressor": "cd8 cells",
     "absolute cd 8 suppressor": "cd8 cells",
     "cd 8 pos lymph": "cd8 cells",
     "cd8 pos lymph": "cd8 cells",
+    "% cd 8 pos lymph": "cd8 cells",
+    "% cd8 pos lymph": "cd8 cells",
     "cd8 positive lymphocytes": "cd8 cells",
+    "absolute cd8 suppressor": "cd8 cells",
     "neutrophils absolute": "neutrophils",
     "absolute neutrophils": "neutrophils",
     "lymphs absolute": "total lymphocyte count",
@@ -142,10 +155,21 @@ _LABEL_REWRITES = {
     "t4 thyroxine total": "total thyroxine",
     "free t4 index t7": "free t4 index",
     "magnesium rbmc": "magnesium",
+    "lipid panel standard cholesterol total": "total cholesterol",
+    "cbc includes diff plt white blood cell count": "white blood cell count",
+    "cbc includes diff / plt white blood cell count": "white blood cell count",
+    "thyroid function assays thyroid stimulating hormone": "thyroid stimulating hormone",
+    "hormone studies serum insulin": "serum insulin",
     # v12 wave-2 residual: mixed bilingual forms from DBTICRP fixture where
     # garbled encoding leaves partial English tokens after lookup normalization.
     "total chol": "total cholesterol",
     "lipoprotein a a": "lipoprotein(a)",
+    "apolipoprotein a apolipoprotein a1": "apolipoprotein a1",
+    "apolipoprotein b a ratio apolipoprotein b a": "apob/apoa1 ratio",
+    "apolipoprotein b / a ratio apolipoprotein b / a": "apob/apoa1 ratio",
+    "lipid function apolipoprotein a1 apolipoprotein a11": "apolipoprotein a1",
+    "test name in range out of range reference range lab vitamin d 25 oh total ia": "vitamin d 25-oh total",
+    "troponin hs ctnt": "troponin hs-ctnt",
     # v12: threshold/risk category labels that must NOT resolve to real analytes
     "intermediate": "threshold_category",
     "low cv risk": "threshold_category",
@@ -246,7 +270,10 @@ _UNIT_COMPATIBILITY_BY_CANONICAL = {
     "18768-1": {"mass_concentration"},   # Apolipoprotein B [Mass/volume]
     "11566-8": {"enzyme_activity"},      # Insulin [Units/volume] - uIU/mL -> enzyme_activity
     "2324-2": {"enzyme_activity"},       # GGT [Enzymatic activity/volume]
-    "33762-6": {"mass_concentration"},   # NT-proBNP [Mass/volume] - pg/mL -> mass_concentration
+    "33762-6": {"mass_concentration", "mass"},   # NT-proBNP [Mass/volume] - tolerate truncated pg token
+    "6598-7": {"mass_concentration"},    # Troponin T.cardiac [Mass/volume]
+    "55884-4": {"ratio"},                # ApoB/ApoA1 [Mass ratio]
+    "8122-4": {"cell_count"},            # CD3 cells [#/volume]
 }
 
 
@@ -799,6 +826,14 @@ def _display_name(canonical_label: str) -> str:
         "hba1c": "HbA1c",
         "ldl-c": "LDL-C",
         "hdl-c": "HDL-C",
+        "lipoprotein(a)": "Lp(a)",
+        "apolipoprotein a1": "ApoA1",
+        "apolipoprotein b": "ApoB",
+        "apob/apoa1 ratio": "ApoB/ApoA1 Ratio",
+        "troponin hs-ctnt": "Troponin hs-cTnT",
+        "cd3 cells": "CD3 Cells",
+        "cd4 cells": "CD4 Helper T-Cell",
+        "cd8 cells": "CD8 Suppressor T-Cell",
     }
     if canonical_label in display_overrides:
         return display_overrides[canonical_label]

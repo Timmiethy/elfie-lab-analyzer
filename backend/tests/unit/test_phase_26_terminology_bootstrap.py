@@ -10,6 +10,7 @@ from app.config import settings
 from app.main import create_app
 from app.terminology import TerminologyLoader
 from app.workers.pipeline import PipelineOrchestrator
+from tests.support.pdf_builder import build_text_pdf
 
 
 def _write_snapshot(path: Path, *, release: str = "loinc-2026.04") -> None:
@@ -64,7 +65,9 @@ def test_phase_26_pipeline_lineage_uses_loaded_terminology_release(
     result = asyncio.run(
         PipelineOrchestrator().run(
             "phase-26-lineage-terminology",
-            file_bytes=None,
+            file_bytes=build_text_pdf([
+                "Glucose 180 mg/dL 70-99",
+            ]),
             lane_type="trusted_pdf",
             source_checksum="sha256:phase-26-terminology",
         )

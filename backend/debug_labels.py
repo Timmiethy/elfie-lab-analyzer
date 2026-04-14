@@ -19,13 +19,13 @@ for label in labels:
     print(f'Input: {label!r}')
     raw_text = label.strip().lower()
     print(f'  After lower: {raw_text!r}')
-    
+
     translated = raw_text
     for source, target in sorted(_BILINGUAL_TRANSLATIONS.items(), key=lambda item: len(item[0]), reverse=True):
         if source in translated:
             translated = translated.replace(source, target)
             print(f'  Bilingual match: {source!r} -> {target!r}')
-    
+
     deduped = []
     for token in translated.split():
         if not deduped or deduped[-1] != token:
@@ -36,13 +36,13 @@ for label in labels:
             deduped = deduped[:midpoint]
     after_bilingual = ' '.join(deduped)
     print(f'  After bilingual+dedup: {after_bilingual!r}')
-    
+
     lookup_text = _normalize_lookup_label(after_bilingual)
     print(f'  After lookup normalize: {lookup_text!r}')
-    
+
     rewritten = _LABEL_REWRITES.get(lookup_text)
     print(f'  After rewrite: {rewritten!r}')
-    
+
     result = resolver.resolve(label, context=ctx)
     print(f'  FINAL normalized: {result["normalized_label"]!r}')
     print(f'  FINAL support_state: {result["support_state"]}')

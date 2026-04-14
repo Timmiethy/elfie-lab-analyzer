@@ -13,7 +13,6 @@ from pydantic import ValidationError
 
 from app.schemas.finding import FindingSchema
 
-
 _LOCALIZED_COPY = {
     "en": {
         "headline": "Structured findings summary",
