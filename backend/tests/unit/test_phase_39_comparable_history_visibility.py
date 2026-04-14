@@ -39,6 +39,7 @@ def _make_observation(
     label: str,
     support_state: str = "supported",
     suppression_reasons: list[str] | None = None,
+    failure_code: str | None = None,
 ) -> dict:
     obs_id = uuid5(NAMESPACE_URL, f"obs:{label}")
     return {
@@ -46,6 +47,7 @@ def _make_observation(
         "raw_analyte_label": label,
         "support_state": support_state,
         "suppression_reasons": suppression_reasons or [],
+        "failure_code": failure_code,
     }
 
 
@@ -217,6 +219,36 @@ class TestGenuineUnresolvedObservationsStillSurface:
 
         not_assessed_labels = [item["raw_label"].lower() for item in artifact["not_assessed"]]
         assert "creatinine" in not_assessed_labels
+
+    def test_failure_code_reason_is_preserved_in_not_assessed(
+        self, renderer: ArtifactRenderer
+    ) -> None:
+        findings = [_make_finding("glucose-high")]
+        observations = [
+            _make_observation("Glucose", support_state="supported"),
+            _make_observation(
+                "Mystery Analyte",
+                support_state="partial",
+                failure_code="unsupported_family",
+            ),
+        ]
+
+        artifact = renderer.render_patient(
+            findings,
+            {
+                "job_id": str(uuid4()),
+                "support_banner": "partially_supported",
+                "trust_status": "trusted",
+                "comparable_history": None,
+            },
+            observations=observations,
+        )
+
+        reason_by_label = {
+            item["raw_label"].lower(): item["reason"]
+            for item in artifact["not_assessed"]
+        }
+        assert reason_by_label["mystery analyte"] == "unsupported_family"
 
     def test_suppressed_sx_finding_surfaces_in_not_assessed(
         self, renderer: ArtifactRenderer

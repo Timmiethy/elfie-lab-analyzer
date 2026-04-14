@@ -137,6 +137,9 @@ async def _persisted_upload_response(
                 db_session=session,
                 document_id=document_id,
                 source_checksum=classification["checksum"],
+                source_filename=classification["sanitized_filename"],
+                source_mime_type=classification["mime_type"],
+                runtime_preflight=classification,
             )
             await session.commit()
     except Exception as exc:
@@ -174,6 +177,9 @@ async def _in_memory_upload_response(
             file_bytes=file_bytes,
             lane_type=classification["lane_type"],
             source_checksum=classification["checksum"],
+            source_filename=classification["sanitized_filename"],
+            source_mime_type=classification["mime_type"],
+            runtime_preflight=classification,
         )
     except Exception:
         observability_metrics.record_job_outcome("failed")

@@ -77,12 +77,25 @@ _HIDDEN_LABEL_MARKERS = (
 _HIDDEN_REASON_MARKERS = (
     "admin_metadata_row",
     "threshold_table_row",
+    "threshold_reference_row",
     "narrative_row",
+    "narrative_guidance_row",
+    "header_footer_row",
+    "footer_or_header_row",
     "footer_header_row",
     "report_metadata_row",
     "test_request_list",
     "patient_demographics_row",
+    "unknown_block_non_result",
+    "ambiguous_block_classification",
 )
+
+_NOT_ASSESSED_REASON_ALIASES = {
+    "unsupported unit or reference range": UnsupportedReason.UNSUPPORTED_UNIT_OR_REFERENCE_RANGE.value,
+    "unsupported_unit": UnsupportedReason.UNSUPPORTED_UNIT_OR_REFERENCE_RANGE.value,
+    "unit_parse_error": UnsupportedReason.UNIT_PARSE_FAIL.value,
+    "unit_parse_failure": UnsupportedReason.UNIT_PARSE_FAIL.value,
+}
 
 
 def _coerce_uuid(value: UUID | str) -> UUID:
@@ -106,10 +119,17 @@ def _normalize_text(value: object) -> str:
 
 
 def _normalize_not_assessed_reason(reason: object) -> str:
-    normalized = _normalize_text(reason)
+    normalized = _canonical_not_assessed_reason(reason)
     if normalized in _VISIBLE_UNSUPPORTED_REASONS:
         return normalized
+    if not normalized:
+        return UnsupportedReason.UNREADABLE_VALUE.value
     return UnsupportedReason.UNREADABLE_VALUE.value
+
+
+def _canonical_not_assessed_reason(reason: object) -> str:
+    normalized = _normalize_text(reason)
+    return _NOT_ASSESSED_REASON_ALIASES.get(normalized, normalized)
 
 
 def _is_hidden_not_assessed_label(raw_label: object) -> bool:
@@ -223,13 +243,16 @@ def _observation_not_assessed_reason(observation: dict) -> object:
     suppression_reasons = observation.get("suppression_reasons") or []
     if isinstance(suppression_reasons, list):
         for reason in suppression_reasons:
-            normalized_reason = _normalize_text(reason)
+            normalized_reason = _canonical_not_assessed_reason(reason)
             if normalized_reason in _VISIBLE_UNSUPPORTED_REASONS:
                 return normalized_reason
 
-    for key in ("suppression_reason", "reason", "support_reason"):
+    for key in ("failure_code", "suppression_reason", "reason", "support_reason"):
         reason = observation.get(key)
         if reason is not None:
+            normalized_reason = _canonical_not_assessed_reason(reason)
+            if normalized_reason in _VISIBLE_UNSUPPORTED_REASONS:
+                return normalized_reason
             return reason
 
     return UnsupportedReason.UNREADABLE_VALUE.value

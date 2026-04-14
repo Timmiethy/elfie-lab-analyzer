@@ -39,6 +39,7 @@ from app.services.clinician_pdf import clinician_pdf_route, write_clinician_pdf
 from app.services.comparable_history import ComparableHistoryService
 from app.services.explanation import ExplanationAdapter
 from app.services.extraction_qa import ExtractionQA
+from app.services.input_gateway import InputGateway
 from app.services.lineage import LineageLogger
 from app.services.nextstep_policy import NextStepPolicyEngine
 from app.services.observation_builder import ObservationBuilder
@@ -55,6 +56,14 @@ from app.terminology import get_loaded_snapshot_metadata
 _JOB_RUNS: dict[str, dict] = {}
 _LOGGER = logging.getLogger(__name__)
 _SUPPORTED_LANES = {"trusted_pdf", "image_beta", "unsupported"}
+_FAIL_CLOSED_DOCUMENT_CLASSES = {
+    "unsupported",
+    "unsupported_pdf",
+    "structured_record",
+    "interpreted_summary",
+    "non_lab_medical",
+    "unknown",
+}
 
 # v12 parser lineage constants
 _PARSER_VERSION_TRUSTED = "pymupdf-1.27.x"
@@ -137,6 +146,17 @@ class PatientContextV1(TypedDict):
 class RuntimeMetadataV1(TypedDict):
     terminology_release: str
     build_commit: str
+
+
+class RuntimeRoutingV1(TypedDict):
+    requested_lane: str
+    selected_lane: str
+    preflight_lane: str | None
+    route_document_class: str | None
+    route_reason_codes: list[str]
+    route_confidence: float | None
+    promotion_status: str | None
+    enforcement_action: str
 
 
 def _normalize_language_id(value: object) -> str | None:
@@ -477,6 +497,9 @@ class PipelineOrchestrator:
         db_session: AsyncSession | None = None,
         document_id: UUID | str | None = None,
         source_checksum: str | None = None,
+        source_filename: str | None = None,
+        source_mime_type: str | None = None,
+        runtime_preflight: dict | None = None,
     ) -> dict:
         job_uuid = _job_uuid(job_id)
         document_uuid = (
@@ -484,11 +507,27 @@ class PipelineOrchestrator:
             if document_id is not None
             else job_uuid
         )
-        selected_lane = lane_type or "trusted_pdf"
+        requested_lane = lane_type or "trusted_pdf"
+        runtime_routing = _default_runtime_routing(
+            requested_lane,
+            action="caller_lane_without_runtime_preflight",
+        )
+        selected_lane = runtime_routing["selected_lane"]
+        if file_bytes is not None and (runtime_preflight is not None or (source_filename and source_mime_type)):
+            runtime_routing = await _resolve_runtime_routing(
+                file_bytes=file_bytes,
+                requested_lane=requested_lane,
+                source_filename=source_filename,
+                source_mime_type=source_mime_type,
+                runtime_preflight=runtime_preflight,
+            )
+            selected_lane = runtime_routing["selected_lane"]
         _LOGGER.info(
-            "pipeline_start job_id=%s lane=%s",
+            "pipeline_start job_id=%s requested_lane=%s selected_lane=%s action=%s",
             job_id,
+            requested_lane,
             selected_lane,
+            runtime_routing["enforcement_action"],
         )
 
         extraction_qa = ExtractionQA()
@@ -669,6 +708,7 @@ class PipelineOrchestrator:
             result["runtime_metadata"] = runtime_metadata
             result["reference_decisions"] = reference_decisions
             result["normalization_trace"] = normalization_trace
+            result["runtime_routing"] = runtime_routing
 
             if db_session is not None:
                 store = TopLevelLifecycleStore(db_session)
@@ -730,6 +770,96 @@ def _job_uuid(job_id: str) -> UUID:
 def _validate_lane(lane_type: str) -> None:
     if lane_type not in _SUPPORTED_LANES:
         raise ValueError(f"unsupported_lane:{lane_type}")
+
+
+def _default_runtime_routing(requested_lane: str, *, action: str) -> RuntimeRoutingV1:
+    return {
+        "requested_lane": requested_lane,
+        "selected_lane": requested_lane,
+        "preflight_lane": None,
+        "route_document_class": None,
+        "route_reason_codes": [],
+        "route_confidence": None,
+        "promotion_status": None,
+        "enforcement_action": action,
+    }
+
+
+def _coerce_route_confidence(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+async def _resolve_runtime_routing(
+    *,
+    file_bytes: bytes,
+    requested_lane: str,
+    source_filename: str | None,
+    source_mime_type: str | None,
+    runtime_preflight: dict | None,
+) -> RuntimeRoutingV1:
+    preflight = runtime_preflight
+    if preflight is None:
+        if not source_filename or not source_mime_type:
+            return _default_runtime_routing(
+                requested_lane,
+                action="caller_lane_without_runtime_preflight",
+            )
+        try:
+            preflight = await InputGateway().preflight(
+                file_bytes,
+                source_filename,
+                source_mime_type,
+            )
+        except Exception as exc:  # noqa: BLE001 - fail closed on runtime preflight errors
+            routing = _default_runtime_routing(
+                requested_lane,
+                action="downgraded_runtime_preflight_error",
+            )
+            routing["selected_lane"] = "unsupported"
+            routing["route_reason_codes"] = [f"runtime_preflight_error:{exc}"]
+            return routing
+
+    preflight_lane = str(preflight.get("lane_type") or "unsupported")
+    route_document_class = str(
+        preflight.get("route_document_class")
+        or preflight.get("document_class")
+        or _UNKNOWN_RUNTIME_VALUE
+    )
+    route_reason_codes = [str(code) for code in (preflight.get("route_reason_codes") or [])]
+    route_confidence = _coerce_route_confidence(preflight.get("route_confidence"))
+    promotion_status = str(preflight.get("promotion_status") or "")
+
+    selected_lane = preflight_lane
+    enforcement_action = "preflight_lane_enforced"
+
+    if route_document_class in _FAIL_CLOSED_DOCUMENT_CLASSES:
+        selected_lane = "unsupported"
+        enforcement_action = "downgraded_non_lab_or_ambiguous_class"
+    elif selected_lane == "image_beta" and promotion_status != "beta_ready":
+        selected_lane = "unsupported"
+        enforcement_action = "downgraded_image_beta_not_ready"
+        route_reason_codes.append(
+            f"image_beta_not_ready:{promotion_status or _UNKNOWN_RUNTIME_VALUE}"
+        )
+    elif requested_lane != preflight_lane:
+        enforcement_action = "lane_mismatch_preflight_enforced"
+
+    _validate_lane(selected_lane)
+    return {
+        "requested_lane": requested_lane,
+        "selected_lane": selected_lane,
+        "preflight_lane": preflight_lane,
+        "route_document_class": route_document_class,
+        "route_reason_codes": route_reason_codes,
+        "route_confidence": route_confidence,
+        "promotion_status": promotion_status,
+        "enforcement_action": enforcement_action,
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -21,6 +21,7 @@ from app.workers.pipeline import (
     _build_lineage_payload,
     _build_runtime_metadata,
     _build_semantic_success_shadow,
+    _resolve_runtime_routing,
     _derive_patient_context,
     _build_persistence_payloads,
     _extract_rows,
@@ -309,6 +310,58 @@ class TestV12RuntimeGuardrails:
             lane_type="unsupported",
         )
         assert rows == []
+
+    @pytest.mark.asyncio
+    async def test_runtime_routing_enforces_preflight_lane_on_mismatch(self):
+        decision = await _resolve_runtime_routing(
+            file_bytes=b"%PDF-1.4 fake",
+            requested_lane="trusted_pdf",
+            source_filename="seed.png",
+            source_mime_type="image/png",
+            runtime_preflight={
+                "lane_type": "image_beta",
+                "route_document_class": "image_pdf_lab",
+                "route_reason_codes": ["image_file_route"],
+                "promotion_status": "beta_ready",
+                "route_confidence": 0.95,
+            },
+        )
+
+        assert decision["selected_lane"] == "image_beta"
+        assert decision["preflight_lane"] == "image_beta"
+        assert decision["enforcement_action"] == "lane_mismatch_preflight_enforced"
+
+    @pytest.mark.asyncio
+    async def test_runtime_routing_downgrades_non_lab_document_class(self):
+        decision = await _resolve_runtime_routing(
+            file_bytes=b"%PDF-1.4 fake",
+            requested_lane="trusted_pdf",
+            source_filename="seed.pdf",
+            source_mime_type="application/pdf",
+            runtime_preflight={
+                "lane_type": "trusted_pdf",
+                "route_document_class": "non_lab_medical",
+                "route_reason_codes": ["non_lab_medical_keywords"],
+                "promotion_status": "ready_unsupported",
+                "route_confidence": 0.97,
+            },
+        )
+
+        assert decision["selected_lane"] == "unsupported"
+        assert decision["enforcement_action"] == "downgraded_non_lab_or_ambiguous_class"
+
+    @pytest.mark.asyncio
+    async def test_runtime_routing_keeps_caller_lane_without_preflight_context(self):
+        decision = await _resolve_runtime_routing(
+            file_bytes=b"%PDF-1.4 fake",
+            requested_lane="trusted_pdf",
+            source_filename=None,
+            source_mime_type=None,
+            runtime_preflight=None,
+        )
+
+        assert decision["selected_lane"] == "trusted_pdf"
+        assert decision["enforcement_action"] == "caller_lane_without_runtime_preflight"
 
 
 class TestV12PipelineRuntimeIntegration:

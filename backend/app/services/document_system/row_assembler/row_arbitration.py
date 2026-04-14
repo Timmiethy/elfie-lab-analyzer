@@ -29,6 +29,19 @@ _THRESHOLD_SHADOW_MARKERS = {
     "threshold",
     "very high",
     "moderate",
+    "castelli",
+    "ldl-c/hdl-c",
+    "total men",
+    "total women",
+    "ratio men",
+    "ratio women",
+}
+_CITATION_SHADOW_MARKERS = {
+    "clin chem",
+    "lab med",
+    "et al",
+    "jama",
+    "doi",
 }
 
 
@@ -44,11 +57,33 @@ class RowArbitration:
 
         rows = _merge_dual_unit_sidecars(rows, suppression_records)
 
-        candidates = [
-            row
-            for row in rows
-            if _not_giant_hybrid(row, suppression_records)
-        ]
+        candidates: list[CandidateRowV3] = []
+        for row in rows:
+            if not _not_giant_hybrid(row, suppression_records):
+                continue
+
+            if row.row_type.value in NORMALIZABLE_ROW_TYPES_V3:
+                if _is_threshold_shadow(row):
+                    suppression_records.append(
+                        SuppressionRecordV1(
+                            row_id=row.row_id,
+                            reason_code="threshold_shadow_row",
+                            detail=row.raw_text[:160],
+                        )
+                    )
+                    continue
+
+                if _is_label_noise_shadow(row):
+                    suppression_records.append(
+                        SuppressionRecordV1(
+                            row_id=row.row_id,
+                            reason_code="label_noise_shadow_row",
+                            detail=row.raw_text[:160],
+                        )
+                    )
+                    continue
+
+            candidates.append(row)
 
         grouped: dict[str, list[CandidateRowV3]] = defaultdict(list)
         passthrough: list[CandidateRowV3] = []
@@ -64,17 +99,7 @@ class RowArbitration:
 
         for _, group in grouped.items():
             if len(group) == 1:
-                row = group[0]
-                if _is_threshold_shadow(row):
-                    suppression_records.append(
-                        SuppressionRecordV1(
-                            row_id=row.row_id,
-                            reason_code="threshold_shadow_row",
-                            detail=row.raw_text[:160],
-                        )
-                    )
-                    continue
-                kept.append(row)
+                kept.append(group[0])
                 continue
 
             scored = sorted(group, key=_score, reverse=True)
@@ -132,6 +157,21 @@ def _is_threshold_shadow(row: CandidateRowV3) -> bool:
         return False
     text = " ".join(row.raw_text.lower().split())
     return any(marker in text for marker in _THRESHOLD_SHADOW_MARKERS)
+
+
+def _is_label_noise_shadow(row: CandidateRowV3) -> bool:
+    if row.raw_value not in (None, "") or row.parsed_numeric_value is not None:
+        return False
+
+    text = " ".join(row.raw_text.lower().split())
+    if not text:
+        return True
+
+    tokens = text.split()
+    if len(tokens) == 1 and len(tokens[0]) <= 2:
+        return True
+
+    return any(marker in text for marker in _CITATION_SHADOW_MARKERS)
 
 
 def _not_giant_hybrid(row: CandidateRowV3, suppression_records: list[SuppressionRecordV1]) -> bool:

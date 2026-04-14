@@ -16,6 +16,47 @@ from .row_arbitration import RowArbitration
 from .row_field_parser import RowFieldParseInput, RowFieldParser
 from .row_grouping import group_lines
 
+_VALUE_TOKEN_RE = re.compile(r"(?:<=|>=|<|>|≤|≥)?\s*\d[\d,]*(?:\.\d+)?")
+_UNKNOWN_BLOCK_RESULT_HINTS = (
+    "analyte",
+    "result",
+    "unit",
+    "reference",
+)
+_UNKNOWN_BLOCK_UNIT_HINTS = (
+    "mg/dl",
+    "g/dl",
+    "mmol/l",
+    "umol/l",
+    "iu/l",
+    "u/l",
+    "%",
+    "ng/ml",
+    "pg",
+    "fl",
+)
+_UNKNOWN_BLOCK_NON_RESULT_HINTS = (
+    "guideline",
+    "interpretation",
+    "clinical history",
+    "gross description",
+    "microscopic",
+    "final diagnosis",
+    "specimen",
+    "patient",
+    "dob",
+    "mrn",
+    "accession",
+    "report printed",
+    "ordered",
+    "received",
+    "page ",
+    "address",
+    "jalan",
+    "wisma",
+    "flr",
+)
+
 
 class RowAssemblerV3:
     """Modular row assembler using line classification, grouping, parsing, arbitration."""
@@ -64,6 +105,23 @@ class RowAssemblerV3:
                         family_adapter_id=family_adapter_id,
                         page_class=page_class,
                         block_role=node.block_role,
+                    )
+                )
+                continue
+
+            if node.block_role == BlockRoleV1.UNKNOWN_BLOCK and not _is_result_like_unknown_block(
+                node_text=node.text,
+                metadata=node.metadata,
+            ):
+                rows.append(
+                    _excluded_row(
+                        artifact=artifact,
+                        source_block_id=node.block_id,
+                        raw_text=node.text,
+                        family_adapter_id=family_adapter_id,
+                        page_class=page_class,
+                        block_role=BlockRoleV1.UNKNOWN_BLOCK,
+                        reason_code="unknown_block_non_result",
                     )
                 )
                 continue
@@ -233,3 +291,45 @@ def _sanitize_candidate_text(value: str) -> str:
     text = re.sub(r"^(?:lipid\s+function|lipid\s+panel\s+standard|comprehensive\s+metabolic\s+panel|cbc\s+includes\s+diff/plt|thyroid\s+panel\s+with\s+tsh\s+t3\s+uptake|electrolytes|serum/plasma\s+glucose)\s+", "", text, flags=re.I)
     text = re.sub(r"m\s+([23])\b", r"m\1", text, flags=re.I)
     return " ".join(text.split())
+
+
+def _is_result_like_unknown_block(*, node_text: str, metadata: dict[str, object]) -> bool:
+    normalized = " ".join(str(node_text or "").lower().split())
+    if not normalized:
+        return False
+
+    if any(marker in normalized for marker in _UNKNOWN_BLOCK_NON_RESULT_HINTS):
+        return False
+
+    evidence = metadata.get("block_classification_evidence") if isinstance(metadata, dict) else None
+    if not isinstance(evidence, dict):
+        evidence = {}
+
+    numeric_density = _safe_float(evidence.get("numeric_token_density"))
+    threshold_density = _safe_float(evidence.get("threshold_pattern_density"))
+    line_count = int(_safe_float(metadata.get("line_count"))) if isinstance(metadata, dict) else 0
+
+    if threshold_density >= 0.12:
+        return False
+    if line_count >= 10 and numeric_density < 0.12:
+        return False
+    if numeric_density >= 0.12:
+        return True
+
+    has_value_token = _VALUE_TOKEN_RE.search(normalized) is not None
+    if not has_value_token:
+        return False
+
+    if any(marker in normalized for marker in _UNKNOWN_BLOCK_RESULT_HINTS):
+        return True
+    if any(unit in normalized for unit in _UNKNOWN_BLOCK_UNIT_HINTS):
+        return True
+
+    return len(normalized.split()) <= 12
+
+
+def _safe_float(value: object) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0

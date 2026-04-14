@@ -152,6 +152,8 @@ async def retry_job(
                     db_session=session,
                     document_id=document_uuid,
                     source_checksum=document_checksum,
+                    source_filename=document.filename,
+                    source_mime_type=document.mime_type,
                 )
                 await session.commit()
         except Exception as exc:

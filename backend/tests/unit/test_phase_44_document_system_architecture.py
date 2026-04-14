@@ -392,6 +392,44 @@ def test_phase_44_row_assembler_v3_builds_rows() -> None:
     )
 
 
+def test_phase_44_row_assembler_v3_excludes_unknown_non_result_blocks() -> None:
+    artifact = PageParseArtifactV4(
+        page_id="doc:unknown-block",
+        page_number=1,
+        backend_id="pymupdf",
+        backend_version="1.0",
+        lane_type="trusted_pdf",
+        page_kind=PageKindV2.LAB_RESULTS,
+        blocks=[
+            PageParseBlockV4(
+                block_id="u1",
+                block_role=BlockRoleV1.UNKNOWN_BLOCK,
+                raw_text="Final Diagnosis: Chronic inflammatory changes",
+                lines=["Final Diagnosis: Chronic inflammatory changes"],
+                metadata={
+                    "block_classification_evidence": {
+                        "numeric_token_density": 0.0,
+                        "threshold_pattern_density": 0.0,
+                    }
+                },
+            ),
+        ],
+        raw_text="Final Diagnosis: Chronic inflammatory changes",
+    )
+
+    graph = BlockGraphBuilder().build(artifact)
+    rows, _suppression = RowAssemblerV3().assemble(
+        block_graph=graph,
+        artifact=artifact,
+        family_adapter_id="generic_layout",
+        page_class="analyte_table_page",
+    )
+
+    assert len(rows) == 1
+    assert rows[0].support_code == "excluded"
+    assert rows[0].failure_code == "unknown_block_non_result"
+
+
 def test_phase_44_artifact_policy_hides_internal_markers() -> None:
     result = ArtifactPolicy().sanitize_not_assessed(
         [

@@ -85,6 +85,9 @@ async def _run_ground_truth(*, enable_image_beta: bool, runtime: dict[str, objec
                     file_bytes=file_bytes,
                     lane_type=lane_type,
                     source_checksum=preflight.get("checksum"),
+                    source_filename=filename,
+                    source_mime_type="application/pdf",
+                    runtime_preflight=preflight,
                 )
             except Exception as exc:  # noqa: BLE001
                 pipeline_result = {
