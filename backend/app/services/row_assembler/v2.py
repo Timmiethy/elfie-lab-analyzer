@@ -792,94 +792,75 @@ class RowAssemblerV2:
         artifact: Any,
         already_recovered_texts: set[str],
     ) -> list[dict[str, Any]]:
-        """Supplement page-level rows with grouped block-line recovery.
-
-        v12 fix: instead of merging entire blocks into one giant candidate,
-        split multi-line result_table and unknown blocks into measurement-sized
-        candidate groups.  Each group becomes one candidate row.
-
-        v12 wave-6: single-line block fallback is now allowed when page-level
-        recovery is absent or unparsed, so locale-comma single-line blocks
-        like "Glucose 5,6 mg/dL" survive recovery.
-        """
+        """Supplement page-level rows with geometric X/Y topology matching logic based on the PageParseBlockV4 geometries."""
         rows: list[dict[str, Any]] = []
 
-        for block in blocks:
-            block_lines = block.lines if block.lines else [block.text]
-            clean_lines = [ln.strip() for ln in block_lines if ln.strip()]
+        # Sort blocks by y0, then x0 for geometric reading order
+        sorted_blocks = sorted(blocks, key=lambda b: (b.bbox[1] if b.bbox else 0, b.bbox[0] if b.bbox else 0) if hasattr(b, 'bbox') else 0)
 
-            # v12 wave-7: allow single-line block fallback candidates when the
-            # line is value-bearing.  We rely on recovered_texts dedupe rather
-            # than page-level-presence heuristics, so locale-comma single-line
-            # results like "Glucose 5,6 mg/dL" survive even when page-level
-            # recovery produced other rows on the same page.
-            if len(clean_lines) == 0:
-                continue
-
-            # v12: Strip heading if present (for result_table / unknown blocks)
-            if block.block_type in ("result_table", "unknown"):
-                effective_lines = self._strip_heading_if_present(clean_lines, family_adapter_id)
+        # Cluster blocks into geometric rows based on y-overlap
+        geometric_rows = []
+        current_row = []
+        current_y_center = None
+        
+        for block in sorted_blocks:
+            bbox = block.bbox if hasattr(block, 'bbox') else None
+            y_center = (bbox[1] + bbox[3]) / 2 if bbox else 0
+            
+            if current_y_center is None:
+                current_y_center = y_center
+                current_row.append(block)
+            elif abs(y_center - current_y_center) < 5.0: # 5 points y-tolerance
+                current_row.append(block)
             else:
-                effective_lines = clean_lines
+                geometric_rows.append(current_row)
+                current_row = [block]
+                current_y_center = y_center
+                
+        if current_row:
+            geometric_rows.append(current_row)
 
-            if not effective_lines:
+        for group_idx, row_blocks in enumerate(geometric_rows, start=1):
+            candidate_text = " ".join([b.raw_text for b in row_blocks if hasattr(b, 'raw_text')])
+            norm_candidate = _normalize_text(candidate_text)
+
+            if not candidate_text.strip() or norm_candidate in already_recovered_texts:
                 continue
 
-            # v12: Group lines into measurement-sized candidates
-            # Each group should represent one measurement row
-            groups = self._group_lines_into_measurements(effective_lines, family_adapter_id, page_class)
+            classification = classify_candidate_text(
+                candidate_text,
+                page_class=page_class,
+                family_adapter_id=family_adapter_id,
+            )
 
-            for group_idx, group_lines in enumerate(groups, start=1):
-                if not group_lines:
-                    continue
+            norm_label = self._normalize_raw_label(candidate_text, classification)
+            if norm_label:
+                classification = dict(classification)
+                classification["raw_analyte_label"] = norm_label
 
-                # v12 wave-7: collapse adjacent duplicate labels inside each group
-                # BEFORE joining candidate_text.  This prevents LabTestingAPI rows
-                # like "SED RATE BY MODIFIED WESTERGREN SED RATE BY MODIFIED WESTERGREN 6"
-                # from ever reaching the parser.
-                group_lines = self._collapse_group_duplicate_labels(group_lines)
-
-                candidate_text = " ".join(group_lines)
-                norm_candidate = _normalize_text(candidate_text)
-
-                if norm_candidate in already_recovered_texts:
-                    continue
-
-                classification = classify_candidate_text(
-                    candidate_text,
+            if classification["row_type"] in NORMALIZABLE_ROW_TYPES:
+                primary_block = row_blocks[0]
+                row = self._candidate_row(
+                    raw_text=candidate_text,
+                    classification=classification,
+                    artifact=artifact,
                     page_class=page_class,
                     family_adapter_id=family_adapter_id,
+                    block_id=primary_block.block_id if hasattr(primary_block, 'block_id') else "unknown",
+                    segment_index=group_idx,
                 )
-
-                # v12 wave-7: normalize the raw label for immunology and LabTesting
-                # resolver compatibility (CD 8 spacing, BASOPHILS P, MAGNESIUM RBC).
-                norm_label = self._normalize_raw_label(candidate_text, classification)
-                if norm_label:
-                    classification = dict(classification)
-                    classification["raw_analyte_label"] = norm_label
-
-                if classification["row_type"] in NORMALIZABLE_ROW_TYPES:
-                    row = self._candidate_row(
-                        raw_text=candidate_text,
-                        classification=classification,
-                        artifact=artifact,
-                        page_class=page_class,
-                        family_adapter_id=family_adapter_id,
-                        block_id=block.block_id,
-                        segment_index=group_idx,
-                    )
-                    row_norm_label = self._normalize_raw_label(
-                        candidate_text,
-                        {"raw_analyte_label": row.get("raw_analyte_label", "")},
-                    )
-                    if row_norm_label:
-                        row["raw_analyte_label"] = row_norm_label
-                    elif norm_label:
-                        row["raw_analyte_label"] = norm_label
-                    row["_source_kind"] = "block_fallback"
-                    row["_is_heading_stripped"] = len(effective_lines) < len(clean_lines)
-                    rows.append(row)
-                    already_recovered_texts.add(norm_candidate)
+                row_norm_label = self._normalize_raw_label(
+                    candidate_text,
+                    {"raw_analyte_label": row.get("raw_analyte_label", "")},
+                )
+                if row_norm_label:
+                    row["raw_analyte_label"] = row_norm_label
+                elif norm_label:
+                    row["raw_analyte_label"] = norm_label
+                row["_source_kind"] = "geometry_fallback"
+                row["_is_heading_stripped"] = False
+                rows.append(row)
+                already_recovered_texts.add(norm_candidate)
 
         return rows
 

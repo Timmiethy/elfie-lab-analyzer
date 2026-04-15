@@ -22,6 +22,12 @@ services:
     environment:
       ELFIE_DATABASE_URL: postgresql+asyncpg://elfie:elfie@db:5432/elfie_labs
       ELFIE_DATABASE_URL_SYNC: postgresql://elfie:elfie@db:5432/elfie_labs
+      ELFIE_LOINC_PATH: /app/data/loinc
+      ELFIE_TERMINOLOGY_SNAPSHOT_PATH: /app/data/loinc
+      ELFIE_ALIAS_TABLES_PATH: /app/data/alias_tables
+      ELFIE_UCUM_PATH: /app/data/ucum
+      ELFIE_FAMILY_CONFIG_REGISTRY_PATH: /app/data/family_configs/document_family_registry_v1.json
+      ELFIE_ARTIFACT_STORE_PATH: /app/artifacts
     depends_on:
       db:
         condition: service_healthy

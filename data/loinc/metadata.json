@@ -1,0 +1,6 @@
+{
+  "snapshot_name": "dev-placeholder",
+  "source": "local-dev-placeholder",
+  "version": "0.0.0",
+  "notes": "Minimal terminology metadata to satisfy local app boot when the real LOINC snapshot is not present."
+}

@@ -60,7 +60,9 @@ def create_app() -> FastAPI:
 
 try:
     app: FastAPI | None = create_app()
-except RuntimeError:
+except RuntimeError as e:
+    import sys
+    print(f"FAILED TO START APP: {e}", file=sys.stderr)
     app = None  # deferred; tests call create_app() directly with patched settings
 
 if __name__ == "__main__":

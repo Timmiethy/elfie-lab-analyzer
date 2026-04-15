@@ -7,7 +7,7 @@
     "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
   },
   "benchmark_contract_version": "benchmark-contract-v1",
-  "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+  "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
   "contract_version": "benchmark-proof-pack-v1",
   "family_benchmarks": {},
   "lineage": {
@@ -16,48 +16,53 @@
     "completeness_telemetry": {
       "contract_version": "completeness-telemetry-v1",
       "counts": {
-        "clean_pages": 1,
-        "clean_rows": 2,
+        "clean_pages": 0,
+        "clean_rows": 0,
         "extracted_pages": 1,
-        "extracted_rows": 2,
+        "extracted_rows": 5,
         "partial_observations": 0,
-        "reference_bound_observations": 2,
-        "result_observations": 2,
-        "supported_observations": 2,
+        "reference_bound_observations": 0,
+        "result_observations": 0,
+        "supported_observations": 0,
         "unsupported_observations": 0
       },
       "ratios": {
-        "observation_supported_ratio": 1.0,
-        "reference_coverage_ratio": 1.0,
-        "structural_clean_row_ratio": 1.0,
-        "structural_page_coverage_ratio": 1.0
+        "observation_supported_ratio": 0.0,
+        "reference_coverage_ratio": 0.0,
+        "structural_clean_row_ratio": 0.0,
+        "structural_page_coverage_ratio": 0.0
       },
       "semantic_success_shadow": {
-        "confidence": 1.0,
+        "confidence": 0.0,
         "contract_version": "semantic-success-shadow-v1",
         "finding_counts": {
           "actionable": 0,
           "suppressed": 0,
           "threshold_conflicts": 0,
-          "total": 2
+          "total": 0
         },
         "lane_type": "trusted_pdf",
-        "limiting_factors": [],
-        "observation_gate_pass": true,
-        "reference_gate_pass": true,
-        "semantic_state": "shadow_fully_recoverable",
-        "structural_gate_pass": true,
-        "support_banner": "fully_supported"
+        "limiting_factors": [
+          "structural_incomplete",
+          "observation_incomplete",
+          "reference_incomplete",
+          "support_banner_could_not_assess"
+        ],
+        "observation_gate_pass": false,
+        "reference_gate_pass": false,
+        "semantic_state": "shadow_not_recoverable",
+        "structural_gate_pass": false,
+        "support_banner": "could_not_assess"
       },
       "states": {
-        "observation": "complete",
-        "reference": "complete",
-        "structural": "complete"
+        "observation": "absent",
+        "reference": "unavailable",
+        "structural": "absent"
       }
     },
     "family_adapter_version": "family-adapter-v1",
     "formula_version": "formula-v1",
-    "id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+    "id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
     "job_id": "c347b7de-d811-5d7e-ad58-c3d0374b0d99",
     "mapping_threshold_config": {
       "default": 0.9
@@ -66,7 +71,7 @@
     "nextstep_policy_version": "nextstep-v1",
     "ocr_version": null,
     "parser_backend": "pymupdf",
-    "parser_backend_version": "1.27.2.2",
+    "parser_backend_version": "1.27.1",
     "parser_version": "pymupdf-1.27.x",
     "row_assembly_version": "row-assembly-v2",
     "row_type_rule_set_version": "row-type-rules-v1",
@@ -77,31 +82,31 @@
     "terminology_release": "loinc-2026.05",
     "unit_engine_version": "ucum-v1"
   },
-  "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+  "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
   "metrics": {
-    "clean_rows": 2,
-    "completeness_observation_state": "complete",
-    "completeness_page_coverage_ratio": 1.0,
-    "completeness_reference_coverage_ratio": 1.0,
-    "completeness_reference_state": "complete",
-    "completeness_structural_ratio": 1.0,
-    "completeness_structural_state": "complete",
-    "completeness_supported_ratio": 1.0,
-    "extracted_rows": 2,
-    "extraction_ms": 7,
-    "findings": 2,
-    "panels": 1,
+    "clean_rows": 0,
+    "completeness_observation_state": "absent",
+    "completeness_page_coverage_ratio": 0.0,
+    "completeness_reference_coverage_ratio": 0.0,
+    "completeness_reference_state": "unavailable",
+    "completeness_structural_ratio": 0.0,
+    "completeness_structural_state": "absent",
+    "completeness_supported_ratio": 0.0,
+    "extracted_rows": 5,
+    "extraction_ms": 9,
+    "findings": 0,
+    "panels": 0,
     "parser_backend": "pymupdf",
-    "parser_backend_version": "1.27.2.2",
-    "processing_ms": 11,
+    "parser_backend_version": "1.27.1",
+    "processing_ms": 12,
     "row_assembly_version": "row-assembly-v2",
     "semantic_shadow_actionable_findings": 0,
-    "semantic_shadow_confidence": 1.0,
-    "semantic_shadow_observation_gate_pass": 1,
-    "semantic_shadow_reference_gate_pass": 1,
-    "semantic_shadow_state": "shadow_fully_recoverable",
-    "semantic_shadow_structural_gate_pass": 1,
-    "semantic_shadow_support_banner": "fully_supported",
+    "semantic_shadow_confidence": 0.0,
+    "semantic_shadow_observation_gate_pass": 0,
+    "semantic_shadow_reference_gate_pass": 0,
+    "semantic_shadow_state": "shadow_not_recoverable",
+    "semantic_shadow_structural_gate_pass": 0,
+    "semantic_shadow_support_banner": "could_not_assess",
     "semantic_shadow_threshold_conflicts": 0
   },
   "regression_tags": [],
@@ -115,12 +120,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -139,7 +144,7 @@
         "report_type": "truth_engine_pipeline"
       },
       "report_name": "ablation_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     },
     "clinician_scan_report.json": {
       "artifact_refs": {
@@ -149,12 +154,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -172,7 +177,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "clinician_scan_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     },
     "coverage_report.json": {
       "artifact_refs": {
@@ -182,12 +187,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -203,33 +208,33 @@
       },
       "payload": {
         "metrics": {
-          "clean_rows": 2,
-          "completeness_observation_state": "complete",
-          "completeness_page_coverage_ratio": 1.0,
-          "completeness_reference_coverage_ratio": 1.0,
-          "completeness_reference_state": "complete",
-          "completeness_structural_ratio": 1.0,
-          "completeness_structural_state": "complete",
-          "completeness_supported_ratio": 1.0,
-          "extracted_rows": 2,
-          "findings": 2,
-          "panels": 1,
+          "clean_rows": 0,
+          "completeness_observation_state": "absent",
+          "completeness_page_coverage_ratio": 0.0,
+          "completeness_reference_coverage_ratio": 0.0,
+          "completeness_reference_state": "unavailable",
+          "completeness_structural_ratio": 0.0,
+          "completeness_structural_state": "absent",
+          "completeness_supported_ratio": 0.0,
+          "extracted_rows": 5,
+          "findings": 0,
+          "panels": 0,
           "parser_backend": "pymupdf",
-          "parser_backend_version": "1.27.2.2",
+          "parser_backend_version": "1.27.1",
           "row_assembly_version": "row-assembly-v2",
           "semantic_shadow_actionable_findings": 0,
-          "semantic_shadow_confidence": 1.0,
-          "semantic_shadow_observation_gate_pass": 1,
-          "semantic_shadow_reference_gate_pass": 1,
-          "semantic_shadow_state": "shadow_fully_recoverable",
-          "semantic_shadow_structural_gate_pass": 1,
-          "semantic_shadow_support_banner": "fully_supported",
+          "semantic_shadow_confidence": 0.0,
+          "semantic_shadow_observation_gate_pass": 0,
+          "semantic_shadow_reference_gate_pass": 0,
+          "semantic_shadow_state": "shadow_not_recoverable",
+          "semantic_shadow_structural_gate_pass": 0,
+          "semantic_shadow_support_banner": "could_not_assess",
           "semantic_shadow_threshold_conflicts": 0
         },
         "regressed_metrics": []
       },
       "report_name": "coverage_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     },
     "explanation_report.json": {
       "artifact_refs": {
@@ -239,12 +244,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -263,7 +268,7 @@
         "template_version": "templates-v1"
       },
       "report_name": "explanation_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     },
     "mapping_report.json": {
       "artifact_refs": {
@@ -273,12 +278,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -297,34 +302,34 @@
           "default": 0.9
         },
         "metrics": {
-          "clean_rows": 2,
-          "completeness_observation_state": "complete",
-          "completeness_page_coverage_ratio": 1.0,
-          "completeness_reference_coverage_ratio": 1.0,
-          "completeness_reference_state": "complete",
-          "completeness_structural_ratio": 1.0,
-          "completeness_structural_state": "complete",
-          "completeness_supported_ratio": 1.0,
-          "extracted_rows": 2,
-          "extraction_ms": 7,
-          "findings": 2,
-          "panels": 1,
+          "clean_rows": 0,
+          "completeness_observation_state": "absent",
+          "completeness_page_coverage_ratio": 0.0,
+          "completeness_reference_coverage_ratio": 0.0,
+          "completeness_reference_state": "unavailable",
+          "completeness_structural_ratio": 0.0,
+          "completeness_structural_state": "absent",
+          "completeness_supported_ratio": 0.0,
+          "extracted_rows": 5,
+          "extraction_ms": 9,
+          "findings": 0,
+          "panels": 0,
           "parser_backend": "pymupdf",
-          "parser_backend_version": "1.27.2.2",
-          "processing_ms": 11,
+          "parser_backend_version": "1.27.1",
+          "processing_ms": 12,
           "row_assembly_version": "row-assembly-v2",
           "semantic_shadow_actionable_findings": 0,
-          "semantic_shadow_confidence": 1.0,
-          "semantic_shadow_observation_gate_pass": 1,
-          "semantic_shadow_reference_gate_pass": 1,
-          "semantic_shadow_state": "shadow_fully_recoverable",
-          "semantic_shadow_structural_gate_pass": 1,
-          "semantic_shadow_support_banner": "fully_supported",
+          "semantic_shadow_confidence": 0.0,
+          "semantic_shadow_observation_gate_pass": 0,
+          "semantic_shadow_reference_gate_pass": 0,
+          "semantic_shadow_state": "shadow_not_recoverable",
+          "semantic_shadow_structural_gate_pass": 0,
+          "semantic_shadow_support_banner": "could_not_assess",
           "semantic_shadow_threshold_conflicts": 0
         }
       },
       "report_name": "mapping_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     },
     "parser_report.json": {
       "artifact_refs": {
@@ -334,12 +339,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -356,12 +361,12 @@
       "payload": {
         "regression_tags": [],
         "timing": {
-          "extraction_ms": 7,
-          "processing_ms": 11
+          "extraction_ms": 9,
+          "processing_ms": 12
         }
       },
       "report_name": "parser_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     },
     "partial_support_report.json": {
       "artifact_refs": {
@@ -371,12 +376,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -397,7 +402,7 @@
         }
       },
       "report_name": "partial_support_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     },
     "patient_comprehension_report.json": {
       "artifact_refs": {
@@ -407,12 +412,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -430,7 +435,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "patient_comprehension_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     },
     "policy_report.json": {
       "artifact_refs": {
@@ -440,12 +445,12 @@
         "patient_artifact": "/api/artifacts/c347b7de-d811-5d7e-ad58-c3d0374b0d99/patient",
         "proof_pack": "/api/jobs/c347b7de-d811-5d7e-ad58-c3d0374b0d99/proof-pack"
       },
-      "benchmark_id": "26d92070-7b6c-521e-b503-b4f5a02b49af",
+      "benchmark_id": "1bc39512-4dfe-53e2-8592-9577cec46e90",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "und",
-      "lineage_id": "53178fc7-8d80-538a-aade-20f7144a9ec6",
+      "lineage_id": "7f304af3-f2f3-5c4c-81a2-5087eb3ebe91",
       "lineage_version_ids": {
         "family_adapter_version": "family-adapter-v1",
         "model_version": null,
@@ -466,41 +471,41 @@
         "severity_policy_version": "severity-v1"
       },
       "report_name": "policy_report.json",
-      "timestamp": "2026-04-14T23:17:58.012215Z"
+      "timestamp": "2026-04-15T04:34:26.603448Z"
     }
   },
   "summary": {
     "baseline_checks": {},
     "family_benchmarks": {},
     "metrics": {
-      "clean_rows": 2,
-      "completeness_observation_state": "complete",
-      "completeness_page_coverage_ratio": 1.0,
-      "completeness_reference_coverage_ratio": 1.0,
-      "completeness_reference_state": "complete",
-      "completeness_structural_ratio": 1.0,
-      "completeness_structural_state": "complete",
-      "completeness_supported_ratio": 1.0,
-      "extracted_rows": 2,
-      "findings": 2,
-      "panels": 1,
+      "clean_rows": 0,
+      "completeness_observation_state": "absent",
+      "completeness_page_coverage_ratio": 0.0,
+      "completeness_reference_coverage_ratio": 0.0,
+      "completeness_reference_state": "unavailable",
+      "completeness_structural_ratio": 0.0,
+      "completeness_structural_state": "absent",
+      "completeness_supported_ratio": 0.0,
+      "extracted_rows": 5,
+      "findings": 0,
+      "panels": 0,
       "parser_backend": "pymupdf",
-      "parser_backend_version": "1.27.2.2",
+      "parser_backend_version": "1.27.1",
       "row_assembly_version": "row-assembly-v2",
       "semantic_shadow_actionable_findings": 0,
-      "semantic_shadow_confidence": 1.0,
-      "semantic_shadow_observation_gate_pass": 1,
-      "semantic_shadow_reference_gate_pass": 1,
-      "semantic_shadow_state": "shadow_fully_recoverable",
-      "semantic_shadow_structural_gate_pass": 1,
-      "semantic_shadow_support_banner": "fully_supported",
+      "semantic_shadow_confidence": 0.0,
+      "semantic_shadow_observation_gate_pass": 0,
+      "semantic_shadow_reference_gate_pass": 0,
+      "semantic_shadow_state": "shadow_not_recoverable",
+      "semantic_shadow_structural_gate_pass": 0,
+      "semantic_shadow_support_banner": "could_not_assess",
       "semantic_shadow_threshold_conflicts": 0
     },
     "regressed_metrics": [],
     "regression_tags": [],
     "timing": {
-      "extraction_ms": 7,
-      "processing_ms": 11
+      "extraction_ms": 9,
+      "processing_ms": 12
     },
     "trace_refs": {}
   },
