@@ -207,6 +207,7 @@ export default function ClinicianShare({
   const [pdfStatus, setPdfStatus] = useState<
     'idle' | 'downloading' | 'downloaded' | 'failed'
   >('idle');
+  const [showAllNotAssessed, setShowAllNotAssessed] = useState(false);
 
   useEffect(() => {
     if (previewArtifact) {
@@ -272,6 +273,11 @@ export default function ClinicianShare({
     () => (artifact ? buildDisplayFindings(artifact, patientArtifact) : []),
     [artifact, patientArtifact],
   );
+  const visibleNotAssessed = artifact
+    ? showAllNotAssessed
+      ? artifact.not_assessed
+      : artifact.not_assessed.slice(0, 2)
+    : [];
 
   const handleCopySummary = useCallback(async () => {
     if (!artifact || typeof navigator === 'undefined' || !navigator.clipboard) {
@@ -391,398 +397,453 @@ export default function ClinicianShare({
       compact
       title="Clinician Summary"
       subtitle="Scannable structured handoff."
-      rightSlot={supportMeta ? <PillBadge tone={supportMeta.tone}>{supportMeta.label}</PillBadge> : undefined}
+      rightSlot={
+        supportMeta ? (
+          <PillBadge tone={supportMeta.tone}>{supportMeta.label}</PillBadge>
+        ) : undefined
+      }
+      contentMaxWidth={1120}
     >
-      <SurfaceCard style={{ marginTop: '0.65rem', padding: '0.85rem' }}>
-        <div style={{ minWidth: 0 }}>
-          <p
-            style={{
-              margin: '0 0 0.22rem',
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: STITCH_COLORS.textMuted,
-            }}
-          >
-            Report date
-          </p>
-          <p
-            style={{
-              margin: 0,
-              fontSize: '0.98rem',
-              fontWeight: 700,
-              color: STITCH_COLORS.textHeading,
-            }}
-          >
-            {artifact.report_date}
-          </p>
-        </div>
+      <div className="stitch-grid-two stitch-enter" style={{ marginTop: '0.65rem' }}>
+        <div className="stitch-flow">
+          <section>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.6rem',
+                marginBottom: '0.5rem',
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  color: STITCH_COLORS.textHeading,
+                }}
+              >
+                Top findings
+              </h3>
+              <PillBadge tone={displayFindings.length > 0 ? 'beta' : 'neutral'}>
+                {displayFindings.length > 0
+                  ? `${displayFindings.length} item${displayFindings.length > 1 ? 's' : ''}`
+                  : 'None'}
+              </PillBadge>
+            </div>
 
-        <p
-          style={{
-            margin: '0.5rem 0 0',
-            fontSize: '0.88rem',
-            lineHeight: 1.55,
-            color: STITCH_COLORS.textSecondary,
-          }}
-        >
-          {formatSupportCoverage(artifact.support_coverage)}
-        </p>
+            {displayFindings.length > 0 ? (
+              <div className="stitch-flow" style={{ gap: '0.55rem' }}>
+                {displayFindings.map((finding) => {
+                  const severityMeta = SEVERITY_META[finding.severityClass];
+                  const nextStepMeta = finding.nextstepClass
+                    ? NEXTSTEP_META[finding.nextstepClass]
+                    : null;
+                  const isExpanded = expandedFinding === finding.id;
 
-        <p
-          style={{
-            margin: '0.35rem 0 0',
-            fontSize: '0.74rem',
-            lineHeight: 1.45,
-            color: trustMeta?.color ?? STITCH_COLORS.textMuted,
-            fontWeight: 700,
-          }}
-        >
-          {trustMeta?.label ?? 'Trusted PDF lane'}
-        </p>
-
-        <p
-          style={{
-            margin: '0.45rem 0 0',
-            fontSize: '0.74rem',
-            lineHeight: 1.45,
-            color: STITCH_COLORS.textMuted,
-            fontWeight: 600,
-          }}
-        >
-          Structured findings only. No diagnosis or treatment advice.
-        </p>
-
-        {artifact.provenance_link && (
-          <a
-            href={artifact.provenance_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              marginTop: '0.55rem',
-              color: STITCH_COLORS.blue,
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-            }}
-          >
-            Source document
-          </a>
-        )}
-      </SurfaceCard>
-
-      <section style={{ marginTop: '0.85rem' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.6rem',
-            marginBottom: '0.5rem',
-          }}
-        >
-          <h3
-            style={{
-              margin: 0,
-              fontSize: '1rem',
-              fontWeight: 700,
-              color: STITCH_COLORS.textHeading,
-            }}
-          >
-            Top findings
-          </h3>
-          <PillBadge tone={displayFindings.length > 0 ? 'beta' : 'neutral'}>
-            {displayFindings.length > 0
-              ? `${displayFindings.length} item${displayFindings.length > 1 ? 's' : ''}`
-              : 'None'}
-          </PillBadge>
-        </div>
-
-        {displayFindings.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            {displayFindings.map((finding) => {
-              const severityMeta = SEVERITY_META[finding.severityClass];
-              const nextStepMeta = finding.nextstepClass
-                ? NEXTSTEP_META[finding.nextstepClass]
-                : null;
-              const isExpanded = expandedFinding === finding.id;
-
-              return (
-                <SurfaceCard key={finding.id} style={{ padding: '0.82rem' }}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExpandedFinding(isExpanded ? null : finding.id)
-                    }
-                    style={{
-                      width: '100%',
-                      border: 'none',
-                      background: 'none',
-                      textAlign: 'left',
-                      padding: 0,
-                      cursor: 'pointer',
-                    }}
-                    aria-expanded={isExpanded}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '0.6rem',
-                        alignItems: 'flex-start',
-                      }}
-                    >
-                      <div style={{ minWidth: 0 }}>
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.08em',
-                            color: STITCH_COLORS.textMuted,
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          {finding.analyteLabel}
-                        </p>
-                        <p
-                          style={{
-                            margin: '0.24rem 0 0',
-                            fontSize: '1.05rem',
-                            fontWeight: 800,
-                            color: STITCH_COLORS.textHeading,
-                            lineHeight: 1.25,
-                          }}
-                        >
-                          {finding.measurement ?? severityMeta.label}
-                        </p>
-                      </div>
-                      <span
-                        aria-hidden="true"
+                  return (
+                    <SurfaceCard key={finding.id} style={{ padding: '0.92rem' }}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedFinding(isExpanded ? null : finding.id)
+                        }
                         style={{
-                          color: STITCH_COLORS.textMuted,
-                          fontSize: '0.88rem',
-                          width: 30,
-                          height: 30,
-                          borderRadius: '50%',
-                          backgroundColor: STITCH_COLORS.surfaceLow,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
+                          width: '100%',
+                          border: 'none',
+                          background: 'none',
+                          textAlign: 'left',
+                          padding: 0,
+                          cursor: 'pointer',
                         }}
+                        aria-expanded={isExpanded}
                       >
-                        {isExpanded ? '▾' : '▸'}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.35rem',
-                        marginTop: '0.55rem',
-                      }}
-                    >
-                      <div
-                        style={{
-                          padding: '0.55rem 0.65rem',
-                          borderRadius: STITCH_RADIUS.md,
-                          backgroundColor: severityMeta.bg,
-                          color: severityMeta.color,
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          lineHeight: 1.45,
-                        }}
-                      >
-                        {finding.severityClass} · {severityMeta.label}
-                      </div>
-                      {nextStepMeta && (
                         <div
                           style={{
-                            padding: '0.55rem 0.65rem',
-                            borderRadius: STITCH_RADIUS.md,
-                            backgroundColor: nextStepMeta.bg,
-                            color: nextStepMeta.color,
-                            fontSize: '0.8rem',
-                            fontWeight: 700,
-                            lineHeight: 1.45,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: '0.7rem',
+                            alignItems: 'flex-start',
                           }}
                         >
-                          {finding.nextstepClass} · {nextStepMeta.label}
+                          <div style={{ minWidth: 0 }}>
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.08em',
+                                color: STITCH_COLORS.textMuted,
+                                lineHeight: 1.3,
+                              }}
+                            >
+                              {finding.analyteLabel}
+                            </p>
+                            <p
+                              style={{
+                                margin: '0.24rem 0 0',
+                                fontSize: '1rem',
+                                fontWeight: 800,
+                                color: STITCH_COLORS.textHeading,
+                                lineHeight: 1.3,
+                              }}
+                            >
+                              {finding.measurement ?? severityMeta.label}
+                            </p>
+                          </div>
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              color: STITCH_COLORS.textMuted,
+                              fontSize: '0.88rem',
+                              width: 34,
+                              height: 34,
+                              borderRadius: '50%',
+                              backgroundColor: STITCH_COLORS.surfaceLow,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {isExpanded ? '▾' : '▸'}
+                          </span>
+                        </div>
+
+                        <div className="stitch-segment-row" style={{ marginTop: '0.6rem' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '0.38rem 0.62rem',
+                              borderRadius: STITCH_RADIUS.pill,
+                              backgroundColor: severityMeta.bg,
+                              color: severityMeta.color,
+                              fontSize: '0.76rem',
+                              fontWeight: 700,
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {finding.severityClass} · {severityMeta.label}
+                          </span>
+                          {nextStepMeta && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '0.38rem 0.62rem',
+                                borderRadius: STITCH_RADIUS.pill,
+                                backgroundColor: nextStepMeta.bg,
+                                color: nextStepMeta.color,
+                                fontSize: '0.76rem',
+                                fontWeight: 700,
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              {finding.nextstepClass} · {nextStepMeta.label}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="stitch-compact-list" style={{ marginTop: '0.7rem' }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: '0.82rem',
+                              lineHeight: 1.55,
+                              color: STITCH_COLORS.textSecondary,
+                            }}
+                          >
+                            {finding.threshold}
+                          </p>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: '0.82rem',
+                              lineHeight: 1.55,
+                              color: STITCH_COLORS.textSecondary,
+                            }}
+                          >
+                            {finding.detail ?? finding.summary}
+                          </p>
                         </div>
                       )}
-                    </div>
+                    </SurfaceCard>
+                  );
+                })}
+              </div>
+            ) : (
+              <SurfaceCard style={{ padding: '0.9rem' }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '0.86rem',
+                    lineHeight: 1.58,
+                    color: STITCH_COLORS.textSecondary,
+                  }}
+                >
+                  No top findings were supplied.
+                </p>
+              </SurfaceCard>
+            )}
+          </section>
 
-                    <p
-                      style={{
-                        margin: '0.55rem 0 0',
-                        fontSize: '0.8rem',
-                        lineHeight: 1.5,
-                        color: STITCH_COLORS.textSecondary,
-                      }}
-                    >
-                      {finding.threshold}
-                    </p>
-                  </button>
+          <section>
+            <SurfaceCard
+              style={{
+                padding: '0.9rem',
+                border: '2px dashed rgba(118, 118, 126, 0.22)',
+                boxShadow: 'none',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.6rem',
+                  marginBottom: '0.55rem',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      color: STITCH_COLORS.textHeading,
+                    }}
+                  >
+                    Items not assessed
+                  </h3>
+                  <p
+                    style={{
+                      margin: '0.18rem 0 0',
+                      fontSize: '0.82rem',
+                      lineHeight: 1.5,
+                      color: STITCH_COLORS.textSecondary,
+                    }}
+                  >
+                    Unsupported items remain visible for honest handoff.
+                  </p>
+                </div>
+                {artifact.not_assessed.length > 0 && (
+                  <PillBadge tone="neutral">
+                    {artifact.not_assessed.length} item
+                    {artifact.not_assessed.length > 1 ? 's' : ''}
+                  </PillBadge>
+                )}
+              </div>
 
-                  {isExpanded && (
-                    <p
+              {artifact.not_assessed.length > 0 ? (
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: '1.05rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.42rem',
+                  }}
+                >
+                  {visibleNotAssessed.map((item, index) => (
+                    <li
+                      key={`${item.raw_label}-${index}`}
                       style={{
-                        margin: '0.55rem 0 0',
-                        fontSize: '0.82rem',
+                        fontSize: '0.84rem',
                         lineHeight: 1.55,
                         color: STITCH_COLORS.textSecondary,
                       }}
                     >
-                      {finding.detail ?? finding.summary}
-                    </p>
-                  )}
-                </SurfaceCard>
-              );
-            })}
-          </div>
-        ) : (
-          <SurfaceCard style={{ padding: '0.84rem' }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: '0.86rem',
-                lineHeight: 1.55,
-                color: STITCH_COLORS.textSecondary,
-              }}
-            >
-              No top findings were supplied.
-            </p>
-          </SurfaceCard>
-        )}
-      </section>
-
-      <section style={{ marginTop: '0.85rem' }}>
-        <h3
-          style={{
-            margin: '0 0 0.45rem',
-            fontSize: '1rem',
-            fontWeight: 700,
-            color: STITCH_COLORS.textHeading,
-          }}
-        >
-          Items not assessed
-        </h3>
-        <div
-          style={{
-            ...pageCardStyle({
-              padding: '0.8rem',
-              border: '2px dashed rgba(118, 118, 126, 0.22)',
-              boxShadow: 'none',
-            }),
-          }}
-        >
-          {artifact.not_assessed.length > 0 ? (
-            <ul
-              style={{
-                margin: 0,
-                paddingLeft: '1.05rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.42rem',
-              }}
-            >
-              {artifact.not_assessed.map((item, index) => (
-                <li
-                  key={`${item.raw_label}-${index}`}
+                      <strong style={{ color: STITCH_COLORS.textHeading }}>
+                        {item.raw_label}
+                      </strong>{' '}
+                      — {item.reason}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p
                   style={{
+                    margin: 0,
                     fontSize: '0.84rem',
-                    lineHeight: 1.5,
+                    lineHeight: 1.55,
                     color: STITCH_COLORS.textSecondary,
                   }}
                 >
-                  <strong style={{ color: STITCH_COLORS.textHeading }}>
-                    {item.raw_label}
-                  </strong>{' '}
-                  — {item.reason}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p
-              style={{
-                margin: 0,
-                fontSize: '0.84rem',
-                lineHeight: 1.5,
-                color: STITCH_COLORS.textSecondary,
-              }}
-            >
-              No items were left unassessed.
-            </p>
-          )}
-        </div>
-      </section>
+                  No items were left unassessed.
+                </p>
+              )}
 
-      <section style={{ marginTop: '0.85rem' }}>
-        <div
-          style={{
-            backgroundColor: STITCH_COLORS.navy,
-            borderRadius: STITCH_RADIUS.lg,
-            padding: '0.75rem',
-            color: STITCH_COLORS.surfaceWhite,
-          }}
-        >
-          <p
+              {artifact.not_assessed.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllNotAssessed((prev) => !prev)}
+                  style={{
+                    marginTop: '0.75rem',
+                    border: 'none',
+                    background: 'none',
+                    padding: 0,
+                    color: STITCH_COLORS.blue,
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {showAllNotAssessed
+                    ? 'Show fewer items'
+                    : `Show all ${artifact.not_assessed.length} items`}
+                </button>
+              )}
+            </SurfaceCard>
+          </section>
+        </div>
+
+        <aside className="stitch-rail">
+          <SurfaceCard
             style={{
-              margin: '0 0 0.5rem',
-              fontSize: '0.68rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: 'rgba(255,255,255,0.64)',
-              textAlign: 'center',
+              padding: '1rem',
+              background:
+                'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(255,246,248,0.94) 100%)',
             }}
           >
-            Share or save
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {canShare() ? (
-              <PrimaryButton onClick={() => void handleShareSummary()}>
-                Share summary
-              </PrimaryButton>
-            ) : (
-              <PrimaryButton onClick={() => void handleCopySummary()}>
-                {copyStatus === 'copied'
-                  ? 'Summary copied'
-                  : copyStatus === 'failed'
-                    ? 'Copy failed'
-                  : 'Copy summary'}
-              </PrimaryButton>
-            )}
-            {jobId && (
-              <SecondaryButton onClick={() => void handleDownloadPdf()}>
-                {pdfStatus === 'downloading'
-                  ? 'Downloading PDF\u2026'
-                  : pdfStatus === 'downloaded'
-                    ? 'PDF downloaded'
-                    : pdfStatus === 'failed'
-                      ? 'Download failed'
-                      : 'Download clinician PDF'}
-              </SecondaryButton>
-            )}
-            <SecondaryButton onClick={handleExportSummary}>
-              Export summary
-            </SecondaryButton>
-          </div>
-        </div>
-      </section>
+            <div className="stitch-compact-list">
+              <div>
+                <p
+                  style={{
+                    margin: '0 0 0.22rem',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: STITCH_COLORS.textMuted,
+                  }}
+                >
+                  Report date
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    color: STITCH_COLORS.textHeading,
+                  }}
+                >
+                  {artifact.report_date}
+                </p>
+              </div>
 
-      {onNavigateBack && (
-        <SecondaryButton onClick={onNavigateBack} style={{ marginTop: '0.85rem' }}>
-          Back to patient summary
-        </SecondaryButton>
-      )}
+              <div className="stitch-segment-row">
+                {supportMeta && (
+                  <PillBadge tone={supportMeta.tone}>{supportMeta.label}</PillBadge>
+                )}
+                {trustMeta && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '4px 10px',
+                      borderRadius: STITCH_RADIUS.pill,
+                      backgroundColor:
+                        trustMeta.tone === 'trusted'
+                          ? STITCH_COLORS.trustedBg
+                          : STITCH_COLORS.betaBg,
+                      color: trustMeta.color,
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {trustMeta.label}
+                  </span>
+                )}
+              </div>
+
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.84rem',
+                  lineHeight: 1.55,
+                  color: STITCH_COLORS.textSecondary,
+                }}
+              >
+                Structured findings only. No diagnosis or treatment advice.
+              </p>
+
+              {artifact.provenance_link && (
+                <a
+                  href={artifact.provenance_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    color: STITCH_COLORS.blue,
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Source document
+                </a>
+              )}
+
+              <div className="stitch-divider" />
+
+              <div className="stitch-flow" style={{ gap: '0.5rem' }}>
+                {canShare() ? (
+                  <PrimaryButton onClick={() => void handleShareSummary()}>
+                    Share summary
+                  </PrimaryButton>
+                ) : (
+                  <PrimaryButton onClick={() => void handleCopySummary()}>
+                    {copyStatus === 'copied'
+                      ? 'Summary copied'
+                      : copyStatus === 'failed'
+                        ? 'Copy failed'
+                        : 'Copy summary'}
+                  </PrimaryButton>
+                )}
+                {jobId && (
+                  <SecondaryButton onClick={() => void handleDownloadPdf()}>
+                    {pdfStatus === 'downloading'
+                      ? 'Downloading PDF…'
+                      : pdfStatus === 'downloaded'
+                        ? 'PDF downloaded'
+                        : pdfStatus === 'failed'
+                          ? 'Download failed'
+                          : 'Download clinician PDF'}
+                  </SecondaryButton>
+                )}
+                <SecondaryButton onClick={handleExportSummary}>
+                  Export summary
+                </SecondaryButton>
+                {onNavigateBack && (
+                  <SecondaryButton onClick={onNavigateBack}>
+                    Back to patient summary
+                  </SecondaryButton>
+                )}
+              </div>
+
+              {copyStatus === 'failed' && !canShare() && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '0.78rem',
+                    lineHeight: 1.45,
+                    color: STITCH_COLORS.errorText,
+                  }}
+                >
+                  Clipboard access is not available in this browser.
+                </p>
+              )}
+            </div>
+          </SurfaceCard>
+        </aside>
+      </div>
     </PageChrome>
   );
 }

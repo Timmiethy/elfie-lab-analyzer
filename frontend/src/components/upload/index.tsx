@@ -10,6 +10,7 @@ import type { LaneType, UploadResponse } from '../../types';
 import {
   PageChrome,
   PrimaryButton,
+  SecondaryButton,
   SurfaceCard,
 } from '../common';
 import {
@@ -151,6 +152,7 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
           Recommended
         </div>
       }
+      contentMaxWidth={1040}
     >
       {notice && (
         <div
@@ -176,229 +178,299 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
       )}
 
       <form onSubmit={handleSubmit}>
-        <SurfaceCard
-          style={{
-            padding: '1.25rem 1rem 1.1rem',
-            marginTop: '0.9rem',
-          }}
-        >
-          {selectedFile ? (
-            <div>
-              <div
-                style={{
-                  padding: '0.8rem 0.9rem',
-                  borderRadius: STITCH_RADIUS.md,
-                  backgroundColor: isPdf
-                    ? STITCH_COLORS.trustedBg
-                    : STITCH_COLORS.surfaceLow,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '0.75rem',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <p
+        <div className="stitch-upload-layout stitch-enter" style={{ marginTop: '0.9rem' }}>
+          <SurfaceCard
+            style={{
+              padding: '1.25rem 1rem 1.1rem',
+              background:
+                'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(255,246,248,0.94) 100%)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+                marginBottom: '0.9rem',
+              }}
+            >
+              {['PDF preferred', 'Images supported', `Max ${MAX_SIZE_MB} MB`].map(
+                (label) => (
+                  <span
+                    key={label}
                     style={{
-                      margin: 0,
-                      fontSize: '0.88rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '0.38rem 0.72rem',
+                      borderRadius: STITCH_RADIUS.pill,
+                      backgroundColor: STITCH_COLORS.surfaceWhite,
+                      border: `1px solid ${STITCH_COLORS.borderGhost}`,
+                      fontSize: '0.74rem',
                       fontWeight: 700,
-                      color: STITCH_COLORS.textHeading,
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    {selectedFile.name}
-                  </p>
-                  <p
-                    style={{
-                      margin: '0.25rem 0 0',
-                      fontSize: '0.78rem',
                       color: STITCH_COLORS.textSecondary,
                     }}
                   >
-                    {isPdf
-                      ? `PDF \u00B7 ${fileSizeLabel(selectedFile.size)} \u00B7 clearest results`
-                      : isImage
-                        ? `Image \u00B7 ${fileSizeLabel(selectedFile.size)} \u00B7 support may be partial`
-                        : `${fileSizeLabel(selectedFile.size)}`}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={clearFile}
-                  style={{
-                    border: 'none',
-                    background: 'none',
-                    color: STITCH_COLORS.textSecondary,
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    padding: 0,
-                    flexShrink: 0,
-                  }}
-                  aria-label="Remove selected file"
-                >
-                  Remove
-                </button>
-              </div>
-
-              {error && (
-                <div
-                  role="alert"
-                  style={{
-                    marginTop: '0.75rem',
-                    padding: '0.7rem 0.8rem',
-                    borderRadius: STITCH_RADIUS.sm,
-                    backgroundColor: STITCH_COLORS.errorBg,
-                    color: STITCH_COLORS.errorText,
-                    fontSize: '0.84rem',
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {error}
-                </div>
+                    {label}
+                  </span>
+                ),
               )}
+            </div>
 
-              <div style={{ marginTop: '1rem' }}>
+            {selectedFile ? (
+              <div className="stitch-stack-tight">
+                <div
+                  style={{
+                    padding: '0.9rem 0.95rem',
+                    borderRadius: STITCH_RADIUS.lg,
+                    backgroundColor: isPdf
+                      ? STITCH_COLORS.trustedBg
+                      : STITCH_COLORS.surfaceLow,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '0.75rem',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <p
+                      style={{
+                        margin: '0 0 0.18rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: STITCH_COLORS.textMuted,
+                      }}
+                    >
+                      Selected file
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '0.94rem',
+                        fontWeight: 700,
+                        color: STITCH_COLORS.textHeading,
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {selectedFile.name}
+                    </p>
+                    <p
+                      style={{
+                        margin: '0.28rem 0 0',
+                        fontSize: '0.8rem',
+                        lineHeight: 1.5,
+                        color: STITCH_COLORS.textSecondary,
+                      }}
+                    >
+                      {isPdf
+                        ? `PDF · ${fileSizeLabel(selectedFile.size)} · clearest support coverage`
+                        : isImage
+                          ? `Image · ${fileSizeLabel(selectedFile.size)} · support may be partial`
+                          : fileSizeLabel(selectedFile.size)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearFile}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      color: STITCH_COLORS.textSecondary,
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: 0,
+                      flexShrink: 0,
+                    }}
+                    aria-label="Remove selected file"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                {error && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '0.75rem 0.85rem',
+                      borderRadius: STITCH_RADIUS.md,
+                      backgroundColor: STITCH_COLORS.errorBg,
+                      color: STITCH_COLORS.errorText,
+                      fontSize: '0.84rem',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {error}
+                  </div>
+                )}
+
                 <PrimaryButton
                   type="submit"
                   disabled={!hasValidFile || uploading}
                 >
-                  {uploading ? 'Analyzing report\u2026' : 'Analyze Report'}
+                  {uploading ? 'Analyzing report…' : 'Analyze report'}
                 </PrimaryButton>
               </div>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <p
-                style={{
-                  margin: '0 0 0.25rem',
-                  fontSize: '0.92rem',
-                  fontWeight: 600,
-                  color: STITCH_COLORS.textHeading,
-                  textAlign: 'center',
-                }}
-              >
-                Choose a file to upload
-              </p>
+            ) : (
+              <div className="stitch-stack-tight">
+                <div>
+                  <p
+                    style={{
+                      margin: '0 0 0.16rem',
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: STITCH_COLORS.textMuted,
+                    }}
+                  >
+                    Start with the clearest file
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '1.1rem',
+                      fontWeight: 700,
+                      lineHeight: 1.4,
+                      color: STITCH_COLORS.textHeading,
+                    }}
+                  >
+                    Upload a PDF report first, or use a photo when that is all
+                    you have.
+                  </p>
+                </div>
 
-              <PrimaryButton
-                type="button"
-                onClick={() => pdfInputRef.current?.click()}
-                disabled={uploading}
-              >
-                Upload PDF Report
-              </PrimaryButton>
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  margin: '0.18rem 0 0.2rem',
-                }}
-              >
                 <div
-                  style={{ flex: 1, height: 1, backgroundColor: STITCH_COLORS.borderGhost }}
-                />
-                <span
                   style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    color: STITCH_COLORS.textMuted,
+                    padding: '1rem',
+                    borderRadius: STITCH_RADIUS.lg,
+                    backgroundColor: STITCH_COLORS.surfaceWhite,
+                    border: `1px solid ${STITCH_COLORS.borderGhost}`,
                   }}
                 >
-                  or
-                </span>
-                <div
-                  style={{ flex: 1, height: 1, backgroundColor: STITCH_COLORS.borderGhost }}
-                />
+                  <PrimaryButton
+                    type="button"
+                    onClick={() => pdfInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    Upload PDF report
+                  </PrimaryButton>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      margin: '0.8rem 0',
+                    }}
+                  >
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 1,
+                        backgroundColor: STITCH_COLORS.borderGhost,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: STITCH_COLORS.textMuted,
+                      }}
+                    >
+                      or
+                    </span>
+                    <div
+                      style={{
+                        flex: 1,
+                        height: 1,
+                        backgroundColor: STITCH_COLORS.borderGhost,
+                      }}
+                    />
+                  </div>
+
+                  <SecondaryButton
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    Upload a photo instead (beta)
+                  </SecondaryButton>
+                </div>
               </div>
+            )}
 
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                disabled={uploading}
-                style={{
-                  border: 'none',
-                  background: 'none',
-                  color: STITCH_COLORS.blue,
-                  fontSize: '0.86rem',
-                  fontWeight: 700,
-                  lineHeight: 1.4,
-                  padding: '0.1rem 0',
-                  cursor: uploading ? 'not-allowed' : 'pointer',
-                  opacity: uploading ? 0.65 : 1,
-                }}
-              >
-                Upload a photo instead (beta)
-              </button>
-            </div>
-          )}
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={handlePdfChange}
+              style={{ display: 'none' }}
+            />
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept=".png,.jpg,.jpeg,.tiff,.webp,image/png,image/jpeg,image/tiff,image/webp"
+              onChange={handleImageChange}
+              style={{ display: 'none' }}
+            />
+          </SurfaceCard>
 
-          <input
-            ref={pdfInputRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            onChange={handlePdfChange}
-            style={{ display: 'none' }}
-          />
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept=".png,.jpg,.jpeg,.tiff,.webp,image/png,image/jpeg,image/tiff,image/webp"
-            onChange={handleImageChange}
-            style={{ display: 'none' }}
-          />
-        </SurfaceCard>
-
-        <SurfaceCard
-          style={{
-            marginTop: '0.75rem',
-            padding: '0.85rem 0.95rem',
-            backgroundColor: STITCH_COLORS.surfaceLow,
-            boxShadow: 'none',
-          }}
-        >
-          <p
+          <SurfaceCard
             style={{
-              margin: '0 0 0.3rem',
-              fontSize: '0.74rem',
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: STITCH_COLORS.textMuted,
+              padding: '1rem',
+              backgroundColor: STITCH_COLORS.surfaceLow,
+              boxShadow: 'none',
             }}
           >
-            For your safety
-          </p>
-          <p
-            style={{
-              margin: 0,
-              fontSize: '0.86rem',
-              lineHeight: 1.55,
-              color: STITCH_COLORS.textSecondary,
-            }}
-          >
-            This tool is for wellness support only, not a diagnosis or
-            treatment plan. Photos and screenshots may not capture every result
-            clearly, so we will show you exactly what we can and cannot review.
-          </p>
-        </SurfaceCard>
+            <p
+              style={{
+                margin: '0 0 0.22rem',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: STITCH_COLORS.textMuted,
+              }}
+            >
+              Before you upload
+            </p>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '0.92rem',
+                fontWeight: 700,
+                lineHeight: 1.45,
+                color: STITCH_COLORS.textHeading,
+              }}
+            >
+              Start with a PDF when possible. Use a photo only when you do not
+              have the original report.
+            </p>
 
-        <p
-          style={{
-            margin: '0.85rem 0 0',
-            fontSize: '0.74rem',
-            lineHeight: 1.5,
-            color: STITCH_COLORS.textMuted,
-            textAlign: 'center',
-          }}
-        >
-          We check your results line by line before building a summary.
-        </p>
+            <div className="stitch-divider" style={{ margin: '0.85rem 0' }} />
+
+            <ul className="stitch-helper-list">
+              <li>PDFs usually keep the clearest row structure.</li>
+              <li>Image uploads may return a partial preview only.</li>
+              <li>Unsupported rows stay visible instead of being hidden.</li>
+            </ul>
+
+            <p
+              style={{
+                margin: '0.85rem 0 0',
+                fontSize: '0.82rem',
+                lineHeight: 1.55,
+                color: STITCH_COLORS.textSecondary,
+              }}
+            >
+              Wellness-support only. No diagnosis or treatment advice.
+            </p>
+          </SurfaceCard>
+        </div>
       </form>
     </PageChrome>
   );

@@ -9,7 +9,6 @@ import {
 import {
   STITCH_COLORS,
   STITCH_RADIUS,
-  STITCH_SHADOWS,
   pageCardStyle,
 } from '../common/system';
 
@@ -238,221 +237,228 @@ export default function Processing({
           <PillBadge tone="beta">{LANE_LABELS[laneType]}</PillBadge>
         ) : undefined
       }
+      contentMaxWidth={980}
     >
-      <SurfaceCard
-        style={{
-          padding: '1.4rem 1rem 1.25rem',
-          marginTop: '0.9rem',
-        }}
-      >
-        <div
+      <div className="stitch-processing-layout stitch-enter" style={{ marginTop: '0.9rem' }}>
+        <SurfaceCard
           style={{
-            position: 'relative',
-            width: 220,
-            height: 220,
-            margin: '0 auto 1.3rem',
+            padding: '1.35rem 1rem 1.2rem',
+            background:
+              'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(255,246,248,0.94) 100%)',
           }}
         >
-          <svg
-            viewBox="0 0 220 220"
-            style={{ width: '100%', height: '100%', display: 'block' }}
-          >
-            <circle
-              cx="110"
-              cy="110"
-              r={circleRadius}
-              fill="none"
-              stroke={STITCH_COLORS.surfaceHigh}
-              strokeWidth="10"
-            />
-            <circle
-              cx="110"
-              cy="110"
-              r={circleRadius}
-              fill="none"
-              stroke={STITCH_COLORS.pink}
-              strokeWidth="12"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={dashOffset}
-              style={{
-                transform: 'rotate(-90deg)',
-                transformOrigin: '50% 50%',
-                transition: 'stroke-dashoffset 200ms ease',
-              }}
-            />
-          </svg>
           <div
             style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
+              position: 'relative',
+              width: 220,
+              height: 220,
+              margin: '0 auto 1.15rem',
             }}
           >
+            <svg
+              viewBox="0 0 220 220"
+              style={{ width: '100%', height: '100%', display: 'block' }}
+            >
+              <circle
+                cx="110"
+                cy="110"
+                r={circleRadius}
+                fill="none"
+                stroke={STITCH_COLORS.surfaceHigh}
+                strokeWidth="10"
+              />
+              <circle
+                cx="110"
+                cy="110"
+                r={circleRadius}
+                fill="none"
+                stroke={STITCH_COLORS.pink}
+                strokeWidth="12"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+                style={{
+                  transform: 'rotate(-90deg)',
+                  transformOrigin: '50% 50%',
+                  transition: 'stroke-dashoffset 200ms ease',
+                }}
+              />
+            </svg>
             <div
               style={{
-                width: 46,
-                height: 46,
-                borderRadius: 14,
-                backgroundColor: 'rgba(255, 21, 112, 0.12)',
-                color: STITCH_COLORS.pink,
+                position: 'absolute',
+                inset: 0,
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '1.15rem',
-                fontWeight: 700,
-                marginBottom: '0.45rem',
               }}
             >
-              ▣
-            </div>
-            <span
-              style={{
-                fontSize: '2.6rem',
-                fontWeight: 800,
-                color: STITCH_COLORS.textHeading,
-                letterSpacing: '-0.05em',
-              }}
-            >
-              {progressPercent}%
-            </span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {DISPLAY_STAGES.map((stage, index) => {
-            const isDone = index < activeStageIndex;
-            const isActive = index === activeStageIndex;
-
-            return (
               <div
-                key={stage}
                 style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 14,
+                  backgroundColor: 'rgba(255, 21, 112, 0.12)',
+                  color: STITCH_COLORS.pink,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.9rem',
-                  color: isActive
-                    ? STITCH_COLORS.textHeading
-                    : STITCH_COLORS.textSecondary,
-                  fontWeight: isActive ? 700 : 600,
+                  justifyContent: 'center',
+                  fontSize: '1.15rem',
+                  fontWeight: 700,
+                  marginBottom: '0.45rem',
                 }}
               >
-                <div
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: STITCH_RADIUS.pill,
-                    backgroundColor: isDone
-                      ? '#6BFE9C'
-                      : isActive
-                        ? 'rgba(255, 21, 112, 0.12)'
-                        : STITCH_COLORS.surfaceLow,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: isDone
-                      ? STITCH_COLORS.navy
-                      : isActive
-                        ? STITCH_COLORS.pink
-                        : STITCH_COLORS.textMuted,
-                    flexShrink: 0,
-                    position: 'relative',
-                  }}
-                >
-                  {isDone ? (
-                    <span aria-hidden="true">✓</span>
-                  ) : isActive ? (
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: '50%',
-                        border: `2px solid ${STITCH_COLORS.pink}`,
-                        borderTopColor: 'transparent',
-                        display: 'inline-block',
-                        animation: 'spin 900ms linear infinite',
-                      }}
-                    />
-                  ) : (
-                    <span aria-hidden="true">•</span>
-                  )}
-                </div>
-                <span>{stage}</span>
+                ▣
               </div>
-            );
-          })}
-        </div>
-      </SurfaceCard>
+              <span
+                style={{
+                  fontSize: '2.6rem',
+                  fontWeight: 800,
+                  color: STITCH_COLORS.textHeading,
+                  letterSpacing: '-0.05em',
+                }}
+              >
+                {progressPercent}%
+              </span>
+            </div>
+          </div>
 
-      <div
-        style={{
-          marginTop: '1rem',
-          backgroundColor: STITCH_COLORS.navy,
-          borderRadius: STITCH_RADIUS.md,
-          padding: '1rem',
-          color: STITCH_COLORS.surfaceWhite,
-          boxShadow: STITCH_SHADOWS.lift,
-        }}
-      >
-        <div style={{ display: 'flex', gap: '0.85rem' }}>
           <div
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 14,
-              backgroundColor: STITCH_COLORS.pink,
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.1rem',
-              flexShrink: 0,
+              gap: 8,
+              padding: '0.45rem 0.8rem',
+              borderRadius: STITCH_RADIUS.pill,
+              backgroundColor: STITCH_COLORS.surfaceWhite,
+              border: `1px solid ${STITCH_COLORS.borderGhost}`,
+              marginBottom: '1rem',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: STITCH_COLORS.textHeading,
             }}
           >
-            ⚡
-          </div>
-          <div>
-            <p
+            <span
+              aria-hidden="true"
               style={{
-                margin: 0,
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: STITCH_COLORS.pink,
+                display: 'inline-block',
               }}
-            >
-              {isImageBeta ? 'Image beta active' : 'Support checks active'}
-            </p>
-            <p
-              style={{
-                margin: '0.35rem 0 0',
-                fontSize: '0.9rem',
-                lineHeight: 1.55,
-                color: 'rgba(255,255,255,0.78)',
-              }}
-            >
-              {isImageBeta
-                ? 'Photo and screenshot uploads may return a partial preview only. Unsupported or unreadable rows will stay visible instead of being hidden.'
-                : 'We validate support row by row before values are summarized. Only supported rows move into the patient artifact.'}
-            </p>
+            />
+            {backendLabel}
           </div>
-        </div>
-      </div>
 
-      <p
-        style={{
-          margin: '1rem 0 0',
-          fontSize: '0.8rem',
-          color: STITCH_COLORS.textSecondary,
-          lineHeight: 1.55,
-          textAlign: 'center',
-        }}
-      >
-        {backendLabel}. Processing may take a few seconds.
-      </p>
+          <div className="stitch-flow">
+            {DISPLAY_STAGES.map((stage, index) => {
+              const isDone = index < activeStageIndex;
+              const isActive = index === activeStageIndex;
+
+              return (
+                <div
+                  key={stage}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.9rem',
+                    color: isActive
+                      ? STITCH_COLORS.textHeading
+                      : STITCH_COLORS.textSecondary,
+                    fontWeight: isActive ? 700 : 600,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: STITCH_RADIUS.pill,
+                      backgroundColor: isDone
+                        ? '#6BFE9C'
+                        : isActive
+                          ? 'rgba(255, 21, 112, 0.12)'
+                          : STITCH_COLORS.surfaceLow,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: isDone
+                        ? STITCH_COLORS.navy
+                        : isActive
+                          ? STITCH_COLORS.pink
+                          : STITCH_COLORS.textMuted,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isDone ? (
+                      <span aria-hidden="true">✓</span>
+                    ) : isActive ? (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: '50%',
+                          border: `2px solid ${STITCH_COLORS.pink}`,
+                          borderTopColor: 'transparent',
+                          display: 'inline-block',
+                          animation: 'spin 900ms linear infinite',
+                        }}
+                      />
+                    ) : (
+                      <span aria-hidden="true">•</span>
+                    )}
+                  </div>
+                  <span>{stage}</span>
+                </div>
+              );
+            })}
+          </div>
+        </SurfaceCard>
+
+        <SurfaceCard
+          style={{
+            padding: '1rem',
+            backgroundColor: STITCH_COLORS.surfaceLow,
+            boxShadow: 'none',
+          }}
+        >
+          <p
+            style={{
+              margin: '0 0 0.24rem',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: STITCH_COLORS.textMuted,
+            }}
+          >
+            What to expect
+          </p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: '0.94rem',
+              fontWeight: 700,
+              lineHeight: 1.45,
+              color: STITCH_COLORS.textHeading,
+            }}
+          >
+            {isImageBeta
+              ? 'Image uploads may return a partial preview.'
+              : 'We are checking the report row by row before summarizing it.'}
+          </p>
+
+          <div className="stitch-divider" style={{ margin: '0.85rem 0' }} />
+
+          <ul className="stitch-helper-list">
+            <li>Only supported rows move into the patient summary.</li>
+            <li>Unsupported or unreadable rows stay visible instead of being hidden.</li>
+            <li>{backendLabel}. This usually takes a few seconds.</li>
+          </ul>
+        </SurfaceCard>
+      </div>
     </PageChrome>
   );
 }

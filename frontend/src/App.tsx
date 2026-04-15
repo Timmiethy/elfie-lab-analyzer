@@ -20,7 +20,6 @@ import {
   type PreviewLanguage,
   type PreviewVariant,
 } from './fixtures/stitchPreviewData';
-
 type AppState =
   | 'upload'
   | 'processing'
@@ -141,6 +140,27 @@ function App() {
 
   if (state === 'preview_selector') {
     const fixtures = listPreviewFixtures();
+    const coverageSummary = [
+      {
+        label: 'Fully supported',
+        value: fixtures.filter(
+          (fixture) => fixture.patientArtifact.support_banner === 'fully_supported',
+        ).length,
+      },
+      {
+        label: 'Partial support',
+        value: fixtures.filter(
+          (fixture) =>
+            fixture.patientArtifact.support_banner === 'partially_supported',
+        ).length,
+      },
+      {
+        label: 'Could not assess',
+        value: fixtures.filter(
+          (fixture) => fixture.patientArtifact.support_banner === 'could_not_assess',
+        ).length,
+      },
+    ];
 
     return (
       <PageChrome
@@ -148,135 +168,217 @@ function App() {
         title="Preview Fixtures"
         subtitle="Developer-only fixtures for reviewing result surfaces. Use the live upload flow for smoke validation."
         rightSlot={<PillBadge tone="neutral">Developer fixtures</PillBadge>}
+        contentMaxWidth={1040}
       >
-        <div
-          style={{
-            marginTop: '0.9rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.9rem',
-          }}
-        >
-          {fixtures.map((fixture) => (
+        <div className="stitch-preview-layout stitch-enter" style={{ marginTop: '0.9rem' }}>
+          <div className="stitch-flow">
             <SurfaceCard
-              key={`${fixture.language}_${fixture.variant}`}
-              style={{ padding: '1rem' }}
+              style={{
+                padding: '1.1rem',
+                background:
+                  'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,246,248,0.96) 100%)',
+              }}
             >
-              <div
+              <p
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
+                  margin: '0 0 0.35rem',
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: STITCH_COLORS.textMuted,
                 }}
               >
-                <div>
-                  <p
-                    style={{
-                      margin: '0 0 0.25rem',
-                      fontSize: '0.76rem',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      color: STITCH_COLORS.textMuted,
-                    }}
-                  >
-                    {fixture.language.toUpperCase()} ·{' '}
-                    {fixture.variant.replace(/_/g, ' ')}
-                  </p>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '0.92rem',
-                      lineHeight: 1.55,
-                      color: STITCH_COLORS.textSecondary,
-                    }}
-                  >
-                    {fixture.patientArtifact.support_banner.replace(/_/g, ' ')}
-                    {fixture.hasComparableHistory
-                      ? ' · comparable history present'
-                      : ' · no comparable history'}
-                  </p>
-                </div>
-                <PillBadge
-                  tone={
-                    fixture.patientArtifact.support_banner === 'fully_supported'
-                      ? 'trusted'
-                      : fixture.patientArtifact.support_banner ===
-                          'partially_supported'
-                        ? 'beta'
-                        : 'neutral'
-                  }
-                >
-                  {fixture.patientArtifact.overall_severity}
-                </PillBadge>
-              </div>
+                Review desk
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  lineHeight: 1.4,
+                  color: STITCH_COLORS.textHeading,
+                }}
+              >
+                Typed fixture routes for fast surface review.
+              </p>
+              <p
+                style={{
+                  margin: '0.45rem 0 0',
+                  fontSize: '0.9rem',
+                  lineHeight: 1.6,
+                  color: STITCH_COLORS.textSecondary,
+                }}
+              >
+                Use these for copy, layout, and state QA. Use the live upload
+                flow for runtime smoke validation.
+              </p>
 
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.6rem',
-                  marginTop: '0.9rem',
-                }}
-              >
-                <PrimaryButton
-                  onClick={() => {
-                    setPreviewVariant(fixture.variant);
-                    setPreviewLanguage(fixture.language);
-                    setJobId(null);
-                    setState('patient_artifact');
-                  }}
-                >
-                  Open patient summary
-                </PrimaryButton>
-                <SecondaryButton
-                  onClick={() => {
-                    setPreviewVariant(fixture.variant);
-                    setPreviewLanguage(fixture.language);
-                    setJobId(null);
-                    setState('clinician_share');
-                  }}
-                >
-                  Open clinician summary
-                </SecondaryButton>
+              <div className="stitch-grid-fit" style={{ marginTop: '0.9rem' }}>
+                {coverageSummary.map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      padding: '0.8rem',
+                      borderRadius: 18,
+                      backgroundColor: STITCH_COLORS.surfaceWhite,
+                      border: `1px solid ${STITCH_COLORS.borderGhost}`,
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: '0 0 0.2rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        color: STITCH_COLORS.textMuted,
+                      }}
+                    >
+                      {item.label}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '1.5rem',
+                        fontWeight: 800,
+                        letterSpacing: '-0.04em',
+                        color: STITCH_COLORS.textHeading,
+                      }}
+                    >
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
               </div>
             </SurfaceCard>
-          ))}
-        </div>
 
-        <div
-          style={{
-            marginTop: '1rem',
-            backgroundColor: STITCH_COLORS.errorBg,
-            color: STITCH_COLORS.errorText,
-            borderRadius: 24,
-            padding: '1rem',
-          }}
-        >
-          <p
-            style={{
-              margin: '0 0 0.3rem',
-              fontSize: '0.76rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-            }}
-          >
-            Preview mode
-          </p>
-          <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>
-            These screens use typed local fixtures. The live upload flow is the
-            smoke source of truth, so use it for runtime validation.
-          </p>
-        </div>
+            <SurfaceCard
+              style={{
+                padding: '1rem',
+                backgroundColor: STITCH_COLORS.errorBg,
+                color: STITCH_COLORS.errorText,
+              }}
+            >
+              <p
+                style={{
+                  margin: '0 0 0.3rem',
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                Preview mode
+              </p>
+              <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>
+                These screens use typed local fixtures. The live upload flow is
+                the smoke source of truth, so use it for runtime validation.
+              </p>
+              <SecondaryButton
+                onClick={() => setState('upload')}
+                style={{ marginTop: '0.9rem' }}
+              >
+                Open live upload
+              </SecondaryButton>
+            </SurfaceCard>
+          </div>
 
-        <SecondaryButton
-          onClick={() => setState('upload')}
-          style={{ marginTop: '1rem' }}
-        >
-          Open live upload
-        </SecondaryButton>
+          <div className="stitch-flow">
+            {fixtures.map((fixture) => (
+              <SurfaceCard
+                key={`${fixture.language}_${fixture.variant}`}
+                style={{ padding: '1rem' }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div>
+                    <p
+                      style={{
+                        margin: '0 0 0.25rem',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                        color: STITCH_COLORS.textMuted,
+                      }}
+                    >
+                      {fixture.language.toUpperCase()} ·{' '}
+                      {fixture.variant.replace(/_/g, ' ')}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '0.96rem',
+                        fontWeight: 700,
+                        lineHeight: 1.45,
+                        color: STITCH_COLORS.textHeading,
+                      }}
+                    >
+                      {fixture.patientArtifact.support_banner.replace(/_/g, ' ')}
+                    </p>
+                    <p
+                      style={{
+                        margin: '0.22rem 0 0',
+                        fontSize: '0.84rem',
+                        lineHeight: 1.55,
+                        color: STITCH_COLORS.textSecondary,
+                      }}
+                    >
+                      {fixture.hasComparableHistory
+                        ? 'Comparable history available for review.'
+                        : 'No comparable history in this preview.'}
+                    </p>
+                  </div>
+                  <PillBadge
+                    tone={
+                      fixture.patientArtifact.support_banner === 'fully_supported'
+                        ? 'trusted'
+                        : fixture.patientArtifact.support_banner ===
+                            'partially_supported'
+                          ? 'beta'
+                          : 'neutral'
+                    }
+                  >
+                    {fixture.patientArtifact.overall_severity}
+                  </PillBadge>
+                </div>
+
+                <div
+                  className="stitch-inline-actions"
+                  style={{ marginTop: '0.9rem' }}
+                >
+                  <PrimaryButton
+                    onClick={() => {
+                      setPreviewVariant(fixture.variant);
+                      setPreviewLanguage(fixture.language);
+                      setJobId(null);
+                      setState('patient_artifact');
+                    }}
+                  >
+                    Open patient summary
+                  </PrimaryButton>
+                  <SecondaryButton
+                    onClick={() => {
+                      setPreviewVariant(fixture.variant);
+                      setPreviewLanguage(fixture.language);
+                      setJobId(null);
+                      setState('clinician_share');
+                    }}
+                  >
+                    Open clinician summary
+                  </SecondaryButton>
+                </div>
+              </SurfaceCard>
+            ))}
+          </div>
+        </div>
       </PageChrome>
     );
   }
