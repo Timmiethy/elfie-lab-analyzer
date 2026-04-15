@@ -18,6 +18,7 @@ interface PageChromeProps {
   children: ReactNode;
   compact?: boolean;
   contentMaxWidth?: number;
+  className?: string;
 }
 
 export function PageChrome({
@@ -27,10 +28,15 @@ export function PageChrome({
   children,
   compact = false,
   contentMaxWidth = 560,
+  className,
 }: PageChromeProps) {
   return (
-    <div style={PAGE_SHELL_STYLE}>
+    <div
+      className={['stitch-page-shell', className].filter(Boolean).join(' ')}
+      style={PAGE_SHELL_STYLE}
+    >
       <div
+        className="stitch-page-chrome__hero"
         style={{
           position: 'relative',
           backgroundColor: STITCH_COLORS.navy,
@@ -42,6 +48,7 @@ export function PageChrome({
       >
         <div
           aria-hidden="true"
+          className="stitch-page-chrome__mesh"
           style={{
             position: 'absolute',
             inset: 0,
@@ -51,6 +58,7 @@ export function PageChrome({
           }}
         />
         <div
+          className="stitch-page-chrome__hero-inner"
           style={{
             position: 'relative',
             zIndex: 1,
@@ -103,7 +111,14 @@ export function PageChrome({
           }}
         />
       </div>
-      <div style={{ ...CONTENT_COLUMN_STYLE, maxWidth: contentMaxWidth, marginTop: compact ? '-0.25rem' : '0.4rem' }}>
+      <div
+        className="stitch-page-chrome__content"
+        style={{
+          ...CONTENT_COLUMN_STYLE,
+          maxWidth: contentMaxWidth,
+          marginTop: compact ? '-0.25rem' : '0.4rem',
+        }}
+      >
         {children}
       </div>
     </div>
@@ -113,14 +128,29 @@ export function PageChrome({
 interface SurfaceCardProps {
   children: ReactNode;
   style?: CSSProperties;
+  className?: string;
 }
 
-export function SurfaceCard({ children, style }: SurfaceCardProps) {
-  return <section style={pageCardStyle(style)}>{children}</section>;
+export function SurfaceCard({ children, style, className }: SurfaceCardProps) {
+  return (
+    <section
+      className={['stitch-surface-card', className].filter(Boolean).join(' ')}
+      style={pageCardStyle(style)}
+    >
+      {children}
+    </section>
+  );
 }
 
-export function SubtleCard({ children, style }: SurfaceCardProps) {
-  return <section style={subtleCardStyle(style)}>{children}</section>;
+export function SubtleCard({ children, style, className }: SurfaceCardProps) {
+  return (
+    <section
+      className={['stitch-subtle-card', className].filter(Boolean).join(' ')}
+      style={subtleCardStyle(style)}
+    >
+      {children}
+    </section>
+  );
 }
 
 interface PillBadgeProps {
@@ -203,6 +233,7 @@ interface ButtonProps {
   type?: 'button' | 'submit';
   disabled?: boolean;
   style?: CSSProperties;
+  className?: string;
 }
 
 export function PrimaryButton({
@@ -211,9 +242,13 @@ export function PrimaryButton({
   type = 'button',
   disabled = false,
   style,
+  className,
 }: ButtonProps) {
   return (
     <button
+      className={['stitch-button', 'stitch-button--primary', className]
+        .filter(Boolean)
+        .join(' ')}
       type={type}
       onClick={onClick}
       disabled={disabled}
@@ -246,9 +281,13 @@ export function SecondaryButton({
   type = 'button',
   disabled = false,
   style,
+  className,
 }: ButtonProps) {
   return (
     <button
+      className={['stitch-button', 'stitch-button--secondary', className]
+        .filter(Boolean)
+        .join(' ')}
       type={type}
       onClick={onClick}
       disabled={disabled}

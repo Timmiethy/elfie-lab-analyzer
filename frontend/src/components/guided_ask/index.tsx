@@ -126,206 +126,171 @@ export default function GuidedAsk({
   );
 
   return (
-    <PageChrome compact title={resolveCopy('guided_ask.title')}>
+    <PageChrome
+      compact
+      title={resolveCopy('guided_ask.title')}
+      subtitle="Choose one safe question."
+      contentMaxWidth={980}
+    >
       <SurfaceCard
         style={{
           marginTop: '0.65rem',
-          padding: '0.85rem',
+          padding: '0.9rem',
           backgroundColor: STITCH_COLORS.surfaceLow,
           boxShadow: 'none',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.7rem',
-            alignItems: 'flex-start',
-          }}
-        >
-          <div
-            aria-hidden="true"
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: '50%',
-              background:
-                'linear-gradient(180deg, rgba(255, 21, 112, 0.14) 0%, rgba(255, 21, 112, 0.08) 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: STITCH_COLORS.pink,
-              fontSize: '1rem',
-              flexShrink: 0,
-            }}
-          >
-            ✦
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <p
-              style={{
-                margin: '0 0 0.16rem',
-                fontSize: '0.74rem',
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: STITCH_COLORS.textMuted,
-              }}
-            >
-              {resolveCopy('guided_ask.coach_label')}
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: '0.88rem',
-                lineHeight: 1.55,
-                color: STITCH_COLORS.textSecondary,
-              }}
-            >
-              {resolveCopy('guided_ask.intro')}
-            </p>
-            <p
-              style={{
-                margin: '0.32rem 0 0',
-                fontSize: '0.76rem',
-                lineHeight: 1.45,
-                color: STITCH_COLORS.textMuted,
-              }}
-            >
-              {resolveCopy('guided_ask.wellness_boundary')}
-            </p>
-          </div>
-        </div>
-      </SurfaceCard>
-
-      <section style={{ marginTop: '0.8rem' }}>
         <p
           style={{
-            margin: '0 0 0.45rem',
-            fontSize: '0.72rem',
+            margin: '0 0 0.16rem',
+            fontSize: '0.74rem',
             fontWeight: 800,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
             color: STITCH_COLORS.textMuted,
           }}
         >
-          {resolveCopy('guided_ask.reply_label')}
-        </p>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '0.5rem',
-          }}
-        >
-          {FAQ_ITEMS.map((item) => {
-            const isSelected = item.id === selectedItem.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setSelectedId(item.id)}
-                style={{
-                  border: 'none',
-                  borderRadius: STITCH_RADIUS.pill,
-                  padding: '0.7rem 0.95rem',
-                  backgroundColor: isSelected
-                    ? 'rgba(255, 21, 112, 0.12)'
-                    : STITCH_COLORS.surfaceWhite,
-                  color: isSelected
-                    ? STITCH_COLORS.pink
-                    : STITCH_COLORS.textHeading,
-                  fontSize: '0.84rem',
-                  fontWeight: 700,
-                  lineHeight: 1.35,
-                  cursor: 'pointer',
-                  boxShadow: isSelected
-                    ? '0 8px 20px rgba(255, 21, 112, 0.12)'
-                    : '0 8px 22px rgba(15, 23, 42, 0.08)',
-                }}
-              >
-                {resolveCopy(item.questionKey)}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <SurfaceCard
-        style={{
-          marginTop: '0.75rem',
-          padding: '0.9rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.7rem',
-            alignItems: 'flex-start',
-          }}
-        >
-          <div
-            aria-hidden="true"
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              backgroundColor: STITCH_COLORS.blueSoft,
-              color: STITCH_COLORS.navy,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '0.92rem',
-              flexShrink: 0,
-            }}
-          >
-            💬
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <p
-              style={{
-                margin: '0.02rem 0 0',
-                fontSize: '0.88rem',
-                lineHeight: 1.58,
-                color: STITCH_COLORS.textSecondary,
-              }}
-            >
-              {resolveCopy(selectedItem.answerKey)}
-            </p>
-          </div>
-        </div>
-      </SurfaceCard>
-
-      <SurfaceCard
-        style={{
-          marginTop: '0.75rem',
-          padding: '0.65rem 0.8rem',
-          backgroundColor: STITCH_COLORS.warningBg,
-          boxShadow: 'none',
-        }}
-      >
-        <p
-          style={{
-            margin: '0 0 0.15rem',
-            fontSize: '0.7rem',
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: STITCH_COLORS.warningText,
-          }}
-        >
-          {resolveCopy('guided_ask.blocked_title')}
+          {resolveCopy('guided_ask.coach_label')}
         </p>
         <p
           style={{
             margin: 0,
-            fontSize: '0.8rem',
-            lineHeight: 1.42,
-            color: STITCH_COLORS.warningText,
+            fontSize: '0.88rem',
+            lineHeight: 1.55,
+            color: STITCH_COLORS.textSecondary,
           }}
         >
-          {resolveCopy('guided_ask.blocked_text')}
+          {resolveCopy('guided_ask.intro')}
         </p>
       </SurfaceCard>
+
+      <div className="stitch-faq-layout stitch-enter" style={{ marginTop: '0.8rem' }}>
+        <SurfaceCard style={{ padding: '0.9rem' }}>
+          <p
+            style={{
+              margin: '0 0 0.45rem',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: STITCH_COLORS.textMuted,
+            }}
+          >
+            {resolveCopy('guided_ask.reply_label')}
+          </p>
+          <div className="stitch-question-list">
+            {FAQ_ITEMS.map((item) => {
+              const isSelected = item.id === selectedItem.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedId(item.id)}
+                  style={{
+                    border: `1px solid ${
+                      isSelected
+                        ? 'rgba(255, 21, 112, 0.18)'
+                        : STITCH_COLORS.borderGhost
+                    }`,
+                    borderRadius: STITCH_RADIUS.md,
+                    padding: '0.78rem 0.85rem',
+                    backgroundColor: isSelected
+                      ? 'rgba(255, 21, 112, 0.08)'
+                      : STITCH_COLORS.surfaceWhite,
+                    color: isSelected
+                      ? STITCH_COLORS.pink
+                      : STITCH_COLORS.textHeading,
+                    fontSize: '0.84rem',
+                    fontWeight: 700,
+                    lineHeight: 1.4,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {resolveCopy(item.questionKey)}
+                </button>
+              );
+            })}
+          </div>
+        </SurfaceCard>
+
+        <SurfaceCard style={{ padding: '1rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.7rem',
+              alignItems: 'flex-start',
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: '50%',
+                backgroundColor: STITCH_COLORS.blueSoft,
+                color: STITCH_COLORS.navy,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.92rem',
+                flexShrink: 0,
+              }}
+            >
+              💬
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p
+                style={{
+                  margin: '0 0 0.25rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: STITCH_COLORS.textMuted,
+                }}
+              >
+                {resolveCopy(selectedItem.questionKey)}
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.9rem',
+                  lineHeight: 1.65,
+                  color: STITCH_COLORS.textSecondary,
+                }}
+              >
+                {resolveCopy(selectedItem.answerKey)}
+              </p>
+            </div>
+          </div>
+
+          <div className="stitch-divider" style={{ margin: '0.9rem 0' }} />
+
+          <p
+            style={{
+              margin: '0 0 0.12rem',
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: STITCH_COLORS.warningText,
+            }}
+          >
+            {resolveCopy('guided_ask.blocked_title')}
+          </p>
+          <p
+            style={{
+              margin: 0,
+              fontSize: '0.8rem',
+              lineHeight: 1.5,
+              color: STITCH_COLORS.textSecondary,
+            }}
+          >
+            {resolveCopy('guided_ask.blocked_text')} {resolveCopy('guided_ask.wellness_boundary')}
+          </p>
+        </SurfaceCard>
+      </div>
 
       {onNavigateBack && (
         <SecondaryButton onClick={onNavigateBack} style={{ marginTop: '0.85rem' }}>
