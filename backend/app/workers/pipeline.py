@@ -62,6 +62,8 @@ _FAIL_CLOSED_DOCUMENT_CLASSES = {
     "structured_record",
     "interpreted_summary",
     "non_lab_medical",
+    "pathology_report",
+    "imaging_narrative",
     "unknown",
 }
 
@@ -805,10 +807,13 @@ async def _resolve_runtime_routing(
     preflight = runtime_preflight
     if preflight is None:
         if not source_filename or not source_mime_type:
-            return _default_runtime_routing(
+            routing = _default_runtime_routing(
                 requested_lane,
-                action="caller_lane_without_runtime_preflight",
+                action="downgraded_missing_runtime_preflight_context",
             )
+            routing["selected_lane"] = "unsupported"
+            routing["route_reason_codes"] = ["runtime_preflight_missing_context"]
+            return routing
         try:
             preflight = await InputGateway().preflight(
                 file_bytes,
@@ -834,12 +839,30 @@ async def _resolve_runtime_routing(
     route_confidence = _coerce_route_confidence(preflight.get("route_confidence"))
     promotion_status = str(preflight.get("promotion_status") or "")
 
+    if preflight_lane not in _SUPPORTED_LANES:
+        return {
+            "requested_lane": requested_lane,
+            "selected_lane": "unsupported",
+            "preflight_lane": preflight_lane,
+            "route_document_class": route_document_class,
+            "route_reason_codes": [
+                *route_reason_codes,
+                f"invalid_preflight_lane:{preflight_lane or _UNKNOWN_RUNTIME_VALUE}",
+            ],
+            "route_confidence": route_confidence,
+            "promotion_status": promotion_status,
+            "enforcement_action": "downgraded_invalid_preflight_lane",
+        }
+
     selected_lane = preflight_lane
     enforcement_action = "preflight_lane_enforced"
 
     if route_document_class in _FAIL_CLOSED_DOCUMENT_CLASSES:
         selected_lane = "unsupported"
         enforcement_action = "downgraded_non_lab_or_ambiguous_class"
+    elif route_document_class == "composite_packet":
+        enforcement_action = "composite_packet_page_fencing_required"
+        route_reason_codes.append("composite_packet_requires_page_fencing")
     elif selected_lane == "image_beta" and promotion_status != "beta_ready":
         selected_lane = "unsupported"
         enforcement_action = "downgraded_image_beta_not_ready"

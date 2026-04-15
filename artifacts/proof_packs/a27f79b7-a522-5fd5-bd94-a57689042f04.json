@@ -7,7 +7,7 @@
     "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
   },
   "benchmark_contract_version": "benchmark-contract-v1",
-  "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+  "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
   "contract_version": "benchmark-proof-pack-v1",
   "family_benchmarks": {},
   "lineage": {
@@ -93,7 +93,7 @@
     "panels": 1,
     "parser_backend": null,
     "parser_backend_version": null,
-    "processing_ms": 4,
+    "processing_ms": 3,
     "row_assembly_version": null,
     "semantic_shadow_actionable_findings": 0,
     "semantic_shadow_confidence": 1.0,
@@ -115,7 +115,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -139,7 +139,7 @@
         "report_type": "truth_engine_pipeline"
       },
       "report_name": "ablation_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     },
     "clinician_scan_report.json": {
       "artifact_refs": {
@@ -149,7 +149,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -172,7 +172,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "clinician_scan_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     },
     "coverage_report.json": {
       "artifact_refs": {
@@ -182,7 +182,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -229,7 +229,7 @@
         "regressed_metrics": []
       },
       "report_name": "coverage_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     },
     "explanation_report.json": {
       "artifact_refs": {
@@ -239,7 +239,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -263,7 +263,7 @@
         "template_version": "templates-v1"
       },
       "report_name": "explanation_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     },
     "mapping_report.json": {
       "artifact_refs": {
@@ -273,7 +273,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -311,7 +311,7 @@
           "panels": 1,
           "parser_backend": null,
           "parser_backend_version": null,
-          "processing_ms": 4,
+          "processing_ms": 3,
           "row_assembly_version": null,
           "semantic_shadow_actionable_findings": 0,
           "semantic_shadow_confidence": 1.0,
@@ -324,7 +324,7 @@
         }
       },
       "report_name": "mapping_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     },
     "parser_report.json": {
       "artifact_refs": {
@@ -334,7 +334,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -357,11 +357,11 @@
         "regression_tags": [],
         "timing": {
           "extraction_ms": 0,
-          "processing_ms": 4
+          "processing_ms": 3
         }
       },
       "report_name": "parser_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     },
     "partial_support_report.json": {
       "artifact_refs": {
@@ -371,7 +371,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -397,7 +397,7 @@
         }
       },
       "report_name": "partial_support_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     },
     "patient_comprehension_report.json": {
       "artifact_refs": {
@@ -407,7 +407,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -430,7 +430,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "patient_comprehension_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     },
     "policy_report.json": {
       "artifact_refs": {
@@ -440,7 +440,7 @@
         "patient_artifact": "/api/artifacts/a27f79b7-a522-5fd5-bd94-a57689042f04/patient",
         "proof_pack": "/api/jobs/a27f79b7-a522-5fd5-bd94-a57689042f04/proof-pack"
       },
-      "benchmark_id": "dd191f0e-d7ec-5764-8167-33ac7b528486",
+      "benchmark_id": "bd053816-ac3e-5695-b9d3-fd2ad1a0a3ea",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "image_beta",
@@ -466,7 +466,7 @@
         "severity_policy_version": "severity-v1"
       },
       "report_name": "policy_report.json",
-      "timestamp": "2026-04-14T17:28:59.929904Z"
+      "timestamp": "2026-04-14T23:15:03.343143Z"
     }
   },
   "summary": {
@@ -500,7 +500,7 @@
     "regression_tags": [],
     "timing": {
       "extraction_ms": 0,
-      "processing_ms": 4
+      "processing_ms": 3
     },
     "trace_refs": {}
   },

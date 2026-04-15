@@ -59,6 +59,7 @@ class FlaggedCard(BaseModel):
 class UnsupportedItem(BaseModel):
     raw_label: str
     reason: UnsupportedReason
+    internal_reason: str | None = None
 
 
 class ComparableHistoryStatus(StrEnum):

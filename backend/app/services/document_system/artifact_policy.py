@@ -8,7 +8,7 @@ from .config_registry import FamilyConfigRegistry, get_family_config_registry
 
 @dataclass(frozen=True)
 class ArtifactPolicyResult:
-    not_assessed: list[dict[str, str]]
+    not_assessed: list[dict[str, str | None]]
     grouped_counts: dict[str, int]
 
 
@@ -22,7 +22,14 @@ class ArtifactPolicy:
         visible_reason_map = self._registry.visible_unsupported_categories()
         hidden_markers = self._registry.hidden_markers()
 
-        sanitized: list[dict[str, str]] = []
+        visible_categories = {
+            *visible_reason_map.keys(),
+            *visible_reason_map.values(),
+            "insufficient_support",
+            "unreadable_value",
+        }
+
+        sanitized: list[dict[str, str | None]] = []
         seen: set[tuple[str, str]] = set()
         grouped = Counter()
 
@@ -30,6 +37,7 @@ class ArtifactPolicy:
             raw_label_original = _clean(str(item.get("raw_label") or "unknown"))
             raw_label = _normalize(raw_label_original)
             raw_reason = _normalize(str(item.get("reason") or "unreadable_value"))
+            internal_reason = _normalize(str(item.get("internal_reason") or raw_reason))
             canonical_reason = visible_reason_map.get(raw_reason, raw_reason)
 
             if _contains_hidden_marker(raw_label, hidden_markers):
@@ -46,6 +54,8 @@ class ArtifactPolicy:
 
             if not canonical_reason:
                 canonical_reason = "unreadable_value"
+            elif canonical_reason not in visible_categories:
+                canonical_reason = "insufficient_support"
 
             dedupe_key = (raw_label, canonical_reason)
             if dedupe_key in seen:
@@ -56,6 +66,7 @@ class ArtifactPolicy:
                 {
                     "raw_label": raw_label_original,
                     "reason": canonical_reason,
+                    "internal_reason": internal_reason or canonical_reason,
                 }
             )
             grouped[canonical_reason] += 1

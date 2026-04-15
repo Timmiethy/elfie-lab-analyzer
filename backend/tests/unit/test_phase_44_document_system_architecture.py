@@ -3,11 +3,15 @@ from __future__ import annotations
 from io import BytesIO
 from uuid import uuid4
 
+import pytest
+
 from app.services.document_system.artifact_policy import ArtifactPolicy
 from app.services.document_system.block_graph_builder import BlockGraphBuilder
 from app.services.document_system.born_digital_substrate import BornDigitalSubstrate
 from app.services.document_system.config_registry import get_family_config_registry
 from app.services.document_system.contracts import (
+    BlockGraphV1,
+    BlockNodeV1,
     BlockRoleV1,
     PageKindV2,
     PageParseArtifactV4,
@@ -17,6 +21,7 @@ from app.services.document_system.document_router import DocumentRouteInput, Doc
 from app.services.document_system.document_splitter import DocumentSplitter, PageRoutingHint
 from app.services.document_system.page_classifier import PageClassifier
 from app.services.document_system.row_assembler import RowAssemblerV3
+from app.services.parser import _assert_lab_page_line_structure, _should_skip_page_for_normalization
 from app.services.parser.born_digital_parser import BornDigitalParser
 
 
@@ -349,6 +354,65 @@ def test_phase_44_block_graph_builder_links_nodes() -> None:
     graph = BlockGraphBuilder().build(artifact)
     assert len(graph.nodes) == 2
     assert graph.edges
+    assert graph.nodes[0].lines == ["Glucose 180 mg/dL"]
+    assert graph.nodes[1].lines == ["HbA1c 6.8 %"]
+
+
+def test_phase_44_parser_line_structure_assertion_raises_on_lost_multiline_arrays() -> None:
+    graph = BlockGraphV1(
+        page_id="doc:line-loss",
+        page_number=1,
+        nodes=[
+            BlockNodeV1(
+                node_id="n1",
+                block_id="b1",
+                block_role=BlockRoleV1.RESULT_BLOCK,
+                text="Glucose 180 mg/dL HbA1c 6.8 %",
+                page_number=1,
+                reading_order=0,
+                lines=[],
+                metadata={"line_count": 2},
+            ),
+            BlockNodeV1(
+                node_id="n2",
+                block_id="b2",
+                block_role=BlockRoleV1.RESULT_BLOCK,
+                text="Sodium 141 mmol/L Potassium 4.0 mmol/L",
+                page_number=1,
+                reading_order=1,
+                lines=[],
+                metadata={"line_count": 2},
+            ),
+        ],
+        edges=[],
+    )
+
+    with pytest.raises(ValueError, match="trusted_pdf_line_structure_lost"):
+        _assert_lab_page_line_structure(graph, page_class="analyte_table_page")
+
+
+def test_phase_44_page_fencing_skips_low_signal_non_lab_page() -> None:
+    assert _should_skip_page_for_normalization(
+        "non_lab_medical",
+        metadata={
+            "page_classification_evidence": {
+                "numeric_token_density": 0.02,
+                "table_density": 0.05,
+            }
+        },
+    )
+
+
+def test_phase_44_page_fencing_keeps_numeric_dense_non_lab_page_for_split_packets() -> None:
+    assert not _should_skip_page_for_normalization(
+        "non_lab_medical",
+        metadata={
+            "page_classification_evidence": {
+                "numeric_token_density": 0.22,
+                "table_density": 0.41,
+            }
+        },
+    )
 
 
 def test_phase_44_row_assembler_v3_builds_rows() -> None:

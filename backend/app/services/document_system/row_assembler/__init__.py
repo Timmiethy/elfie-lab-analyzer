@@ -17,21 +17,21 @@ from .row_field_parser import RowFieldParseInput, RowFieldParser
 from .row_grouping import group_lines
 
 _VALUE_TOKEN_RE = re.compile(r"(?:<=|>=|<|>|≤|≥)?\s*\d[\d,]*(?:\.\d+)?")
-_UNKNOWN_BLOCK_RESULT_HINTS = (
-    "analyte",
-    "result",
-    "unit",
-    "reference",
+_RANGE_TOKEN_RE = re.compile(
+    r"(?:<=|>=|<|>|≤|≥)?\s*\d[\d,]*(?:\.\d+)?\s*(?:-|–|to)\s*(?:<=|>=|<|>|≤|≥)?\s*\d[\d,]*(?:\.\d+)?"
 )
 _UNKNOWN_BLOCK_UNIT_HINTS = (
     "mg/dl",
     "g/dl",
+    "g/l",
     "mmol/l",
     "umol/l",
+    "mmol/mol",
     "iu/l",
     "u/l",
     "%",
     "ng/ml",
+    "ng/l",
     "pg",
     "fl",
 )
@@ -55,6 +55,110 @@ _UNKNOWN_BLOCK_NON_RESULT_HINTS = (
     "jalan",
     "wisma",
     "flr",
+    "pathology",
+    "histopathology",
+    "gross description",
+    "microscopic",
+    "final diagnosis",
+    "ultrasound",
+    "radiology",
+    "echocardiogram",
+    "x-ray",
+)
+_UNKNOWN_BLOCK_NARRATIVE_MARKERS = (
+    "guideline",
+    "interpretation",
+    "clinical",
+    "history",
+    "diagnosis",
+    "specimen",
+    "recommend",
+    "comment",
+    "note",
+    "pathology",
+    "ultrasound",
+    "radiology",
+)
+_UNKNOWN_BLOCK_THRESHOLD_MARKERS = (
+    "prediabetes",
+    "risk",
+    "cut off",
+    "cutoff",
+    "threshold",
+    "target range",
+    "castelli",
+    "ifg",
+    "very high",
+    "moderate",
+)
+_UNKNOWN_BLOCK_CITATION_MARKERS = (
+    "clin chem",
+    "lab med",
+    "et al",
+    "doi",
+    "jama",
+)
+_UNKNOWN_BLOCK_LABEL_STOPWORDS = {
+    "result",
+    "results",
+    "unit",
+    "units",
+    "reference",
+    "range",
+    "normal",
+    "high",
+    "low",
+    "risk",
+    "threshold",
+    "note",
+    "clinical",
+    "patient",
+    "specimen",
+    "report",
+    "page",
+    "section",
+    "table",
+    "value",
+}
+_PREPARSE_RISK_MARKERS = (
+    "risk",
+    "cut off",
+    "cutoff",
+    "threshold",
+    "prediabetes",
+    "target range",
+    "castelli",
+    "ifg",
+)
+_PREPARSE_NOTE_MARKERS = (
+    "note",
+    "guideline",
+    "interpretation",
+    "clinical",
+    "history",
+    "recommended",
+)
+_PREPARSE_CITATION_MARKERS = (
+    "et al",
+    "doi",
+    "clin chem",
+    "lab med",
+    "jama",
+)
+_HEADING_ONLY_HINTS = (
+    "biochemistry",
+    "haematology",
+    "hematology",
+    "chemistry",
+    "test name in range out of range reference range lab",
+    "lipid function",
+    "lipid panel standard",
+    "comprehensive metabolic panel",
+    "cbc includes diff/plt",
+    "thyroid panel with tsh t3 uptake",
+    "electrolytes",
+    "serum/plasma glucose",
+    "albumin and creatinine ratio (acr)",
 )
 
 
@@ -126,7 +230,9 @@ class RowAssemblerV3:
                 )
                 continue
 
-            line_values = [line.strip() for line in node.text.splitlines() if line.strip()]
+            line_values = [line.strip() for line in list(node.lines or []) if str(line).strip()]
+            if not line_values:
+                line_values = [line.strip() for line in node.text.splitlines() if line.strip()]
             if not line_values and node.text.strip():
                 line_values = [node.text.strip()]
             if not line_values:
@@ -156,6 +262,20 @@ class RowAssemblerV3:
                 if not candidate_text:
                     continue
 
+                if _should_preparse_suppress_candidate(candidate_text):
+                    rows.append(
+                        _excluded_row(
+                            artifact=artifact,
+                            source_block_id=node.block_id,
+                            raw_text=candidate_text,
+                            family_adapter_id=family_adapter_id,
+                            page_class=page_class,
+                            block_role=node.block_role,
+                            reason_code="preparse_threshold_note_citation_row",
+                        )
+                    )
+                    continue
+
                 parsed = self._row_field_parser.parse(
                     candidate_text,
                     RowFieldParseInput(
@@ -168,6 +288,43 @@ class RowAssemblerV3:
                         parser_backend=artifact.backend_id,
                         parser_backend_version=artifact.backend_version,
                         source_kind="block_graph",
+                        segment_index=index,
+                    ),
+                )
+                rows.append(parsed)
+
+        if page_class == "analyte_table_page" and _should_use_bbox_row_fallback(block_graph.nodes):
+            for index, fallback in enumerate(_build_bbox_row_candidates(block_graph.nodes), start=1):
+                candidate_text = _sanitize_candidate_text(fallback["text"])
+                if not candidate_text:
+                    continue
+
+                if _should_preparse_suppress_candidate(candidate_text):
+                    rows.append(
+                        _excluded_row(
+                            artifact=artifact,
+                            source_block_id=fallback["source_block_id"],
+                            raw_text=candidate_text,
+                            family_adapter_id=family_adapter_id,
+                            page_class=page_class,
+                            block_role=BlockRoleV1.UNKNOWN_BLOCK,
+                            reason_code="preparse_threshold_note_citation_row",
+                        )
+                    )
+                    continue
+
+                parsed = self._row_field_parser.parse(
+                    candidate_text,
+                    RowFieldParseInput(
+                        document_id=artifact.page_id,
+                        page_id=artifact.page_id,
+                        source_page=artifact.page_number,
+                        source_block_id=fallback["source_block_id"],
+                        family_adapter_id=family_adapter_id,
+                        page_class=page_class,
+                        parser_backend=artifact.backend_id,
+                        parser_backend_version=artifact.backend_version,
+                        source_kind="bbox_row_merge",
                         segment_index=index,
                     ),
                 )
@@ -285,10 +442,9 @@ def _sanitize_candidate_text(value: str) -> str:
     if not text:
         return ""
 
-    text = re.sub(r"^(?:biochemistry|haematology|hematology|chemistry)\s+", "", text, flags=re.I)
-    text = re.sub(r"^albumin\s+and\s+creatinine\s+ratio\s*\(acr\)\s+", "", text, flags=re.I)
-    text = re.sub(r"^(?:test\s+name\s+in\s+range\s+out\s+of\s+range\s+reference\s+range\s+lab)\s+", "", text, flags=re.I)
-    text = re.sub(r"^(?:lipid\s+function|lipid\s+panel\s+standard|comprehensive\s+metabolic\s+panel|cbc\s+includes\s+diff/plt|thyroid\s+panel\s+with\s+tsh\s+t3\s+uptake|electrolytes|serum/plasma\s+glucose)\s+", "", text, flags=re.I)
+    if _is_heading_only_candidate(text):
+        return ""
+
     text = re.sub(r"m\s+([23])\b", r"m\1", text, flags=re.I)
     return " ".join(text.split())
 
@@ -306,26 +462,208 @@ def _is_result_like_unknown_block(*, node_text: str, metadata: dict[str, object]
         evidence = {}
 
     numeric_density = _safe_float(evidence.get("numeric_token_density"))
-    threshold_density = _safe_float(evidence.get("threshold_pattern_density"))
-    line_count = int(_safe_float(metadata.get("line_count"))) if isinstance(metadata, dict) else 0
-
-    if threshold_density >= 0.12:
-        return False
-    if line_count >= 10 and numeric_density < 0.12:
-        return False
-    if numeric_density >= 0.12:
-        return True
-
     has_value_token = _VALUE_TOKEN_RE.search(normalized) is not None
+    has_analyte_like_label = _has_analyte_label_evidence(normalized)
+    has_unit_or_reference = _has_unit_or_reference_evidence(normalized)
+
+    token_count = max(1, len(_tokenize(normalized)))
+    threshold_density = max(
+        _safe_float(evidence.get("threshold_pattern_density")),
+        _marker_density(normalized, _UNKNOWN_BLOCK_THRESHOLD_MARKERS, token_count),
+    )
+    narrative_density = _marker_density(normalized, _UNKNOWN_BLOCK_NARRATIVE_MARKERS, token_count)
+    citation_density = _marker_density(normalized, _UNKNOWN_BLOCK_CITATION_MARKERS, token_count)
+
     if not has_value_token:
         return False
+    if not has_analyte_like_label:
+        return False
+    if not has_unit_or_reference:
+        return False
+    if numeric_density < 0.08:
+        return False
+    if narrative_density >= 0.08:
+        return False
+    if threshold_density >= 0.08:
+        return False
+    if citation_density >= 0.06:
+        return False
 
-    if any(marker in normalized for marker in _UNKNOWN_BLOCK_RESULT_HINTS):
+    return True
+
+
+def _is_heading_only_candidate(value: str) -> bool:
+    compact = " ".join(str(value or "").split())
+    normalized = compact.lower()
+    if not normalized:
+        return False
+    if _VALUE_TOKEN_RE.search(normalized):
+        return False
+    if any(hint == normalized or normalized.startswith(f"{hint} ") for hint in _HEADING_ONLY_HINTS):
+        return True
+    return compact.isupper() and len(normalized.split()) <= 8
+
+
+def _should_preparse_suppress_candidate(value: str) -> bool:
+    normalized = " ".join(str(value or "").lower().split())
+    if not normalized:
+        return False
+
+    has_threshold_or_note_marker = any(marker in normalized for marker in _PREPARSE_RISK_MARKERS) or any(
+        marker in normalized for marker in _PREPARSE_NOTE_MARKERS
+    )
+    has_citation_marker = any(marker in normalized for marker in _PREPARSE_CITATION_MARKERS)
+    if not has_threshold_or_note_marker and not has_citation_marker:
+        return False
+
+    return not _is_strict_measurement_candidate(normalized)
+
+
+def _is_strict_measurement_candidate(normalized: str) -> bool:
+    if not _VALUE_TOKEN_RE.search(normalized):
+        return False
+    if not _has_analyte_label_evidence(normalized):
+        return False
+    if not _has_unit_or_reference_evidence(normalized):
+        return False
+
+    token_count = max(1, len(_tokenize(normalized)))
+    if _marker_density(normalized, _UNKNOWN_BLOCK_CITATION_MARKERS, token_count) >= 0.12:
+        return False
+    if _marker_density(normalized, _UNKNOWN_BLOCK_NARRATIVE_MARKERS, token_count) >= 0.2:
+        return False
+    return True
+
+
+def _has_unit_or_reference_evidence(normalized: str) -> bool:
+    if _RANGE_TOKEN_RE.search(normalized):
+        return True
+    if "reference range" in normalized or "reference interval" in normalized:
         return True
     if any(unit in normalized for unit in _UNKNOWN_BLOCK_UNIT_HINTS):
         return True
+    return bool(
+        re.search(
+            r"\b(?:mg|g|mmol|umol|ng|pg|iu|u|ml|dl|l|mm|cm|fl)(?:/[a-z0-9]+)?\b",
+            normalized,
+        )
+    )
 
-    return len(normalized.split()) <= 12
+
+def _has_analyte_label_evidence(normalized: str) -> bool:
+    tokens = _tokenize(normalized)
+    alpha_tokens = [token for token in tokens if any(char.isalpha() for char in token)]
+    informative_tokens = [
+        token
+        for token in alpha_tokens
+        if token not in _UNKNOWN_BLOCK_LABEL_STOPWORDS and len(token) > 2
+    ]
+    return len(informative_tokens) >= 1
+
+
+def _tokenize(value: str) -> list[str]:
+    return re.findall(r"[a-z0-9%/().+-]+", value.lower())
+
+
+def _marker_density(value: str, markers: tuple[str, ...], token_count: int) -> float:
+    if token_count <= 0:
+        return 0.0
+    hits = sum(1 for marker in markers if marker in value)
+    return hits / token_count
+
+
+def _should_use_bbox_row_fallback(nodes: list[object]) -> bool:
+    bbox_nodes = [
+        node
+        for node in nodes
+        if getattr(node, "bbox", None) is not None and str(getattr(node, "text", "") or "").strip()
+    ]
+    if len(bbox_nodes) < 16:
+        return False
+
+    short_fragment_count = sum(
+        1 for node in bbox_nodes if len(str(getattr(node, "text", "") or "").split()) <= 3
+    )
+    value_only_count = sum(
+        1
+        for node in bbox_nodes
+        if len(str(getattr(node, "text", "") or "").split()) <= 2
+        and _VALUE_TOKEN_RE.search(str(getattr(node, "text", "") or "").lower()) is not None
+    )
+    fragmentation_ratio = short_fragment_count / max(1, len(bbox_nodes))
+    return fragmentation_ratio >= 0.45 and value_only_count >= 6
+
+
+def _build_bbox_row_candidates(nodes: list[object]) -> list[dict[str, str]]:
+    entries: list[dict[str, object]] = []
+    for node in nodes:
+        bbox = getattr(node, "bbox", None)
+        if bbox is None:
+            continue
+        text = " ".join(str(getattr(node, "text", "") or "").split())
+        if not text:
+            continue
+        y_center = (float(bbox.y0) + float(bbox.y1)) / 2.0
+        entries.append(
+            {
+                "source_block_id": str(getattr(node, "block_id", "bbox-row")),
+                "text": text,
+                "y_center": y_center,
+                "x0": float(getattr(bbox, "x0", 0.0) or 0.0),
+                "reading_order": int(getattr(node, "reading_order", 0) or 0),
+            }
+        )
+
+    entries.sort(
+        key=lambda item: (
+            float(item["y_center"]),
+            float(item["x0"]),
+        )
+    )
+
+    clusters: list[dict[str, object]] = []
+    for entry in entries:
+        y_center = float(entry["y_center"])
+        if clusters and abs(y_center - float(clusters[-1]["y_center"])) <= 4.5:
+            current_entries = list(clusters[-1]["entries"])  # type: ignore[arg-type]
+            current_entries.append(entry)
+            clusters[-1]["entries"] = current_entries
+            clusters[-1]["y_center"] = sum(float(item["y_center"]) for item in current_entries) / max(
+                1,
+                len(current_entries),
+            )
+            continue
+
+        clusters.append({"y_center": y_center, "entries": [entry]})
+
+    candidates: list[dict[str, str]] = []
+    for cluster in clusters:
+        cluster_entries = list(cluster["entries"])  # type: ignore[arg-type]
+        ordered_entries = sorted(
+            cluster_entries,
+            key=lambda item: (
+                float(item["x0"]),
+                int(item["reading_order"]),
+            ),
+        )
+
+        parts = [
+            " ".join(str(item["text"] or "").split())
+            for item in ordered_entries
+            if str(item["text"] or "").strip()
+        ]
+        line_text = " ".join(" ".join(parts).split())
+        if not line_text or len(line_text.split()) < 2:
+            continue
+
+        candidates.append(
+            {
+                "source_block_id": str(ordered_entries[0]["source_block_id"]),
+                "text": line_text,
+            }
+        )
+
+    return candidates
 
 
 def _safe_float(value: object) -> float:

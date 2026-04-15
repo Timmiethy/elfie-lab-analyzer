@@ -160,6 +160,11 @@ _LABEL_REWRITES = {
     "cbc includes diff / plt white blood cell count": "white blood cell count",
     "thyroid function assays thyroid stimulating hormone": "thyroid stimulating hormone",
     "hormone studies serum insulin": "serum insulin",
+    "mean blood glucose": "glucose",
+    "urine glucose": "glucose",
+    "urine protein": "protein",
+    "microalbumin per urine volume": "urine albumin",
+    "microalbumin (per urine volume)": "urine albumin",
     # v12 wave-2 residual: mixed bilingual forms from DBTICRP fixture where
     # garbled encoding leaves partial English tokens after lookup normalization.
     "total chol": "total cholesterol",
@@ -325,6 +330,20 @@ class AnalyteResolver:
             family_adapter_id=family_adapter_id,
             language_id=language_id,
         )
+        if (
+            family_adapter_id == "innoquest_bilingual_general"
+            and normalized_label in {"载脂蛋白", "apolipoprotein"}
+            and raw_unit_string in {"b/a", "b / a", "a/b", "a / b", "ratio"}
+        ):
+            normalized_label = "apob/apoa1 ratio"
+            normalization_trace.append(
+                {
+                    "stage": "unit_aware_rewrite",
+                    "status": "applied",
+                    "detail": normalized_label,
+                }
+            )
+
         candidates, candidate_trace, support_code, failure_code, support_state = self._score_candidates(
             normalized_label,
             specimen_context=specimen_context,

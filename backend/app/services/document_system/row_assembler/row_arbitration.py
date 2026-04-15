@@ -153,10 +153,15 @@ def _score(row: CandidateRowV3) -> tuple[int, int, int, int]:
 
 
 def _is_threshold_shadow(row: CandidateRowV3) -> bool:
-    if row.raw_value not in (None, ""):
-        return False
     text = " ".join(row.raw_text.lower().split())
-    return any(marker in text for marker in _THRESHOLD_SHADOW_MARKERS)
+    if not any(marker in text for marker in _THRESHOLD_SHADOW_MARKERS):
+        return False
+
+    # Keep real analyte measurements that carry both explicit value channels.
+    if row.raw_unit not in (None, "") and row.raw_reference_range not in (None, ""):
+        return False
+
+    return True
 
 
 def _is_label_noise_shadow(row: CandidateRowV3) -> bool:

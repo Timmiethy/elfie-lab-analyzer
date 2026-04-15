@@ -154,6 +154,7 @@ class BlockNodeV1:
     text: str
     page_number: int
     reading_order: int
+    lines: list[str] = field(default_factory=list)
     bbox: SourceSpanV1 | None = None
     language_tags: list[str] = field(default_factory=list)
     source_spans: list[SourceSpanV1] = field(default_factory=list)

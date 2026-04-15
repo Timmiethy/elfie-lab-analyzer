@@ -17,6 +17,7 @@ class BlockGraphBuilder:
                     text=block.raw_text,
                     page_number=artifact.page_number,
                     reading_order=reading_order,
+                    lines=list(block.lines),
                     bbox=block.bbox,
                     language_tags=list(block.language_tags),
                     source_spans=list(block.source_spans),

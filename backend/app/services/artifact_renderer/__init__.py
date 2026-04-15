@@ -96,6 +96,16 @@ _NOT_ASSESSED_REASON_ALIASES = {
     "unit_parse_error": UnsupportedReason.UNIT_PARSE_FAIL.value,
     "unit_parse_failure": UnsupportedReason.UNIT_PARSE_FAIL.value,
 }
+_NON_RESULT_ROW_TYPES = {
+    "admin_metadata_row",
+    "threshold_reference_row",
+    "narrative_guidance_row",
+    "header_footer_row",
+    "test_request_row",
+    "metadata_row",
+    "heading_row",
+    "unknown_row",
+}
 
 
 def _coerce_uuid(value: UUID | str) -> UUID:
@@ -118,13 +128,14 @@ def _normalize_text(value: object) -> str:
     return " ".join(str(value or "").strip().lower().split())
 
 
-def _normalize_not_assessed_reason(reason: object) -> str:
+def _normalize_not_assessed_reason(reason: object) -> tuple[str, str]:
     normalized = _canonical_not_assessed_reason(reason)
     if normalized in _VISIBLE_UNSUPPORTED_REASONS:
-        return normalized
+        return normalized, normalized
     if not normalized:
-        return UnsupportedReason.UNREADABLE_VALUE.value
-    return UnsupportedReason.UNREADABLE_VALUE.value
+        unreadable = UnsupportedReason.UNREADABLE_VALUE.value
+        return unreadable, unreadable
+    return UnsupportedReason.INSUFFICIENT_SUPPORT.value, normalized
 
 
 def _canonical_not_assessed_reason(reason: object) -> str:
@@ -147,9 +158,11 @@ def _is_hidden_not_assessed_reason(reason: object) -> bool:
 def _make_not_assessed_item(raw_label: object, reason: object) -> dict | None:
     if _is_hidden_not_assessed_label(raw_label) or _is_hidden_not_assessed_reason(reason):
         return None
+    patient_reason, internal_reason = _normalize_not_assessed_reason(reason)
     return {
         "raw_label": str(raw_label or "unknown"),
-        "reason": _normalize_not_assessed_reason(reason),
+        "reason": patient_reason,
+        "internal_reason": internal_reason,
     }
 
 
@@ -220,22 +233,20 @@ def _make_not_assessed(findings: list[dict], observations: list[dict] | None = N
 
     if observations:
         for observation in observations:
-            support_state = observation.get("support_state")
-            if hasattr(support_state, "value"):
-                support_state = support_state.value
-            if str(support_state or "").lower() != "supported":
-                obs_id = str(observation.get("id", ""))
-                if obs_id not in finding_obs_ids:
-                    observation_reason = _observation_not_assessed_reason(observation)
-                    item = _make_not_assessed_item(
-                        observation.get("raw_analyte_label", "unknown"),
-                        observation_reason,
-                    )
-                    if item is not None:
-                        key = (item["raw_label"], item["reason"])
-                        if key not in seen:
-                            seen.add(key)
-                            items.append(item)
+            if not _is_true_result_observation(observation):
+                continue
+            obs_id = str(observation.get("id", ""))
+            if obs_id not in finding_obs_ids:
+                observation_reason = _observation_not_assessed_reason(observation)
+                item = _make_not_assessed_item(
+                    observation.get("raw_analyte_label", "unknown"),
+                    observation_reason,
+                )
+                if item is not None:
+                    key = (item["raw_label"], item["reason"])
+                    if key not in seen:
+                        seen.add(key)
+                        items.append(item)
     return items
 
 
@@ -278,6 +289,18 @@ def _observation_support_state(observation: dict) -> str:
     if hasattr(support_state, "value"):
         support_state = support_state.value
     return str(support_state or "").strip().lower()
+
+
+def _is_true_result_observation(observation: dict) -> bool:
+    support_state = _observation_support_state(observation)
+    if support_state in {"", "excluded", "supported"}:
+        return False
+
+    row_type = str(observation.get("row_type") or "").strip().lower()
+    if row_type in _NON_RESULT_ROW_TYPES:
+        return False
+
+    return True
 
 
 def _build_artifact_counts(

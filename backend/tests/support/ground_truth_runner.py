@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from math import ceil
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
@@ -24,6 +25,10 @@ _PLACEHOLDER_ANALYTE_MARKERS = (
     "panel analytes",
     "chemistry/lipid analytes",
     "chemistry and hematology analytes",
+    "cbc core",
+    "lipids",
+    "biochemistry analytes",
+    "hba1c if present",
     "independent of order",
     "raw measured analytes",
     "raw-lab analytes",
@@ -356,6 +361,12 @@ def validate_entry(
     )
     mismatches.extend(assert_analyte_set(entry=entry, pipeline_result=pipeline_result))
     mismatches.extend(
+        assert_supported_observation_floor(entry=entry, pipeline_result=pipeline_result)
+    )
+    mismatches.extend(
+        assert_family_specific_hard_gates(entry=entry, pipeline_result=pipeline_result)
+    )
+    mismatches.extend(
         assert_artifact_leaks(
             dataset=dataset,
             entry=entry,
@@ -517,6 +528,105 @@ def assert_analyte_set(*, entry: GroundTruthEntry, pipeline_result: dict[str, An
     return [f"missing_analyte: {analyte}" for analyte in missing]
 
 
+def assert_supported_observation_floor(
+    *,
+    entry: GroundTruthEntry,
+    pipeline_result: dict[str, Any] | None,
+) -> list[str]:
+    if pipeline_result is None:
+        return []
+
+    support_banner = _pipeline_support_banner(pipeline_result)
+    if support_banner == "could_not_assess":
+        return []
+
+    required = [
+        analyte
+        for analyte in entry.must_extract_analytes
+        if not _is_placeholder_analyte(analyte)
+    ]
+    if not required:
+        return []
+
+    supported_count = _supported_observation_count(pipeline_result)
+    floor = _supported_observation_floor(
+        required_count=len(required),
+        support_banner=support_banner,
+    )
+
+    if supported_count >= floor:
+        return []
+    return [
+        "supported_observation_floor_miss: "
+        f"required_floor={floor} supported_count={supported_count}"
+    ]
+
+
+def assert_family_specific_hard_gates(
+    *,
+    entry: GroundTruthEntry,
+    pipeline_result: dict[str, Any] | None,
+) -> list[str]:
+    if pipeline_result is None:
+        return []
+
+    file_name = entry.file.lower()
+    messages: list[str] = []
+
+    patient_artifact = pipeline_result.get("patient_artifact")
+    not_assessed_labels = _patient_not_assessed_labels(patient_artifact)
+    supported_labels = _supported_observation_labels(pipeline_result)
+
+    if file_name.endswith("easy/seed_labtestingapi_sample_report.pdf"):
+        must_not_leak = (
+            "report status",
+            "client information",
+            "room",
+            "floor",
+            "address",
+        )
+        for marker in must_not_leak:
+            if any(marker in label for label in not_assessed_labels):
+                messages.append(f"labtestingapi_marker_leak: {marker}")
+
+    if file_name.endswith("medium/seed_sterlingaccuris_pathology_sample_report.pdf"):
+        pathology_markers = (
+            "pathology",
+            "final diagnosis",
+            "microscopic",
+            "gross description",
+            "watermark",
+            "signature",
+        )
+        for marker in pathology_markers:
+            if any(marker in label for label in not_assessed_labels):
+                messages.append(f"sterling_pathology_leak: {marker}")
+
+        if _supported_observation_count(pipeline_result) < 2:
+            messages.append("sterling_supported_coverage_floor_miss: expected>=2")
+
+    if file_name.endswith("medium/seed_innoquest_dbticrp.pdf"):
+        required_markers = ("apoa1", "apob", "apob/apoa1", "lp(a)")
+        for marker in required_markers:
+            marker_normalized = _normalize_token(marker)
+            if not any(marker_normalized in label for label in supported_labels):
+                messages.append(f"dbticrp_required_analyte_missing: {marker}")
+
+        note_markers = (
+            "eas",
+            "consensus",
+            "castelli",
+            "recurrent cv",
+            "clin chem",
+            "lab med",
+        )
+        for marker in note_markers:
+            if any(marker in label for label in not_assessed_labels):
+                messages.append(f"dbticrp_note_leak: {marker}")
+
+    return messages
+
+
 def _is_placeholder_analyte(value: str) -> bool:
     normalized = value.lower()
     if any(marker in normalized for marker in _PLACEHOLDER_ANALYTE_MARKERS):
@@ -573,6 +683,58 @@ def observed_analytes(pipeline_result: dict[str, Any]) -> set[str]:
                 values.add(value)
 
     return values
+
+
+def _supported_observation_count(pipeline_result: dict[str, Any]) -> int:
+    observations = pipeline_result.get("observations")
+    if not isinstance(observations, list):
+        return 0
+    count = 0
+    for observation in observations:
+        if not isinstance(observation, dict):
+            continue
+        support_state = observation.get("support_state")
+        if hasattr(support_state, "value"):
+            support_state = support_state.value
+        if str(support_state or "").lower() == "supported":
+            count += 1
+    return count
+
+
+def _supported_observation_labels(pipeline_result: dict[str, Any]) -> set[str]:
+    observations = pipeline_result.get("observations")
+    if not isinstance(observations, list):
+        return set()
+
+    labels: set[str] = set()
+    for observation in observations:
+        if not isinstance(observation, dict):
+            continue
+        support_state = observation.get("support_state")
+        if hasattr(support_state, "value"):
+            support_state = support_state.value
+        if str(support_state or "").lower() != "supported":
+            continue
+
+        for key in ("accepted_analyte_display", "raw_analyte_label"):
+            value = _normalize_token(observation.get(key))
+            if value:
+                labels.add(value)
+
+    return labels
+
+
+def _patient_not_assessed_labels(patient_artifact: object) -> list[str]:
+    if not isinstance(patient_artifact, dict):
+        return []
+    labels: list[str] = []
+    for item in patient_artifact.get("not_assessed", []) or []:
+        if not isinstance(item, dict):
+            continue
+        label = _normalize_token(item.get("raw_label"))
+        if label:
+            labels.append(label)
+    return labels
 
 
 def write_ground_truth_report(report: GroundTruthReport) -> Path:
@@ -662,3 +824,11 @@ def _minimum_analyte_coverage_threshold(*, required_count: int, support_banner: 
     if support_banner == "fully_supported":
         return 0.7
     return 0.5
+
+
+def _supported_observation_floor(*, required_count: int, support_banner: str) -> int:
+    if required_count <= 1:
+        return 1
+    if support_banner == "fully_supported":
+        return max(1, ceil(required_count * 0.7))
+    return max(1, ceil(required_count * 0.5))

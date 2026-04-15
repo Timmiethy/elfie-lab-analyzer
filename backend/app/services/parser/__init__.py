@@ -1694,9 +1694,16 @@ def _parse_trusted_pdf_v12(
             raise ValueError(TrustedPdfParseFailureCode.AMBIGUOUS_PAGE_CLASSIFICATION.value)
 
         saw_text = saw_text or bool(str(artifact.raw_text or "").strip())
+        if _should_skip_page_for_normalization(
+            getattr(artifact.page_kind, "value", "unknown"),
+            metadata=artifact.metadata,
+        ):
+            continue
+
         family_adapter_id = _select_adapter(artifact.raw_text).family_adapter_id
         block_graph = block_graph_builder.build(artifact)
         page_class = _page_class_from_v4_kind(getattr(artifact.page_kind, "value", "unknown"))
+        _assert_lab_page_line_structure(block_graph, page_class=page_class)
         candidate_rows, suppression_report = assembler.assemble(
             block_graph=block_graph,
             artifact=artifact,
@@ -1736,6 +1743,68 @@ def _page_class_from_v4_kind(page_kind: str) -> str:
         "footer_header": "header_footer_page",
     }
     return mapping.get(str(page_kind), "mixed_page")
+
+
+def _assert_lab_page_line_structure(block_graph: Any, *, page_class: str) -> None:
+    """Fail fast when multi-line lab evidence loses line arrays before assembly.
+
+    Multi-row lab pages must preserve block line arrays so row assembly can
+    operate on true row boundaries instead of flattened block text.
+    """
+    if page_class != "analyte_table_page":
+        return
+
+    nodes = list(getattr(block_graph, "nodes", []) or [])
+    if not nodes:
+        return
+
+    expected_line_total = 0
+    actual_line_total = 0
+    for node in nodes:
+        metadata = node.metadata if isinstance(node.metadata, dict) else {}
+        try:
+            expected_line_count = int(float(metadata.get("line_count", 0)))
+        except (TypeError, ValueError):
+            expected_line_count = 0
+
+        line_values = list(getattr(node, "lines", []) or [])
+        actual_line_count = len([line for line in line_values if str(line).strip()])
+
+        expected_line_total += expected_line_count if expected_line_count > 0 else actual_line_count
+        actual_line_total += actual_line_count
+
+    # Assertion target for multi-row lab pages:
+    #   sum(len(node.lines)) > number_of_nodes
+    if expected_line_total > len(nodes) and actual_line_total <= len(nodes):
+        raise ValueError("trusted_pdf_line_structure_lost")
+
+
+def _should_skip_page_for_normalization(
+    page_kind: str,
+    *,
+    metadata: dict[str, Any] | None = None,
+) -> bool:
+    normalized = str(page_kind or "unknown")
+    if normalized not in {"non_lab_medical", "interpreted_summary"}:
+        return False
+
+    evidence = (metadata or {}).get("page_classification_evidence") if isinstance(metadata, dict) else None
+    if isinstance(evidence, dict):
+        try:
+            numeric_density = float(evidence.get("numeric_token_density", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            numeric_density = 0.0
+        try:
+            table_density = float(evidence.get("table_density", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            table_density = 0.0
+
+        # Composite packets can carry both pathology and dense raw-lab pages.
+        # Only skip clearly non-lab pages with weak numeric/table evidence.
+        if numeric_density >= 0.08 or table_density >= 0.2:
+            return False
+
+    return True
 
 
 def _materialize_v12_row(

@@ -469,6 +469,7 @@ async def test_wave22_nmol_l_unit_classifies_correctly() -> None:
     engine = UcumEngine()
     assert engine.classify_unit_family("nmol/L") == "molar_concentration"
     assert engine.classify_unit_family("pg/mL") == "mass_concentration"
+    assert engine.classify_unit_family("B/A") == "ratio"
 
 
 async def test_wave22_innoquest_analyte_resolver_accepts_new_analytes() -> None:
@@ -709,6 +710,62 @@ async def test_wave4_innoquest_total_bilirubin_chinese_label_resolves() -> None:
     assert accepted["candidate_code"] == "1975-2", (
         f"Expected 1975-2, got {accepted['candidate_code']}"
     )
+
+
+async def test_wave24_innoquest_apolipoprotein_ratio_unit_aware_rewrite_resolves() -> None:
+    """V12 wave-24: DBTICRP rows with compact Chinese apolipoprotein labels
+    and B/A unit channels should resolve to ApoB/ApoA1 ratio."""
+    from app.services.analyte_resolver import AnalyteResolver
+
+    resolver = AnalyteResolver()
+    result = resolver.resolve(
+        "载脂蛋白",
+        context={
+            "family_adapter_id": "innoquest_bilingual_general",
+            "specimen_context": "serum",
+            "language_id": "en",
+            "raw_unit_string": "B/A",
+        },
+    )
+    assert result["support_state"] == "supported", (
+        f"载脂蛋白 with B/A unit should be supported: {result['failure_code']}"
+    )
+    accepted = result.get("accepted_candidate")
+    assert accepted is not None
+    assert accepted["candidate_code"] == "55884-4", (
+        f"Expected 55884-4, got {accepted['candidate_code']}"
+    )
+
+
+async def test_wave24_sterling_core_label_rewrites_resolve() -> None:
+    """V12 wave-24: Sterling packet residual labels should resolve after
+    lexical rewrites so core supported coverage is retained."""
+    from app.services.analyte_resolver import AnalyteResolver
+
+    resolver = AnalyteResolver()
+    cases = [
+        ("Mean Blood Glucose", "mg/dL", "Glucose"),
+        ("Urine Glucose", "", "Glucose"),
+        ("Urine Protein", "", "Total Protein"),
+        ("Microalbumin (per urine volume)", "mg/L", "Urine Albumin"),
+    ]
+
+    for raw_label, raw_unit, expected_display in cases:
+        result = resolver.resolve(
+            raw_label,
+            context={
+                "family_adapter_id": "generic_layout",
+                "specimen_context": "urine",
+                "language_id": "en",
+                "raw_unit_string": raw_unit,
+            },
+        )
+        assert result["support_state"] == "supported", (
+            f"{raw_label!r} should be supported: {result['failure_code']}"
+        )
+        accepted = result.get("accepted_candidate")
+        assert accepted is not None
+        assert accepted["candidate_display"] == expected_display
 
 
 # ---------------------------------------------------------------------------

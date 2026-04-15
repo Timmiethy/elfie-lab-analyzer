@@ -7,7 +7,7 @@
     "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
   },
   "benchmark_contract_version": "benchmark-contract-v1",
-  "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+  "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
   "contract_version": "benchmark-proof-pack-v1",
   "family_benchmarks": {},
   "lineage": {
@@ -88,7 +88,7 @@
     "completeness_structural_state": "complete",
     "completeness_supported_ratio": 1.0,
     "extracted_rows": 1,
-    "extraction_ms": 5,
+    "extraction_ms": 6,
     "findings": 1,
     "panels": 1,
     "parser_backend": "pymupdf",
@@ -115,7 +115,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -139,7 +139,7 @@
         "report_type": "truth_engine_pipeline"
       },
       "report_name": "ablation_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     },
     "clinician_scan_report.json": {
       "artifact_refs": {
@@ -149,7 +149,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -172,7 +172,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "clinician_scan_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     },
     "coverage_report.json": {
       "artifact_refs": {
@@ -182,7 +182,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -229,7 +229,7 @@
         "regressed_metrics": []
       },
       "report_name": "coverage_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     },
     "explanation_report.json": {
       "artifact_refs": {
@@ -239,7 +239,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -263,7 +263,7 @@
         "template_version": "templates-v1"
       },
       "report_name": "explanation_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     },
     "mapping_report.json": {
       "artifact_refs": {
@@ -273,7 +273,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -306,7 +306,7 @@
           "completeness_structural_state": "complete",
           "completeness_supported_ratio": 1.0,
           "extracted_rows": 1,
-          "extraction_ms": 5,
+          "extraction_ms": 6,
           "findings": 1,
           "panels": 1,
           "parser_backend": "pymupdf",
@@ -324,7 +324,7 @@
         }
       },
       "report_name": "mapping_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     },
     "parser_report.json": {
       "artifact_refs": {
@@ -334,7 +334,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -356,12 +356,12 @@
       "payload": {
         "regression_tags": [],
         "timing": {
-          "extraction_ms": 5,
+          "extraction_ms": 6,
           "processing_ms": 9
         }
       },
       "report_name": "parser_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     },
     "partial_support_report.json": {
       "artifact_refs": {
@@ -371,7 +371,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -397,7 +397,7 @@
         }
       },
       "report_name": "partial_support_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     },
     "patient_comprehension_report.json": {
       "artifact_refs": {
@@ -407,7 +407,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -430,7 +430,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "patient_comprehension_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     },
     "policy_report.json": {
       "artifact_refs": {
@@ -440,7 +440,7 @@
         "patient_artifact": "/api/artifacts/61529adc-7a4d-5339-8db7-4a22ab100c4e/patient",
         "proof_pack": "/api/jobs/61529adc-7a4d-5339-8db7-4a22ab100c4e/proof-pack"
       },
-      "benchmark_id": "645379d7-eea8-5129-859e-06d699eed76e",
+      "benchmark_id": "a1c9e6b1-af85-5efe-9cbf-cb891351ea7d",
       "build_commit": "unknown",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
@@ -466,7 +466,7 @@
         "severity_policy_version": "severity-v1"
       },
       "report_name": "policy_report.json",
-      "timestamp": "2026-04-14T17:28:59.733084Z"
+      "timestamp": "2026-04-14T23:15:03.187315Z"
     }
   },
   "summary": {
@@ -499,7 +499,7 @@
     "regressed_metrics": [],
     "regression_tags": [],
     "timing": {
-      "extraction_ms": 5,
+      "extraction_ms": 6,
       "processing_ms": 9
     },
     "trace_refs": {}

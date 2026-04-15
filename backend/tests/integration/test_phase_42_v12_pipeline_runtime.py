@@ -351,7 +351,7 @@ class TestV12RuntimeGuardrails:
         assert decision["enforcement_action"] == "downgraded_non_lab_or_ambiguous_class"
 
     @pytest.mark.asyncio
-    async def test_runtime_routing_keeps_caller_lane_without_preflight_context(self):
+    async def test_runtime_routing_downgrades_when_preflight_context_is_missing(self):
         decision = await _resolve_runtime_routing(
             file_bytes=b"%PDF-1.4 fake",
             requested_lane="trusted_pdf",
@@ -360,8 +360,8 @@ class TestV12RuntimeGuardrails:
             runtime_preflight=None,
         )
 
-        assert decision["selected_lane"] == "trusted_pdf"
-        assert decision["enforcement_action"] == "caller_lane_without_runtime_preflight"
+        assert decision["selected_lane"] == "unsupported"
+        assert decision["enforcement_action"] == "downgraded_missing_runtime_preflight_context"
 
 
 class TestV12PipelineRuntimeIntegration:
