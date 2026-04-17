@@ -39,10 +39,10 @@ export function PageChrome({
         className="stitch-page-chrome__hero"
         style={{
           position: 'relative',
-          backgroundColor: STITCH_COLORS.navy,
+          background: `linear-gradient(135deg, #C9104F 0%, ${STITCH_COLORS.pinkDark} 45%, ${STITCH_COLORS.pink} 100%)`,
           color: STITCH_COLORS.surfaceWhite,
           padding: compact ? '1.5rem 1.25rem 2.5rem' : '1.75rem 1.25rem 3rem',
-          boxShadow: STITCH_SHADOWS.lift,
+          boxShadow: '0 18px 40px rgba(255, 21, 112, 0.28)',
           overflow: 'hidden',
         }}
       >
@@ -53,7 +53,7 @@ export function PageChrome({
             position: 'absolute',
             inset: 0,
             background:
-              'radial-gradient(circle at 82% 18%, rgba(255,255,255,0.14) 0, rgba(255,255,255,0.02) 24%, transparent 26%)',
+              'radial-gradient(circle at 82% 18%, rgba(255,255,255,0.35) 0, rgba(255,255,255,0.08) 28%, transparent 52%), radial-gradient(circle at 12% 88%, rgba(255,255,255,0.22) 0, rgba(255,255,255,0.04) 30%, transparent 55%)',
             pointerEvents: 'none',
           }}
         />
@@ -73,11 +73,13 @@ export function PageChrome({
           <div style={{ minWidth: 0 }}>
             <p
               style={{
-                fontSize: '1.2rem',
-                fontWeight: 700,
+                fontSize: '1.35rem',
+                fontWeight: 800,
                 letterSpacing: '-0.02em',
                 margin: 0,
                 lineHeight: 1.2,
+                color: STITCH_COLORS.surfaceWhite,
+                textShadow: '0 1px 2px rgba(139, 8, 51, 0.25)',
               }}
             >
               {title}
@@ -85,10 +87,10 @@ export function PageChrome({
             {subtitle && (
               <p
                 style={{
-                  fontSize: '0.88rem',
+                  fontSize: '0.9rem',
                   lineHeight: 1.5,
-                  color: 'rgba(255,255,255,0.72)',
-                  margin: '0.4rem 0 0',
+                  color: 'rgba(255,255,255,0.88)',
+                  margin: '0.45rem 0 0',
                   maxWidth: 380,
                 }}
               >
@@ -106,7 +108,7 @@ export function PageChrome({
             right: 0,
             bottom: -26,
             height: 52,
-            backgroundColor: STITCH_COLORS.navy,
+            background: STITCH_COLORS.pink,
             clipPath: 'ellipse(140% 100% at 50% 0%)',
           }}
         />
