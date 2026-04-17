@@ -24,7 +24,7 @@ async def test_phase_28_persist_bundle_reuses_existing_lineage_for_benchmark() -
     result = await store.persist_top_level_bundle(
         job_id=job.id,
         benchmark_run={
-            "report_type": "truth_engine_pipeline",
+            "report_type": "truth_engine_seeded_pipeline",
             "metrics": {"processing_ms": 42},
         },
     )
@@ -34,7 +34,7 @@ async def test_phase_28_persist_bundle_reuses_existing_lineage_for_benchmark() -
     assert result.benchmark_run is benchmark
     store.create_benchmark_run.assert_awaited_once_with(
         lineage_id=lineage.id,
-        report_type="truth_engine_pipeline",
+        report_type="truth_engine_seeded_pipeline",
         metrics={"processing_ms": 42},
     )
 
@@ -66,7 +66,7 @@ async def test_phase_28_persist_bundle_prefers_newly_created_lineage_for_benchma
             "template_version": "templates-v1",
         },
         benchmark_run={
-            "report_type": "truth_engine_pipeline",
+            "report_type": "truth_engine_seeded_pipeline",
             "metrics": {"processing_ms": 42},
         },
     )
@@ -76,7 +76,7 @@ async def test_phase_28_persist_bundle_prefers_newly_created_lineage_for_benchma
     store.get_latest_lineage_run.assert_not_awaited()
     store.create_benchmark_run.assert_awaited_once_with(
         lineage_id=lineage.id,
-        report_type="truth_engine_pipeline",
+        report_type="truth_engine_seeded_pipeline",
         metrics={"processing_ms": 42},
     )
 
@@ -95,7 +95,7 @@ async def test_phase_28_persist_bundle_requires_lineage_before_benchmark() -> No
         await store.persist_top_level_bundle(
             job_id=job.id,
             benchmark_run={
-                "report_type": "truth_engine_pipeline",
+                "report_type": "truth_engine_seeded_pipeline",
                 "metrics": {"processing_ms": 42},
             },
         )

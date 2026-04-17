@@ -61,7 +61,9 @@ def upgrade() -> None:
         sa.Column("parser_version", sa.String(length=32), nullable=False),
         sa.Column("ocr_version", sa.String(length=32), nullable=True),
         sa.Column("terminology_release", sa.String(length=32), nullable=False),
-        sa.Column("mapping_threshold_config", postgresql.JSON(astext_type=sa.Text()), nullable=False),
+        sa.Column(
+            "mapping_threshold_config", postgresql.JSON(astext_type=sa.Text()), nullable=False
+        ),
         sa.Column("unit_engine_version", sa.String(length=32), nullable=False),
         sa.Column("rule_pack_version", sa.String(length=32), nullable=False),
         sa.Column("severity_policy_version", sa.String(length=32), nullable=False),

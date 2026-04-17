@@ -9,14 +9,19 @@ from app.api.auth import CurrentUserId
 from app.api.deps import get_db, get_session_factory
 from app.config import settings
 from app.db import TopLevelLifecycleStore
-from app.services.clinician_pdf import clinician_pdf_path, clinician_pdf_route
 from app.services.observability import observability_metrics
 from app.services.proof_pack import proof_pack_route, read_proof_pack
-from app.workers.pipeline import PipelineOrchestrator, PipelineStep, get_job_run
+from app.workers.pipeline import PipelineOrchestrator, get_job_run
 
 router = APIRouter()
 _PROCESSING_FAILED_DETAIL = "processing_failed"
 _JOB_DEAD_LETTER_DETAIL = "job_dead_lettered"
+
+
+def _normalize_storage_path(raw_path: str) -> Path:
+    # Persisted storage paths can be created on Windows and retried on Linux.
+    # Normalize separators so relative artifacts paths resolve on both platforms.
+    return Path(raw_path.replace("\\", "/"))
 
 
 @router.get("/ops/recent")
@@ -31,7 +36,7 @@ async def get_recent_jobs(
     try:
         store = TopLevelLifecycleStore(db)
         return {"jobs": await store.list_recent_jobs(limit, user_id=user_id)}
-    except (InterfaceError, OperationalError):
+    except (InterfaceError, OperationalError, OSError):
         raise HTTPException(status_code=503, detail="database_unavailable") from None
 
 
@@ -46,16 +51,14 @@ async def get_job_audit(
     try:
         store = TopLevelLifecycleStore(db)
         try:
-            payload = await store.get_job_audit_data(job_id)
+            payload = await store.get_job_audit_data(job_id, user_id=user_id)
             proof_pack = read_proof_pack(job_id)
             payload["proof_pack_available"] = proof_pack is not None
             payload["proof_pack_ref"] = proof_pack_route(job_id) if proof_pack is not None else None
-            payload["clinician_pdf_ref"] = clinician_pdf_route(job_id)
-            payload["clinician_pdf_available"] = clinician_pdf_path(job_id).exists()
             return payload
         except LookupError:
             raise HTTPException(status_code=404, detail="job_not_found")
-    except (InterfaceError, OperationalError):
+    except (InterfaceError, OperationalError, OSError):
         raise HTTPException(status_code=503, detail="database_unavailable") from None
 
 
@@ -81,10 +84,11 @@ async def get_retry_preview(
             return await store.get_retry_preview_data(
                 job_id,
                 max_retry_count=settings.max_job_retries,
+                user_id=user_id,
             )
         except LookupError:
             raise HTTPException(status_code=404, detail="job_not_found")
-    except (InterfaceError, OperationalError):
+    except (InterfaceError, OperationalError, OSError):
         raise HTTPException(status_code=503, detail="database_unavailable") from None
 
 
@@ -95,7 +99,7 @@ async def get_job(
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> dict:
     """Get job details including current processing status."""
-    persisted = await _get_persisted_job(str(job_id), session_factory)
+    persisted = await _get_persisted_job(str(job_id), session_factory, user_id=user_id)
     if persisted is not None:
         return persisted
 
@@ -117,7 +121,7 @@ async def retry_job(
 
     try:
         store = TopLevelLifecycleStore(db)
-        job = await store.get_job(job_id)
+        job = await store.get_job(job_id, user_id=user_id)
         if job is None:
             raise HTTPException(status_code=404, detail="job_not_found")
         if job.dead_letter:
@@ -127,15 +131,26 @@ async def retry_job(
         if document is None:
             raise HTTPException(status_code=404, detail="document_not_found")
 
+        retry_count = await store.increment_retry_count_if_below(
+            job_id,
+            max_retry_count=settings.max_job_retries,
+        )
+        if retry_count is None:
+            raise HTTPException(status_code=409, detail=_JOB_DEAD_LETTER_DETAIL)
+        await db.commit()
+
+        job = await store.get_job(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="job_not_found")
+
         job_uuid = str(job.id)
         document_uuid = document.id
         document_checksum = document.checksum
         document_storage_path = document.storage_path
         lane_type = job.lane_type
-        retry_count = int(job.retry_count or 0) + 1
 
         try:
-            file_bytes = Path(document_storage_path).read_bytes()
+            file_bytes = _normalize_storage_path(document_storage_path).read_bytes()
         except OSError as exc:
             dead_letter = retry_count >= settings.max_job_retries
             await _update_job_status_in_fresh_session(
@@ -158,8 +173,6 @@ async def retry_job(
                     db_session=session,
                     document_id=document_uuid,
                     source_checksum=document_checksum,
-                    source_filename=document.filename,
-                    source_mime_type=document.mime_type,
                 )
                 await session.commit()
         except Exception as exc:
@@ -174,17 +187,15 @@ async def retry_job(
             )
             raise HTTPException(status_code=422, detail=_PROCESSING_FAILED_DETAIL) from exc
 
-        # v12: Clear stale operator_note on successful retry
         await _update_job_status_in_fresh_session(
             job_uuid,
             status=result["status"],
             session_factory=session_factory,
             retry_count=retry_count,
             dead_letter=False,
-            clear_operator_note=True,
         )
-        return await _get_persisted_job(job_uuid, session_factory)
-    except (InterfaceError, OperationalError):
+        return await _get_persisted_job(job_uuid, session_factory, user_id=user_id)
+    except (InterfaceError, OperationalError, OSError):
         raise HTTPException(status_code=503, detail="database_unavailable") from None
 
 
@@ -195,7 +206,11 @@ async def get_job_status(
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> dict:
     """Get lightweight job status for polling."""
-    persisted = await _get_persisted_job_status(str(job_id), session_factory)
+    persisted = await _get_persisted_job_status(
+        str(job_id),
+        session_factory,
+        user_id=user_id,
+    )
     if persisted is not None:
         return persisted
 
@@ -206,7 +221,6 @@ async def get_job_status(
     return {
         "job_id": str(job_id),
         "status": job["status"],
-        "step": job.get("step") or _status_step_from_status(job["status"]),
         "lane_type": job.get("lane_type"),
     }
 
@@ -214,11 +228,13 @@ async def get_job_status(
 async def _get_persisted_job(
     job_id: str,
     session_factory: async_sessionmaker[AsyncSession],
+    *,
+    user_id: UUID,
 ) -> dict | None:
     try:
         async with session_factory() as session:
             store = TopLevelLifecycleStore(session)
-            job = await store.get_job(job_id)
+            job = await store.get_job(job_id, user_id=user_id)
             if job is None:
                 return None
             lineage = await store.get_latest_lineage_run(job_id)
@@ -233,7 +249,7 @@ async def _get_persisted_job(
                 lineage_count=lineage_count,
                 lineage=lineage,
             )
-    except (InterfaceError, OperationalError):
+    except (InterfaceError, OperationalError, OSError):
         observability_metrics.record_persistence_fallback()
         return None
 
@@ -241,20 +257,21 @@ async def _get_persisted_job(
 async def _get_persisted_job_status(
     job_id: str,
     session_factory: async_sessionmaker[AsyncSession],
+    *,
+    user_id: UUID,
 ) -> dict | None:
     try:
         async with session_factory() as session:
             store = TopLevelLifecycleStore(session)
-            job = await store.get_job(job_id)
+            job = await store.get_job(job_id, user_id=user_id)
             if job is None:
                 return None
             return {
                 "job_id": str(job.id),
                 "status": job.status,
-                "step": _status_step_from_status(job.status),
                 "lane_type": job.lane_type,
             }
-    except (InterfaceError, OperationalError):
+    except (InterfaceError, OperationalError, OSError):
         observability_metrics.record_persistence_fallback()
         return None
 
@@ -264,7 +281,6 @@ def _job_payload_from_model(*, job_id: str, job, lineage_count: int, lineage) ->
     return {
         "job_id": job_id,
         "status": job.status,
-        "step": _status_step_from_status(job.status),
         "lane_type": job.lane_type,
         "qa": None,
         "findings": [],
@@ -283,7 +299,6 @@ def _runtime_job_payload(*, job_id: str, job: dict) -> dict:
     return {
         "job_id": job_id,
         "status": job["status"],
-        "step": job.get("step") or _status_step_from_status(job["status"]),
         "lane_type": job.get("lane_type"),
         "qa": job.get("qa"),
         "findings": job.get("findings", []),
@@ -296,16 +311,6 @@ def _runtime_job_payload(*, job_id: str, job: dict) -> dict:
     }
 
 
-def _status_step_from_status(status: str) -> str:
-    if status in {"completed", "partial"}:
-        return PipelineStep.LINEAGE_PERSIST.value
-    if status == "pending":
-        return PipelineStep.PREFLIGHT.value
-    if status in {"failed", "dead_lettered"}:
-        return status
-    return str(status)
-
-
 async def _update_job_status_in_fresh_session(
     job_id: str,
     *,
@@ -314,7 +319,6 @@ async def _update_job_status_in_fresh_session(
     retry_count: int | None = None,
     dead_letter: bool | None = None,
     operator_note: str | None = None,
-    clear_operator_note: bool = False,
 ) -> None:
     async with session_factory() as session:
         store = TopLevelLifecycleStore(session)
@@ -324,6 +328,5 @@ async def _update_job_status_in_fresh_session(
             retry_count=retry_count,
             dead_letter=dead_letter,
             operator_note=operator_note,
-            clear_operator_note=clear_operator_note,
         )
         await session.commit()

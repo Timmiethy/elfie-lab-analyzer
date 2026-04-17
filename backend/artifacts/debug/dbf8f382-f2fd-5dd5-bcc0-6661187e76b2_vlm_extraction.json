@@ -1,0 +1,16 @@
+[
+  {
+    "source_page": 1,
+    "row_hash": "structured-row-glucose",
+    "raw_text": "Glucose 180 mg/dL",
+    "raw_analyte_label": "glucose fasting",
+    "raw_value_string": "180",
+    "raw_unit_string": "mg/dL",
+    "parsed_numeric_value": 180.0,
+    "raw_reference_range": "70-99",
+    "specimen_context": "serum",
+    "language_id": "en",
+    "extraction_confidence": 1.0,
+    "document_id": "dbf8f382-f2fd-5dd5-bcc0-6661187e76b2"
+  }
+]

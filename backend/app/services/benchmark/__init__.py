@@ -20,16 +20,9 @@ PROOF_PACK_REPORT_NAMES = (
     "clinician_scan_report.json",
     "ablation_report.json",
 )
-_TRACE_REF_FIELDS = (
-    "parser_trace",
-    "normalization_trace",
-    "suppression_report",
-)
 _LINEAGE_VERSION_FIELDS = (
     "parser_version",
     "ocr_version",
-    "family_adapter_version",
-    "row_assembly_version",
     "terminology_release",
     "unit_engine_version",
     "rule_pack_version",
@@ -75,25 +68,6 @@ def _compare_metric(observed: object, baseline: object) -> dict:
 
 def _lineage_version_ids(lineage: Mapping[str, object]) -> dict[str, object]:
     return {field_name: lineage.get(field_name) for field_name in _LINEAGE_VERSION_FIELDS}
-
-
-def _compact_trace_refs(trace_refs: Mapping[str, object] | None) -> dict[str, object]:
-    if not trace_refs:
-        return {}
-
-    return {
-        str(ref_name): ref_value
-        for ref_name, ref_value in trace_refs.items()
-        if ref_value not in (None, "", [], {}, ())
-    }
-
-
-def _trace_refs_from_artifact_refs(artifact_refs: Mapping[str, object]) -> dict[str, object]:
-    return {
-        ref_name: artifact_refs[ref_name]
-        for ref_name in _TRACE_REF_FIELDS
-        if artifact_refs.get(ref_name) not in (None, "", [], {}, ())
-    }
 
 
 def _proof_report_base(
@@ -217,23 +191,16 @@ class BenchmarkRecorder:
         metrics: dict,
         baselines: Mapping[str, object] | None = None,
         regression_tags: Sequence[str] | None = None,
-        *,
-        family_benchmarks: Mapping[str, object] | None = None,
-        trace_refs: Mapping[str, object] | None = None,
     ) -> dict:
         lineage_id_str = str(lineage_id)
         metrics_payload = dict(metrics)
         baselines_payload = dict(baselines or {})
         regression_tags_payload = list(regression_tags or [])
-        family_benchmarks_payload = dict(family_benchmarks or {})
-        trace_refs_payload = _compact_trace_refs(trace_refs)
         benchmark_key = _stable_payload(
             {
                 "baselines": baselines_payload,
-                "family_benchmarks": family_benchmarks_payload,
                 "metrics": metrics_payload,
                 "regression_tags": regression_tags_payload,
-                "trace_refs": trace_refs_payload,
             }
         )
         benchmark_id = uuid5(
@@ -277,16 +244,12 @@ class BenchmarkRecorder:
             "metrics": metrics_payload,
             "baselines": baselines_payload,
             "regression_tags": regression_tags_payload,
-            "family_benchmarks": family_benchmarks_payload,
-            "trace_refs": trace_refs_payload,
             "summary": {
                 "timing": timing_summary,
                 "metrics": non_timing_summary,
                 "baseline_checks": baseline_checks,
                 "regressed_metrics": regressed_metrics,
                 "regression_tags": regression_tags_payload,
-                "family_benchmarks": family_benchmarks_payload,
-                "trace_refs": trace_refs_payload,
             },
         }
 
@@ -305,14 +268,6 @@ class BenchmarkRecorder:
         summary_payload.setdefault(
             "regression_tags", list(benchmark_payload.get("regression_tags") or [])
         )
-        benchmark_trace_refs = _compact_trace_refs(benchmark_payload.get("trace_refs"))
-        artifact_trace_refs = _trace_refs_from_artifact_refs(artifact_refs_payload)
-        trace_refs_payload = {**benchmark_trace_refs, **artifact_trace_refs}
-        family_benchmarks_payload = dict(
-            benchmark_payload.get("family_benchmarks")
-            or summary_payload.get("family_benchmarks")
-            or {}
-        )
 
         return {
             "contract_version": PROOF_PACK_CONTRACT_VERSION,
@@ -325,8 +280,6 @@ class BenchmarkRecorder:
             "regression_tags": list(benchmark_payload.get("regression_tags") or []),
             "lineage": lineage_payload,
             "artifact_refs": artifact_refs_payload,
-            "trace_refs": trace_refs_payload,
-            "family_benchmarks": family_benchmarks_payload,
             "reports": _build_proof_reports(
                 benchmark=benchmark_payload,
                 lineage=lineage_payload,

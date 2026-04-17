@@ -195,6 +195,20 @@ export default function HistoryCard({ history }: Props) {
               {DIRECTION_META[history.direction].label}
             </span>
           </div>
+
+          {history.comparability_status === 'unavailable' &&
+            history.comparability_reason && (
+              <p
+                style={{
+                  margin: '0.45rem 0 0',
+                  fontSize: '0.78rem',
+                  lineHeight: 1.45,
+                  color: '#9A3412',
+                }}
+              >
+                {history.comparability_reason}
+              </p>
+            )}
         </div>
       )}
     </SurfaceCard>

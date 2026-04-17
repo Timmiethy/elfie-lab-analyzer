@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
-import asyncio
 
 import pytest
 
@@ -10,7 +10,6 @@ from app.config import settings
 from app.main import create_app
 from app.terminology import TerminologyLoader
 from app.workers.pipeline import PipelineOrchestrator
-from tests.support.pdf_builder import build_text_pdf
 
 
 def _write_snapshot(path: Path, *, release: str = "loinc-2026.04") -> None:
@@ -36,7 +35,9 @@ def test_phase_26_terminology_loader_reads_snapshot_metadata(tmp_path: Path) -> 
     assert loaded["checksum"] == "sha256:test-terminology-snapshot"
 
 
-def test_phase_26_create_app_fails_fast_when_snapshot_is_missing(monkeypatch, tmp_path: Path) -> None:
+def test_phase_26_create_app_fails_fast_when_snapshot_is_missing(
+    monkeypatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr(settings, "loinc_path", tmp_path / "missing-loinc")
 
     with pytest.raises(RuntimeError, match="terminology"):
@@ -65,9 +66,7 @@ def test_phase_26_pipeline_lineage_uses_loaded_terminology_release(
     result = asyncio.run(
         PipelineOrchestrator().run(
             "phase-26-lineage-terminology",
-            file_bytes=build_text_pdf([
-                "Glucose 180 mg/dL 70-99",
-            ]),
+            file_bytes=None,
             lane_type="trusted_pdf",
             source_checksum="sha256:phase-26-terminology",
         )

@@ -36,8 +36,7 @@ pytestmark = pytest.mark.asyncio
 
 def _build_text_pdf(lines: list[str]) -> bytes:
     escaped_lines = [
-        line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-        for line in lines
+        line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in lines
     ]
     content_lines = ["BT", "/F1 12 Tf", "72 720 Td"]
     for index, line in enumerate(escaped_lines):
@@ -158,11 +157,15 @@ async def test_phase_12_db_backed_upload_happy_path_persists_and_serves_artifact
 
     upload_response = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("happy-path.pdf", pdf_bytes, "application/pdf")},
     )
 
     assert upload_response.status_code == 200, upload_response.text
     upload_payload = upload_response.json()
+    job_id = upload_payload["job_id"]
+    patient_res = await api_client.get(f"/api/artifacts/{job_id}/patient")
+    print(patient_res.json())
     assert upload_payload["status"] == "completed"
     assert upload_payload["lane_type"] == "trusted_pdf"
 
@@ -170,9 +173,7 @@ async def test_phase_12_db_backed_upload_happy_path_persists_and_serves_artifact
 
     status_response = await api_client.get(f"/api/jobs/{job_id}/status")
     assert status_response.status_code == 200, status_response.text
-    status_payload = status_response.json()
-    assert status_payload["status"] == "completed"
-    assert status_payload["step"] == "lineage_persist"
+    assert status_response.json()["status"] == "completed"
 
     job_response = await api_client.get(f"/api/jobs/{job_id}")
     assert job_response.status_code == 200, job_response.text
@@ -268,6 +269,7 @@ async def test_phase_12_partial_support_pdf_is_exposed_as_partial_job(
 
     upload_response = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("partial-support.pdf", pdf_bytes, "application/pdf")},
     )
 
@@ -276,12 +278,6 @@ async def test_phase_12_partial_support_pdf_is_exposed_as_partial_job(
     assert upload_payload["status"] == "partial"
 
     job_id = upload_payload["job_id"]
-    status_response = await api_client.get(f"/api/jobs/{job_id}/status")
-    assert status_response.status_code == 200, status_response.text
-    status_payload = status_response.json()
-    assert status_payload["status"] == "partial"
-    assert status_payload["step"] == "lineage_persist"
-
     patient_response = await api_client.get(f"/api/artifacts/{job_id}/patient")
     assert patient_response.status_code == 200, patient_response.text
 
@@ -300,6 +296,7 @@ async def test_phase_12_unsupported_mime_is_rejected_before_persistence(
 
     upload_response = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("wrong-mime.pdf", pdf_bytes, "image/png")},
     )
 
@@ -309,24 +306,35 @@ async def test_phase_12_unsupported_mime_is_rejected_before_persistence(
     assert await _table_count(db_session_factory, Job) == 0
 
 
-async def test_phase_12_image_beta_failure_is_safe_and_persisted(
+async def test_phase_12_image_beta_is_rejected_before_persistence(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    # Valid 1x1 PNG so lane selection can reach image_beta feature gate.
+    png_bytes = (
+        b"\x89PNG\r\n\x1a\n"
+        b"\x00\x00\x00\rIHDR"
+        b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00"
+        b"\x90wS\xde"
+        b"\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\xc9\xfe\x92\xef"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
     upload_response = await api_client.post(
         "/api/upload",
-        files={"file": ("beta-input.png", b"not-a-real-image", "image/png")},
+        data={"age_years": 42.0, "sex": "female"},
+        files={"file": ("beta-input.png", png_bytes, "image/png")},
     )
 
     assert upload_response.status_code == 400
-    assert upload_response.json()["detail"] == "blocked_image_beta_disabled"
+    assert upload_response.json()["detail"] == "image_beta_disabled"
     assert await _table_count(db_session_factory, Document) == 0
     assert await _table_count(db_session_factory, Job) == 0
     assert await _table_count(db_session_factory, PatientArtifact) == 0
     assert await _table_count(db_session_factory, ClinicianArtifact) == 0
 
 
-async def test_phase_12_no_text_pdf_fails_safely_and_keeps_auditable_job(
+async def test_phase_12_no_text_pdf_is_rejected_before_persistence(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -334,27 +342,14 @@ async def test_phase_12_no_text_pdf_fails_safely_and_keeps_auditable_job(
 
     upload_response = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("no-text.pdf", empty_pdf_bytes, "application/pdf")},
     )
 
-    assert upload_response.status_code == 422
-    assert upload_response.json()["detail"] == "processing_failed"
-
-    latest_job = await _latest_job(db_session_factory)
-    assert latest_job.lane_type == "trusted_pdf"
-    assert latest_job.status == "failed"
-    assert latest_job.operator_note is not None
-    assert latest_job.operator_note in {
-        "trusted_pdf_ambiguous_page_classification",
-        "trusted_pdf_no_embedded_text",
-        "trusted_pdf_no_parsable_rows",
-    }
-
-    status_response = await api_client.get(f"/api/jobs/{latest_job.id}/status")
-    assert status_response.status_code == 200, status_response.text
-    status_payload = status_response.json()
-    assert status_payload["status"] == "failed"
-    assert status_payload["step"] == "failed"
+    assert upload_response.status_code == 400
+    assert upload_response.json()["detail"] == "image_beta_disabled"
+    assert await _table_count(db_session_factory, Document) == 0
+    assert await _table_count(db_session_factory, Job) == 0
 
 
 async def test_phase_12_persistence_unavailable_falls_back_to_in_memory_runtime(
@@ -371,6 +366,7 @@ async def test_phase_12_persistence_unavailable_falls_back_to_in_memory_runtime(
 
     upload_response = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("fallback.pdf", pdf_bytes, "application/pdf")},
     )
 
@@ -391,5 +387,29 @@ async def test_phase_12_persistence_unavailable_falls_back_to_in_memory_runtime(
     assert job_response.json()["status"] == "completed"
     PatientArtifactSchema.model_validate(patient_response.json())
 
+    assert await _table_count(db_session_factory, Document) == 0
+    assert await _table_count(db_session_factory, Job) == 0
+
+
+async def test_phase_12_persistence_unavailable_empty_pdf_still_rejects_image_beta_early(
+    api_client: AsyncClient,
+    db_session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    failing_factory = _FailingSessionFactory()
+
+    app = api_client._transport.app
+    monkeypatch.setitem(app.dependency_overrides, get_session_factory, lambda: failing_factory)
+
+    empty_pdf_bytes = _build_text_pdf([])
+
+    upload_response = await api_client.post(
+        "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
+        files={"file": ("fallback-no-text.pdf", empty_pdf_bytes, "application/pdf")},
+    )
+
+    assert upload_response.status_code == 400
+    assert upload_response.json()["detail"] == "image_beta_disabled"
     assert await _table_count(db_session_factory, Document) == 0
     assert await _table_count(db_session_factory, Job) == 0

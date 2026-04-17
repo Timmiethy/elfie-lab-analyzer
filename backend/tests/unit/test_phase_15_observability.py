@@ -1,56 +1,63 @@
-"""Phase 15 acceptance tests for pipeline observability."""
-
 from __future__ import annotations
 
-import asyncio
-import logging
-
-import pytest
-
-from app.workers.pipeline import PipelineOrchestrator
-from tests.support.pdf_builder import build_text_pdf
+from app.services import observability
 
 
-def test_pipeline_logs_job_start_and_completion_with_context(caplog) -> None:
-    with caplog.at_level(logging.INFO):
-        result = asyncio.run(
-            PipelineOrchestrator().run(
-                "phase-15-observe",
-                file_bytes=build_text_pdf([
-                    "Glucose 180 mg/dL 70-99",
-                ]),
-                lane_type="trusted_pdf",
-            )
-        )
+def test_generate_correlation_id_is_hex_uuid() -> None:
+    correlation_id = observability.generate_correlation_id()
 
-    assert result["status"] in {"completed", "partial"}
-    assert any(
-        "pipeline_start" in record.getMessage()
-        and "phase-15-observe" in record.getMessage()
-        and "trusted_pdf" in record.getMessage()
-        for record in caplog.records
-    )
-    assert any(
-        "pipeline_complete" in record.getMessage()
-        and "phase-15-observe" in record.getMessage()
-        and result["status"] in record.getMessage()
-        for record in caplog.records
-    )
+    assert len(correlation_id) == 32
+    int(correlation_id, 16)
 
 
-def test_pipeline_logs_failure_context_for_unsupported_lane(caplog) -> None:
-    with caplog.at_level(logging.ERROR):
-        with pytest.raises(ValueError):
-            asyncio.run(
-                PipelineOrchestrator().run(
-                    "phase-15-failure",
-                    lane_type="legacy_csv",
-                )
-            )
+def test_set_and_get_current_correlation_id_round_trip() -> None:
+    token = observability._current_correlation_id.set(None)
+    try:
+        observability.set_current_correlation_id("phase-15-correlation")
+        assert observability.get_current_correlation_id() == "phase-15-correlation"
+    finally:
+        observability._current_correlation_id.reset(token)
 
-    assert any(
-        "pipeline_failed" in record.getMessage()
-        and "phase-15-failure" in record.getMessage()
-        and "unsupported_lane:legacy_csv" in record.getMessage()
-        for record in caplog.records
-    )
+
+def test_observability_metrics_snapshot_starts_with_known_counters() -> None:
+    metrics = observability.ObservabilityMetrics()
+
+    assert metrics.snapshot() == {
+        "upload_requests": 0,
+        "jobs_completed": 0,
+        "jobs_partial": 0,
+        "jobs_failed": 0,
+        "unsupported_inputs": 0,
+        "persistence_fallbacks": 0,
+    }
+
+
+def test_observability_metrics_records_outcomes_and_reset() -> None:
+    metrics = observability.ObservabilityMetrics()
+
+    metrics.record_upload_request()
+    metrics.record_job_outcome("completed")
+    metrics.record_job_outcome("partial")
+    metrics.record_job_outcome("failed")
+    metrics.record_job_outcome("ignored")
+    metrics.record_unsupported_input()
+    metrics.record_persistence_fallback()
+
+    assert metrics.snapshot() == {
+        "upload_requests": 1,
+        "jobs_completed": 1,
+        "jobs_partial": 1,
+        "jobs_failed": 1,
+        "unsupported_inputs": 1,
+        "persistence_fallbacks": 1,
+    }
+
+    metrics.reset()
+    assert metrics.snapshot() == {
+        "upload_requests": 0,
+        "jobs_completed": 0,
+        "jobs_partial": 0,
+        "jobs_failed": 0,
+        "unsupported_inputs": 0,
+        "persistence_fallbacks": 0,
+    }

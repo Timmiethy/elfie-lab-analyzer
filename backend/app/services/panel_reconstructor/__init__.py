@@ -23,7 +23,11 @@ class PanelReconstructor:
                 {
                     "panel_key": panel_key,
                     "panel_display": self._panel_display(panel_key),
-                    "observation_ids": [observation.get("id") for observation in grouped_observations if observation.get("id") is not None],
+                    "observation_ids": [
+                        observation.get("id")
+                        for observation in grouped_observations
+                        if observation.get("id") is not None
+                    ],
                     "observation_count": len(grouped_observations),
                     "support_state": self._panel_support_state(grouped_observations),
                     "observations": grouped_observations,
@@ -36,13 +40,20 @@ class PanelReconstructor:
     def _panel_key(observation: dict) -> str:
         analyte_code = str(observation.get("accepted_analyte_code") or "").strip()
         analyte_label = str(observation.get("raw_analyte_label") or "").strip().lower()
+        specimen_context = str(observation.get("specimen_context") or "").strip().lower()
 
         metadata = _load_panel_metadata()
-        if analyte_code in metadata["codes_by_panel"].get("glycemia", set()) or analyte_label in metadata["aliases_by_panel"].get("glycemia", set()):
+        if analyte_code in metadata["codes_by_panel"].get(
+            "glycemia", set()
+        ) or analyte_label in metadata["aliases_by_panel"].get("glycemia", set()):
             return "glycemia"
-        if analyte_code in metadata["codes_by_panel"].get("lipid", set()) or analyte_label in metadata["aliases_by_panel"].get("lipid", set()):
+        if analyte_code in metadata["codes_by_panel"].get(
+            "lipid", set()
+        ) or analyte_label in metadata["aliases_by_panel"].get("lipid", set()):
             return "lipid"
-        if analyte_code in metadata["codes_by_panel"].get("kidney", set()) or analyte_label in metadata["aliases_by_panel"].get("kidney", set()):
+        if analyte_code in metadata["codes_by_panel"].get(
+            "kidney", set()
+        ) or analyte_label in metadata["aliases_by_panel"].get("kidney", set()):
             return "kidney"
         return "unclassified"
 
@@ -57,7 +68,10 @@ class PanelReconstructor:
 
     @staticmethod
     def _panel_support_state(grouped_observations: list[dict]) -> str:
-        support_states = {str(observation.get("support_state") or "").lower() for observation in grouped_observations}
+        support_states = {
+            str(observation.get("support_state") or "").lower()
+            for observation in grouped_observations
+        }
         if support_states == {"supported"}:
             return "supported"
         if "supported" in support_states:
@@ -79,6 +93,9 @@ def _load_panel_metadata() -> dict:
         panel_aliases[panel_key].update(analyte.get("aliases", set()))
         if analyte.get("candidate_code"):
             panel_codes[panel_key].add(analyte["candidate_code"])
+        # Tolerate schema field drift: observations use accepted_analyte_code.
+        if analyte.get("accepted_analyte_code"):
+            panel_codes[panel_key].add(analyte["accepted_analyte_code"])
 
     return {
         "aliases_by_panel": panel_aliases,

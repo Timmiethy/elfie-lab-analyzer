@@ -1,0 +1,44 @@
+[
+  {
+    "document_id": "4516566f-2569-582b-ab99-2e6952b60677",
+    "source_page": 1,
+    "row_hash": "row-total-chol",
+    "raw_text": "Total cholesterol 250 mg/dL",
+    "raw_analyte_label": "total cholesterol",
+    "raw_value_string": "250",
+    "raw_unit_string": "mg/dL",
+    "raw_reference_range": "<200",
+    "parsed_numeric_value": 250.0,
+    "specimen_context": "serum",
+    "language_id": "en",
+    "extraction_confidence": 0.99
+  },
+  {
+    "document_id": "4516566f-2569-582b-ab99-2e6952b60677",
+    "source_page": 1,
+    "row_hash": "row-ldl",
+    "raw_text": "LDL-C 170 mg/dL",
+    "raw_analyte_label": "ldl c",
+    "raw_value_string": "170",
+    "raw_unit_string": "mg/dL",
+    "raw_reference_range": "<100",
+    "parsed_numeric_value": 170.0,
+    "specimen_context": "serum",
+    "language_id": "en",
+    "extraction_confidence": 0.99
+  },
+  {
+    "document_id": "4516566f-2569-582b-ab99-2e6952b60677",
+    "source_page": 1,
+    "row_hash": "row-egfr",
+    "raw_text": "eGFR 52 mL/min/1.73 m2",
+    "raw_analyte_label": "egfr",
+    "raw_value_string": "52",
+    "raw_unit_string": "mL/min/1.73 m2",
+    "raw_reference_range": ">=60",
+    "parsed_numeric_value": 52.0,
+    "specimen_context": "serum",
+    "language_id": "en",
+    "extraction_confidence": 0.99
+  }
+]

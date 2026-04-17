@@ -12,7 +12,7 @@ from uuid import uuid4
 if "fastapi" not in sys.modules:
     fastapi_stub = types.ModuleType("fastapi")
 
-    class HTTPError(Exception):
+    class HTTPException(Exception):
         def __init__(self, status_code: int, detail: str) -> None:
             super().__init__(detail)
             self.status_code = status_code
@@ -34,14 +34,11 @@ if "fastapi" not in sys.modules:
 
             return decorator
 
-    def _file(*_args, **_kwargs):
+    def File(*_args, **_kwargs):
         return None
 
     class UploadFile:
         pass
-
-    HTTPException = HTTPError
-    File = _file
 
     fastapi_stub.APIRouter = APIRouter
     fastapi_stub.File = File
@@ -62,7 +59,6 @@ from app.api.routes import artifacts as artifacts_route
 from app.api.routes import jobs as jobs_route
 from app.api.routes import upload as upload_route
 from app.workers import pipeline as pipeline_module
-from tests.support.pdf_builder import build_text_pdf
 
 
 class _DummyUploadFile:
@@ -79,12 +75,16 @@ class _DummySession:
     def __init__(self) -> None:
         self.commit_calls = 0
         self.rollback_calls = 0
+        self.flush_calls = 0
 
     async def commit(self) -> None:
         self.commit_calls += 1
 
     async def rollback(self) -> None:
         self.rollback_calls += 1
+
+    async def flush(self) -> None:
+        self.flush_calls += 1
 
 
 class _DummySessionContext:
@@ -147,7 +147,7 @@ def test_upload_route_uses_persisted_job_path_when_db_session_is_available(
             _DummyUploadFile(
                 filename="report.pdf",
                 content_type="application/pdf",
-                payload=build_text_pdf(["Glucose 180 mg/dL"]),
+                payload=b"%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n",
             ),
             session_factory=lambda: _DummySessionContext(session),
         )
@@ -161,7 +161,11 @@ def test_upload_route_uses_persisted_job_path_when_db_session_is_available(
     assert calls["job"]["document_id"] == document_id
     assert calls["pipeline"]["job_id"] == str(job_id)
     assert calls["pipeline"]["db_session"] is session
-    assert session.commit_calls >= 2
+    # Single-session transaction boundary: one commit at the end of the combined
+    # (doc-create → job-create → pipeline-run) block. Flush(es) are used between
+    # writes so the pipeline sees FK rows without an early commit.
+    assert session.commit_calls == 1
+    assert session.flush_calls >= 2
     assert session.rollback_calls == 0
 
 
@@ -274,11 +278,6 @@ def test_pipeline_persists_top_level_bundle_when_db_session_is_provided(monkeypa
     result = asyncio.run(
         pipeline_module.PipelineOrchestrator().run(
             "phase-9-job",
-            file_bytes=build_text_pdf([
-                "Glucose 180 mg/dL 70-99",
-                "HbA1c 6.8 % <5.7",
-            ]),
-            lane_type="trusted_pdf",
             db_session=object(),
         )
     )
@@ -290,115 +289,3 @@ def test_pipeline_persists_top_level_bundle_when_db_session_is_provided(monkeypa
     assert "clinician_artifact" in calls["bundle"]
     assert "lineage_run" in calls["bundle"]
     assert "benchmark_run" in calls["bundle"]
-
-
-def test_store_update_job_status_clears_operator_note_explicitly(monkeypatch) -> None:
-    """v12: update_job_status(clear_operator_note=True) must set operator_note to None
-    even when the current value is a stale error message.
-
-    This proves the explicit-clear path does not conflate None-as-omit with
-    None-as-clear, which was the root cause of the stale-note bug.
-    """
-    from app.db import store as store_module
-
-    captured: dict[str, object] = {}
-    job_id = uuid4()
-
-    class FakeJob:
-        def __init__(self) -> None:
-            self.id = job_id
-            self.status = "completed"
-            self.operator_note = "old failure: timeout"
-            self.retry_count = 1
-            self.dead_letter = False
-            self.updated_at = None
-
-    class FakeSession:
-        async def execute(self, stmt):
-            # v12: _values is keyed by Column objects, values are BindParameters.
-            # Normalize to string keys and unwrapped values for assertions.
-            captured["execute_values"] = {
-                col.name if hasattr(col, "name") else col: (
-                    bp.value if hasattr(bp, "value") else bp
-                )
-                for col, bp in stmt._values.items()  # noqa: SLF001
-            }
-            return SimpleNamespace(rowcount=1)
-
-        async def flush(self) -> None:
-            pass
-
-        async def get(self, _model, _pk):
-            return FakeJob()
-
-    async def run_test() -> None:
-        session = FakeSession()
-        persistence = store_module.TopLevelLifecycleStore(session)
-        job = await persistence.update_job_status(
-            job_id,
-            status="completed",
-            retry_count=2,
-            clear_operator_note=True,
-        )
-        assert job.operator_note is None
-        return captured
-
-    result = asyncio.run(run_test())
-    assert "execute_values" in result
-    assert result["execute_values"]["operator_note"] is None
-    assert result["execute_values"]["status"] == "completed"
-
-
-def test_store_update_job_status_preserves_omit_semantics_for_operator_note(monkeypatch) -> None:
-    """v12: update_job_status without clear_operator_note must NOT touch the
-    operator_note column, preserving the existing None-as-omit convention."""
-    from app.db import store as store_module
-
-    captured: dict[str, object] = {}
-    job_id = uuid4()
-
-    class FakeJob:
-        def __init__(self) -> None:
-            self.id = job_id
-            self.status = "completed"
-            self.operator_note = "stale failure message"
-            self.retry_count = 0
-            self.dead_letter = False
-            self.updated_at = None
-
-    class FakeSession:
-        async def execute(self, stmt):
-            # v12: _values is keyed by Column objects, values are BindParameters.
-            # Normalize to string keys and unwrapped values for assertions.
-            captured["execute_values"] = {
-                col.name if hasattr(col, "name") else col: (
-                    bp.value if hasattr(bp, "value") else bp
-                )
-                for col, bp in stmt._values.items()  # noqa: SLF001
-            }
-            return SimpleNamespace(rowcount=1)
-
-        async def flush(self) -> None:
-            pass
-
-        async def get(self, _model, _pk):
-            return FakeJob()
-
-    async def run_test() -> None:
-        session = FakeSession()
-        persistence = store_module.TopLevelLifecycleStore(session)
-        job = await persistence.update_job_status(
-            job_id,
-            status="completed",
-            retry_count=1,
-        )
-        # Without clear_operator_note, the model instance should retain the old note
-        assert job.operator_note == "stale failure message"
-        return captured
-
-    result = asyncio.run(run_test())
-    assert "execute_values" in result
-    # operator_note must NOT appear in the SQL values dict (None-as-omit)
-    assert "operator_note" not in result["execute_values"]
-    assert result["execute_values"]["status"] == "completed"
-

@@ -89,11 +89,12 @@ async def runtime_isolation(
         settings.artifact_store_path = original_artifact_store_path
 
 
-async def test_phase_29_first_supported_run_keeps_unavailable_comparable_history_neutral(
+async def test_phase_29_first_supported_run_surfaces_unavailable_comparable_history(
     api_client: AsyncClient,
 ) -> None:
     upload_response = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={
             "file": (
                 "glucose-first.pdf",
@@ -118,9 +119,6 @@ async def test_phase_29_first_supported_run_keeps_unavailable_comparable_history
         forbidden not in patient.comparable_history.direction
         for forbidden in ["improving", "worsening", "better", "worse"]
     )
-    assert {
-        item.reason.value for item in patient.not_assessed
-    }.isdisjoint({"comparable_history_unavailable"})
 
 
 async def test_phase_29_second_supported_run_surfaces_available_comparable_history(
@@ -128,6 +126,7 @@ async def test_phase_29_second_supported_run_surfaces_available_comparable_histo
 ) -> None:
     first_upload = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={
             "file": (
                 "glucose-earlier.pdf",
@@ -140,6 +139,7 @@ async def test_phase_29_second_supported_run_surfaces_available_comparable_histo
 
     second_upload = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={
             "file": (
                 "glucose-later.pdf",

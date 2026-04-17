@@ -56,7 +56,6 @@ def test_phase_21_benchmark_proof_pack_collects_future_review_evidence() -> None
         artifact_refs={
             "patient_artifact": "artifacts/patient.json",
             "clinician_artifact": "artifacts/clinician.json",
-            "clinician_pdf": "artifacts/clinician.pdf",
         },
         report_metadata={
             "corpus_id": "seeded-launch-corpus-v1",
@@ -71,7 +70,6 @@ def test_phase_21_benchmark_proof_pack_collects_future_review_evidence() -> None
     assert proof_pack["report_type"] == "launch_scope_eval"
     assert proof_pack["lineage"]["rule_pack_version"] == "launch-scope-rules-v1"
     assert proof_pack["artifact_refs"]["patient_artifact"] == "artifacts/patient.json"
-    assert proof_pack["artifact_refs"]["clinician_pdf"] == "artifacts/clinician.pdf"
     assert proof_pack["summary"]["regression_tags"] == ["parser", "lineage"]
     assert set(proof_pack["reports"]) == {
         "parser_report.json",

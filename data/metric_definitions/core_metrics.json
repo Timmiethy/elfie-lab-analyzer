@@ -1,0 +1,3952 @@
+[
+  {
+    "metric_id": "METRIC-0001",
+    "canonical_name": "WBC",
+    "loinc_candidates": [],
+    "aliases": [
+      "leukocytes",
+      "wbc",
+      "wbc count",
+      "white blood cell count",
+      "white blood cells"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0001-01",
+        "metric_id": "METRIC-0001",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "4.0–10.0",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0002",
+    "canonical_name": "RBC",
+    "loinc_candidates": [],
+    "aliases": [
+      "erythrocytes",
+      "rbc",
+      "rbc count",
+      "red blood cell count",
+      "red blood cells"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^12/L",
+    "accepted_report_units": [
+      "10^12/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0002-01",
+        "metric_id": "METRIC-0002",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^12/L",
+        "applies_to": {},
+        "reference_text": "F 4.0–5.4; M 4.5–6.1",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0003",
+    "canonical_name": "Hemoglobin",
+    "loinc_candidates": [],
+    "aliases": [
+      "haemoglobin",
+      "hb",
+      "hemoglobin",
+      "hgb"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "g/dL",
+    "accepted_report_units": [
+      "g/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0003-01",
+        "metric_id": "METRIC-0003",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "g/dL",
+        "applies_to": {},
+        "reference_text": "F 11.5–15.5; M 13.0–17.0",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0004",
+    "canonical_name": "Hematocrit",
+    "loinc_candidates": [],
+    "aliases": [
+      "hct",
+      "hematocrit",
+      "packed cell volume",
+      "pcv"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0004-01",
+        "metric_id": "METRIC-0004",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "F 36–48; M 40–55",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0005",
+    "canonical_name": "MCV",
+    "loinc_candidates": [],
+    "aliases": [
+      "mcv"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "fL",
+    "accepted_report_units": [
+      "fL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0005-01",
+        "metric_id": "METRIC-0005",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "fL",
+        "applies_to": {},
+        "reference_text": "80–100",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0006",
+    "canonical_name": "MCH",
+    "loinc_candidates": [],
+    "aliases": [
+      "mch"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "pg",
+    "accepted_report_units": [
+      "pg"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0006-01",
+        "metric_id": "METRIC-0006",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "pg",
+        "applies_to": {},
+        "reference_text": "27–31",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0007",
+    "canonical_name": "MCHC",
+    "loinc_candidates": [],
+    "aliases": [
+      "mchc"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "g/dL",
+    "accepted_report_units": [
+      "g/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0007-01",
+        "metric_id": "METRIC-0007",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "g/dL",
+        "applies_to": {},
+        "reference_text": "32–36",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0008",
+    "canonical_name": "RDW-CV",
+    "loinc_candidates": [],
+    "aliases": [
+      "rdw",
+      "rdw cv",
+      "rdw-cv"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0008-01",
+        "metric_id": "METRIC-0008",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "12–15",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0009",
+    "canonical_name": "Platelets",
+    "loinc_candidates": [],
+    "aliases": [
+      "platelet",
+      "platelet count",
+      "platelets",
+      "plt"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0009-01",
+        "metric_id": "METRIC-0009",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "150–400",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0010",
+    "canonical_name": "MPV",
+    "loinc_candidates": [],
+    "aliases": [
+      "mpv"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "fL",
+    "accepted_report_units": [
+      "fL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0010-01",
+        "metric_id": "METRIC-0010",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "fL",
+        "applies_to": {},
+        "reference_text": "7.0–9.0",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0011",
+    "canonical_name": "Neutrophils, absolute",
+    "loinc_candidates": [],
+    "aliases": [
+      "absolute neutrophil count",
+      "absolute neutrophils",
+      "anc",
+      "neutrophil",
+      "neutrophil count",
+      "neutrophils",
+      "neutrophils absolute",
+      "neutrophils percent",
+      "neutrophils, absolute"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0011-01",
+        "metric_id": "METRIC-0011",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "2.5–7.0",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0012",
+    "canonical_name": "Lymphocytes, absolute",
+    "loinc_candidates": [],
+    "aliases": [
+      "absolute lymphocyte count",
+      "absolute lymphocytes",
+      "lymphocyte",
+      "lymphocyte count",
+      "lymphocytes",
+      "lymphocytes percent",
+      "lymphocytes, absolute"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0012-01",
+        "metric_id": "METRIC-0012",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "1.0–4.8",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0013",
+    "canonical_name": "Monocytes, absolute",
+    "loinc_candidates": [],
+    "aliases": [
+      "absolute monocyte count",
+      "absolute monocytes",
+      "monocyte",
+      "monocytes",
+      "monocytes percent",
+      "monocytes, absolute"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0013-01",
+        "metric_id": "METRIC-0013",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "0.2–0.8",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0014",
+    "canonical_name": "Eosinophils, absolute",
+    "loinc_candidates": [],
+    "aliases": [
+      "absolute eosinophil count",
+      "absolute eosinophils",
+      "eosinophil",
+      "eosinophils",
+      "eosinophils percent",
+      "eosinophils, absolute"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0014-01",
+        "metric_id": "METRIC-0014",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "<0.5",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0015",
+    "canonical_name": "Basophils, absolute",
+    "loinc_candidates": [],
+    "aliases": [
+      "absolute basophil count",
+      "absolute basophils",
+      "basophil",
+      "basophils",
+      "basophils percent",
+      "basophils, absolute"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0015-01",
+        "metric_id": "METRIC-0015",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "<0.3",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0016",
+    "canonical_name": "Immature granulocytes, absolute",
+    "loinc_candidates": [],
+    "aliases": [
+      "immature granulocytes, absolute",
+      "absolute immature granulocytes"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0016-01",
+        "metric_id": "METRIC-0016",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "<0.1",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0017",
+    "canonical_name": "NRBC, absolute",
+    "loinc_candidates": [],
+    "aliases": [
+      "absolute nrbc",
+      "nrbc, absolute"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "10^9/L",
+    "accepted_report_units": [
+      "10^9/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0017-01",
+        "metric_id": "METRIC-0017",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "10^9/L",
+        "applies_to": {},
+        "reference_text": "<0.01",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0018",
+    "canonical_name": "ESR",
+    "loinc_candidates": [],
+    "aliases": [
+      "erythrocyte sedimentation rate",
+      "esr"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mm/h",
+    "accepted_report_units": [
+      "mm/h"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0018-01",
+        "metric_id": "METRIC-0018",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mm/h",
+        "applies_to": {},
+        "reference_text": "M<50: <15; M≥50: <20; F<50: <20; F≥50: <30",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0019",
+    "canonical_name": "Glucose, fasting",
+    "loinc_candidates": [],
+    "aliases": [
+      "blood glucose",
+      "fasting blood sugar",
+      "fasting glucose",
+      "fasting plasma glucose",
+      "fbs",
+      "fpg",
+      "glucose",
+      "glucose, fasting"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0019-01",
+        "metric_id": "METRIC-0019",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "70–100",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0020",
+    "canonical_name": "Sodium",
+    "loinc_candidates": [],
+    "aliases": [
+      "na",
+      "na+",
+      "serum sodium",
+      "sodium",
+      "sodium na"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/L",
+    "accepted_report_units": [
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0020-01",
+        "metric_id": "METRIC-0020",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/L",
+        "applies_to": {},
+        "reference_text": "135–145",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0021",
+    "canonical_name": "Potassium",
+    "loinc_candidates": [],
+    "aliases": [
+      "k",
+      "k+",
+      "potassium",
+      "potassium k",
+      "serum potassium"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/L",
+    "accepted_report_units": [
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0021-01",
+        "metric_id": "METRIC-0021",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/L",
+        "applies_to": {},
+        "reference_text": "3.7–5.2",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0022",
+    "canonical_name": "Chloride",
+    "loinc_candidates": [],
+    "aliases": [
+      "chloride",
+      "chloride cl",
+      "cl",
+      "cl-",
+      "serum chloride"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/L",
+    "accepted_report_units": [
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0022-01",
+        "metric_id": "METRIC-0022",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/L",
+        "applies_to": {},
+        "reference_text": "96–106",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0023",
+    "canonical_name": "CO2 / bicarbonate",
+    "loinc_candidates": [],
+    "aliases": [
+      "co2 / bicarbonate"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/L",
+    "accepted_report_units": [
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0023-01",
+        "metric_id": "METRIC-0023",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/L",
+        "applies_to": {},
+        "reference_text": "23–29",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0024",
+    "canonical_name": "Calcium, total",
+    "loinc_candidates": [],
+    "aliases": [
+      "ca",
+      "calcium",
+      "calcium, total",
+      "serum calcium",
+      "total calcium"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0024-01",
+        "metric_id": "METRIC-0024",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "8.5–10.2",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0025",
+    "canonical_name": "Calcium, ionized",
+    "loinc_candidates": [],
+    "aliases": [
+      "ionized calcium",
+      "calcium, ionized"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/L",
+    "accepted_report_units": [
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0025-01",
+        "metric_id": "METRIC-0025",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/L",
+        "applies_to": {},
+        "reference_text": "1.05–1.30",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0026",
+    "canonical_name": "Phosphorus",
+    "loinc_candidates": [],
+    "aliases": [
+      "phosphorus"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0026-01",
+        "metric_id": "METRIC-0026",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "3.0–4.5",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0027",
+    "canonical_name": "Magnesium",
+    "loinc_candidates": [],
+    "aliases": [
+      "magnesium"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/L",
+    "accepted_report_units": [
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0027-01",
+        "metric_id": "METRIC-0027",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/L",
+        "applies_to": {},
+        "reference_text": "0.65–1.05",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0028",
+    "canonical_name": "BUN",
+    "loinc_candidates": [],
+    "aliases": [
+      "blood urea",
+      "blood urea nitrogen",
+      "bun",
+      "serum urea",
+      "urea"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL",
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0028-01",
+        "metric_id": "METRIC-0028",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "6–20",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0029",
+    "canonical_name": "Creatinine",
+    "loinc_candidates": [],
+    "aliases": [
+      "creatinine"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0029-01",
+        "metric_id": "METRIC-0029",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "general 0.6–1.3; sex-specific lab override preferred",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0030",
+    "canonical_name": "eGFR",
+    "loinc_candidates": [],
+    "aliases": [
+      "e gfr",
+      "estimated glomerular filtration rate",
+      "glomerular filtration rate",
+      "egfr"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mL/min/{1.73_m2}",
+    "accepted_report_units": [
+      "mL/min/{1.73_m2}"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0030-01",
+        "metric_id": "METRIC-0030",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mL/min/{1.73_m2}",
+        "applies_to": {},
+        "reference_text": "report-specific; do not hardcode one “normal”",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0031",
+    "canonical_name": "Uric acid",
+    "loinc_candidates": [],
+    "aliases": [
+      "uric acid"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0031-01",
+        "metric_id": "METRIC-0031",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "M 4.0–8.5; F 2.7–7.3",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0032",
+    "canonical_name": "Total protein",
+    "loinc_candidates": [],
+    "aliases": [
+      "total protein"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "g/dL",
+    "accepted_report_units": [
+      "g/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0032-01",
+        "metric_id": "METRIC-0032",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "g/dL",
+        "applies_to": {},
+        "reference_text": "6.0–8.3",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0033",
+    "canonical_name": "Albumin",
+    "loinc_candidates": [],
+    "aliases": [
+      "albumin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "g/dL",
+    "accepted_report_units": [
+      "g/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0033-01",
+        "metric_id": "METRIC-0033",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "g/dL",
+        "applies_to": {},
+        "reference_text": "3.4–5.4",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0034",
+    "canonical_name": "Globulin",
+    "loinc_candidates": [],
+    "aliases": [
+      "globulin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "g/dL",
+    "accepted_report_units": [
+      "g/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0034-01",
+        "metric_id": "METRIC-0034",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "g/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0035",
+    "canonical_name": "A/G ratio",
+    "loinc_candidates": [],
+    "aliases": [
+      "a/g ratio",
+      "g ratio"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "1",
+    "accepted_report_units": [
+      "1"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0035-01",
+        "metric_id": "METRIC-0035",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "1",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0036",
+    "canonical_name": "Bilirubin, total",
+    "loinc_candidates": [],
+    "aliases": [
+      "bilirubin",
+      "bilirubin total",
+      "bilirubin, total",
+      "serum bilirubin",
+      "total bilirubin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0036-01",
+        "metric_id": "METRIC-0036",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "0.1–1.2",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0037",
+    "canonical_name": "Bilirubin, direct",
+    "loinc_candidates": [],
+    "aliases": [
+      "bilirubin conjugated",
+      "bilirubin direct",
+      "bilirubin, direct",
+      "conjugated bilirubin",
+      "direct bilirubin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0037-01",
+        "metric_id": "METRIC-0037",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0038",
+    "canonical_name": "Bilirubin, indirect",
+    "loinc_candidates": [],
+    "aliases": [
+      "bilirubin delta",
+      "bilirubin indirect",
+      "bilirubin unconjugated",
+      "bilirubin, indirect",
+      "delta bilirubin",
+      "indirect bilirubin",
+      "unconjugated bilirubin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0038-01",
+        "metric_id": "METRIC-0038",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0039",
+    "canonical_name": "AST / SGOT",
+    "loinc_candidates": [],
+    "aliases": [
+      "aspartate aminotransferase",
+      "ast",
+      "ast / sgot",
+      "ast sgot",
+      "sgot"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "U/L",
+    "accepted_report_units": [
+      "U/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0039-01",
+        "metric_id": "METRIC-0039",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "U/L",
+        "applies_to": {},
+        "reference_text": "8–33",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0040",
+    "canonical_name": "ALT / SGPT",
+    "loinc_candidates": [],
+    "aliases": [
+      "alanine aminotransferase",
+      "alt",
+      "alt / sgpt",
+      "alt sgpt",
+      "sgpt"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "U/L",
+    "accepted_report_units": [
+      "U/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0040-01",
+        "metric_id": "METRIC-0040",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "U/L",
+        "applies_to": {},
+        "reference_text": "4–36",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0041",
+    "canonical_name": "ALP",
+    "loinc_candidates": [],
+    "aliases": [
+      "alp"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "U/L",
+    "accepted_report_units": [
+      "U/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0041-01",
+        "metric_id": "METRIC-0041",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "U/L",
+        "applies_to": {},
+        "reference_text": "20–130",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0042",
+    "canonical_name": "GGT",
+    "loinc_candidates": [],
+    "aliases": [
+      "ggt"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "U/L",
+    "accepted_report_units": [
+      "U/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0042-01",
+        "metric_id": "METRIC-0042",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "U/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0043",
+    "canonical_name": "Anion gap",
+    "loinc_candidates": [],
+    "aliases": [
+      "anion gap"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/L",
+    "accepted_report_units": [
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0043-01",
+        "metric_id": "METRIC-0043",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0044",
+    "canonical_name": "Osmolality, serum",
+    "loinc_candidates": [],
+    "aliases": [
+      "osmolality, serum",
+      "serum osmolality"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mOsm/kg",
+    "accepted_report_units": [
+      "mOsm/kg"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0044-01",
+        "metric_id": "METRIC-0044",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mOsm/kg",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0045",
+    "canonical_name": "Lactate",
+    "loinc_candidates": [],
+    "aliases": [
+      "lactate"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/L",
+    "accepted_report_units": [
+      "mmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0045-01",
+        "metric_id": "METRIC-0045",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0046",
+    "canonical_name": "Amylase",
+    "loinc_candidates": [],
+    "aliases": [
+      "amylase"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "U/L",
+    "accepted_report_units": [
+      "U/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0046-01",
+        "metric_id": "METRIC-0046",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "U/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0047",
+    "canonical_name": "Lipase",
+    "loinc_candidates": [],
+    "aliases": [
+      "lipase"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "U/L",
+    "accepted_report_units": [
+      "U/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0047-01",
+        "metric_id": "METRIC-0047",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "U/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0048",
+    "canonical_name": "CK / CPK",
+    "loinc_candidates": [],
+    "aliases": [
+      "ck / cpk"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "U/L",
+    "accepted_report_units": [
+      "U/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0048-01",
+        "metric_id": "METRIC-0048",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "U/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0049",
+    "canonical_name": "LDH",
+    "loinc_candidates": [],
+    "aliases": [
+      "ldh"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "U/L",
+    "accepted_report_units": [
+      "U/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0049-01",
+        "metric_id": "METRIC-0049",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "U/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0050",
+    "canonical_name": "Ammonia",
+    "loinc_candidates": [],
+    "aliases": [
+      "ammonia"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "µg/dL",
+    "accepted_report_units": [
+      "µg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0050-01",
+        "metric_id": "METRIC-0050",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "µg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0051",
+    "canonical_name": "Total cholesterol",
+    "loinc_candidates": [],
+    "aliases": [
+      "cholesterol",
+      "cholesterol total",
+      "serum cholesterol",
+      "total cholesterol"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0051-01",
+        "metric_id": "METRIC-0051",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "<200",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0052",
+    "canonical_name": "HDL-C",
+    "loinc_candidates": [],
+    "aliases": [
+      "hdl",
+      "hdl c",
+      "hdl cholesterol",
+      "hdl-c",
+      "high density lipoprotein",
+      "high density lipoprotein cholesterol"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0052-01",
+        "metric_id": "METRIC-0052",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": ">60",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0053",
+    "canonical_name": "LDL-C",
+    "loinc_candidates": [],
+    "aliases": [
+      "direct ldl",
+      "ldl",
+      "ldl c",
+      "ldl cholesterol",
+      "ldl-c",
+      "low density lipoprotein",
+      "low density lipoprotein cholesterol"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0053-01",
+        "metric_id": "METRIC-0053",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "<100",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0054",
+    "canonical_name": "Triglycerides",
+    "loinc_candidates": [],
+    "aliases": [
+      "tg",
+      "tgs",
+      "triglyceride",
+      "triglyceride level",
+      "triglycerides"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0054-01",
+        "metric_id": "METRIC-0054",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "<150",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0055",
+    "canonical_name": "Non-HDL cholesterol",
+    "loinc_candidates": [],
+    "aliases": [
+      "non-hdl cholesterol"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0055-01",
+        "metric_id": "METRIC-0055",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0056",
+    "canonical_name": "VLDL-C",
+    "loinc_candidates": [],
+    "aliases": [
+      "very low density lipoprotein",
+      "vldl",
+      "vldl c",
+      "vldl-c"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0056-01",
+        "metric_id": "METRIC-0056",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0057",
+    "canonical_name": "LDL/HDL ratio",
+    "loinc_candidates": [],
+    "aliases": [
+      "hdl ratio",
+      "ldl hdl ratio",
+      "ldl to hdl ratio",
+      "ldl/hdl ratio"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "1",
+    "accepted_report_units": [
+      "1"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0057-01",
+        "metric_id": "METRIC-0057",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "1",
+        "applies_to": {},
+        "reference_text": "lab-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0058",
+    "canonical_name": "Total cholesterol / HDL ratio",
+    "loinc_candidates": [],
+    "aliases": [
+      "chol hdl ratio",
+      "chol/hdl ratio",
+      "cholesterol hdl ratio",
+      "hdl",
+      "hdl c",
+      "hdl cholesterol",
+      "hdl ratio",
+      "high density lipoprotein cholesterol",
+      "total cholesterol / hdl ratio",
+      "total cholesterol hdl ratio",
+      "total cholesterol/hdl ratio"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "1",
+    "accepted_report_units": [
+      "1"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0058-01",
+        "metric_id": "METRIC-0058",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "1",
+        "applies_to": {},
+        "reference_text": "lab-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0059",
+    "canonical_name": "ApoB",
+    "loinc_candidates": [],
+    "aliases": [
+      "apob"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0059-01",
+        "metric_id": "METRIC-0059",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0060",
+    "canonical_name": "ApoA1",
+    "loinc_candidates": [],
+    "aliases": [
+      "apoa1"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0060-01",
+        "metric_id": "METRIC-0060",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "lab-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0061",
+    "canonical_name": "ApoB/ApoA1 ratio",
+    "loinc_candidates": [],
+    "aliases": [
+      "apoa1 ratio",
+      "apob/apoa1 ratio"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "1",
+    "accepted_report_units": [
+      "1"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0061-01",
+        "metric_id": "METRIC-0061",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "1",
+        "applies_to": {},
+        "reference_text": "lab-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0062",
+    "canonical_name": "Lipoprotein(a)",
+    "loinc_candidates": [],
+    "aliases": [
+      "lipoprotein(a)"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0062-01",
+        "metric_id": "METRIC-0062",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "lab-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0063",
+    "canonical_name": "HbA1c",
+    "loinc_candidates": [],
+    "aliases": [
+      "a1c",
+      "haemoglobin a1c",
+      "hb a1c",
+      "hba1c",
+      "hemoglobin a1c"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0063-01",
+        "metric_id": "METRIC-0063",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "report- or guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0064",
+    "canonical_name": "HbA1c",
+    "loinc_candidates": [],
+    "aliases": [
+      "hemoglobin a1c",
+      "a1c",
+      "hba1c",
+      "hb a1c"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mmol/mol",
+    "accepted_report_units": [
+      "mmol/mol"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0064-01",
+        "metric_id": "METRIC-0064",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mmol/mol",
+        "applies_to": {},
+        "reference_text": "report- or guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0065",
+    "canonical_name": "Insulin, fasting",
+    "loinc_candidates": [],
+    "aliases": [
+      "fasting insulin",
+      "insulin, fasting"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "µIU/mL",
+    "accepted_report_units": [
+      "µIU/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0065-01",
+        "metric_id": "METRIC-0065",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "µIU/mL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0066",
+    "canonical_name": "HOMA-IR",
+    "loinc_candidates": [],
+    "aliases": [
+      "homa-ir"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "1",
+    "accepted_report_units": [
+      "1"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0066-01",
+        "metric_id": "METRIC-0066",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "1",
+        "applies_to": {},
+        "reference_text": "calculated; no universal lab ref",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0067",
+    "canonical_name": "Fructosamine",
+    "loinc_candidates": [],
+    "aliases": [
+      "fructosamine"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "µmol/L",
+    "accepted_report_units": [
+      "µmol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0067-01",
+        "metric_id": "METRIC-0067",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "µmol/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0068",
+    "canonical_name": "Microalbumin, urine",
+    "loinc_candidates": [],
+    "aliases": [
+      "microalbumin",
+      "microalbumin per urine volume",
+      "microalbumin urine",
+      "microalbumin, urine",
+      "urine microalbumin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/L",
+    "accepted_report_units": [
+      "mg/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0068-01",
+        "metric_id": "METRIC-0068",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/L",
+        "applies_to": {},
+        "reference_text": "report-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0069",
+    "canonical_name": "Urine albumin/creatinine ratio (ACR)",
+    "loinc_candidates": [],
+    "aliases": [
+      "urine albumin/creatinine ratio (acr)",
+      "creatinine ratio (acr)",
+      "urine albumin",
+      "acr",
+      "albumin creatinine ratio",
+      "albumin/creatinine ratio",
+      "urinary albumin creatinine ratio"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/g{creat}",
+    "accepted_report_units": [
+      "mg/g{creat}",
+      "mg Alb/mmol",
+      "mg/mmol"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0069-01",
+        "metric_id": "METRIC-0069",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/g{creat}",
+        "applies_to": {},
+        "reference_text": "report-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0070",
+    "canonical_name": "Protein/creatinine ratio (PCR)",
+    "loinc_candidates": [],
+    "aliases": [
+      "creatinine ratio (pcr)",
+      "protein/creatinine ratio (pcr)"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/g{creat}",
+    "accepted_report_units": [
+      "mg/g{creat}"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0070-01",
+        "metric_id": "METRIC-0070",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/g{creat}",
+        "applies_to": {},
+        "reference_text": "report-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0071",
+    "canonical_name": "Iron, serum",
+    "loinc_candidates": [],
+    "aliases": [
+      "fe",
+      "iron",
+      "iron, serum",
+      "serum iron"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "µg/dL",
+    "accepted_report_units": [
+      "µg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0071-01",
+        "metric_id": "METRIC-0071",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "µg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0072",
+    "canonical_name": "TIBC",
+    "loinc_candidates": [],
+    "aliases": [
+      "iron binding capacity",
+      "tibc",
+      "total iron binding capacity",
+      "total iron binding capacity tibc",
+      "total iron-binding capacity"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "µg/dL",
+    "accepted_report_units": [
+      "µg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0072-01",
+        "metric_id": "METRIC-0072",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "µg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0073",
+    "canonical_name": "Transferrin",
+    "loinc_candidates": [],
+    "aliases": [
+      "transferrin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0073-01",
+        "metric_id": "METRIC-0073",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0074",
+    "canonical_name": "Transferrin saturation",
+    "loinc_candidates": [],
+    "aliases": [
+      "transferrin sat",
+      "transferrin saturation",
+      "tsat"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0074-01",
+        "metric_id": "METRIC-0074",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "M 20–50; F 15–50",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0075",
+    "canonical_name": "Ferritin",
+    "loinc_candidates": [],
+    "aliases": [
+      "ferritin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/mL",
+    "accepted_report_units": [
+      "ng/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0075-01",
+        "metric_id": "METRIC-0075",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/mL",
+        "applies_to": {},
+        "reference_text": "M 12–300; F 10–150",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0076",
+    "canonical_name": "Vitamin B12",
+    "loinc_candidates": [],
+    "aliases": [
+      "b12",
+      "cobalamin",
+      "vit b12",
+      "vitamin b12"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/L",
+    "accepted_report_units": [
+      "ng/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0076-01",
+        "metric_id": "METRIC-0076",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/L",
+        "applies_to": {},
+        "reference_text": "180–914",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0077",
+    "canonical_name": "Folate",
+    "loinc_candidates": [],
+    "aliases": [
+      "folate"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "µg/L",
+    "accepted_report_units": [
+      "µg/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0077-01",
+        "metric_id": "METRIC-0077",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "µg/L",
+        "applies_to": {},
+        "reference_text": "≥4.0",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0078",
+    "canonical_name": "25-OH Vitamin D",
+    "loinc_candidates": [],
+    "aliases": [
+      "25 hydroxy vitamin d",
+      "25 oh vitamin d",
+      "25-hydroxyvitamin d",
+      "25-oh vitamin d",
+      "vit d",
+      "vitamin d"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/mL",
+    "accepted_report_units": [
+      "ng/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0078-01",
+        "metric_id": "METRIC-0078",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/mL",
+        "applies_to": {},
+        "reference_text": "lab-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0079",
+    "canonical_name": "TSH",
+    "loinc_candidates": [],
+    "aliases": [
+      "thyroid stimulating hormone",
+      "tsh",
+      "tsh thyroid stimulating hormone"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "µU/mL",
+    "accepted_report_units": [
+      "µU/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0079-01",
+        "metric_id": "METRIC-0079",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "µU/mL",
+        "applies_to": {},
+        "reference_text": "0.5–5.0",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0080",
+    "canonical_name": "Free T4",
+    "loinc_candidates": [],
+    "aliases": [
+      "free t4"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/dL",
+    "accepted_report_units": [
+      "ng/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0080-01",
+        "metric_id": "METRIC-0080",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/dL",
+        "applies_to": {},
+        "reference_text": "0.8–1.9",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0081",
+    "canonical_name": "Total T4",
+    "loinc_candidates": [],
+    "aliases": [
+      "t4",
+      "t4 thyroxine",
+      "thyroxine",
+      "total t4"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "µg/dL",
+    "accepted_report_units": [
+      "µg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0081-01",
+        "metric_id": "METRIC-0081",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "µg/dL",
+        "applies_to": {},
+        "reference_text": "4.5–11.7",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0082",
+    "canonical_name": "Free T3",
+    "loinc_candidates": [],
+    "aliases": [
+      "free t3"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "pg/dL",
+    "accepted_report_units": [
+      "pg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0082-01",
+        "metric_id": "METRIC-0082",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "pg/dL",
+        "applies_to": {},
+        "reference_text": "130–450",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0083",
+    "canonical_name": "Total T3",
+    "loinc_candidates": [],
+    "aliases": [
+      "t3",
+      "t3 triiodothyronine",
+      "total t3",
+      "triiodothyronine"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/dL",
+    "accepted_report_units": [
+      "ng/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0083-01",
+        "metric_id": "METRIC-0083",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/dL",
+        "applies_to": {},
+        "reference_text": "60–180",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0084",
+    "canonical_name": "Anti-TPO Ab",
+    "loinc_candidates": [],
+    "aliases": [
+      "anti-tpo ab"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "IU/mL",
+    "accepted_report_units": [
+      "IU/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0084-01",
+        "metric_id": "METRIC-0084",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "IU/mL",
+        "applies_to": {},
+        "reference_text": "assay-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0085",
+    "canonical_name": "CRP",
+    "loinc_candidates": [],
+    "aliases": [
+      "crp"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0085-01",
+        "metric_id": "METRIC-0085",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "<0.3",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0086",
+    "canonical_name": "hs-CRP",
+    "loinc_candidates": [],
+    "aliases": [
+      "hs-crp"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/L",
+    "accepted_report_units": [
+      "mg/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0086-01",
+        "metric_id": "METRIC-0086",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/L",
+        "applies_to": {},
+        "reference_text": "assay-/risk-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0087",
+    "canonical_name": "PT",
+    "loinc_candidates": [],
+    "aliases": [
+      "pt"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "s",
+    "accepted_report_units": [
+      "s"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0087-01",
+        "metric_id": "METRIC-0087",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "s",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0088",
+    "canonical_name": "INR",
+    "loinc_candidates": [],
+    "aliases": [
+      "inr"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "1",
+    "accepted_report_units": [
+      "1"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0088-01",
+        "metric_id": "METRIC-0088",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "1",
+        "applies_to": {},
+        "reference_text": "~0.8–1.2 if not anticoagulated; lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0089",
+    "canonical_name": "aPTT",
+    "loinc_candidates": [],
+    "aliases": [
+      "aptt"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "s",
+    "accepted_report_units": [
+      "s"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0089-01",
+        "metric_id": "METRIC-0089",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "s",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0090",
+    "canonical_name": "Fibrinogen",
+    "loinc_candidates": [],
+    "aliases": [
+      "fibrinogen"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0090-01",
+        "metric_id": "METRIC-0090",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0091",
+    "canonical_name": "D-dimer",
+    "loinc_candidates": [],
+    "aliases": [
+      "d-dimer"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/mL FEU",
+    "accepted_report_units": [
+      "ng/mL FEU"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0091-01",
+        "metric_id": "METRIC-0091",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/mL FEU",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0092",
+    "canonical_name": "Troponin I",
+    "loinc_candidates": [],
+    "aliases": [
+      "troponin i"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/L",
+    "accepted_report_units": [
+      "ng/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0092-01",
+        "metric_id": "METRIC-0092",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/L",
+        "applies_to": {},
+        "reference_text": "assay-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0093",
+    "canonical_name": "Troponin T",
+    "loinc_candidates": [],
+    "aliases": [
+      "troponin t"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/L",
+    "accepted_report_units": [
+      "ng/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0093-01",
+        "metric_id": "METRIC-0093",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/L",
+        "applies_to": {},
+        "reference_text": "assay-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0094",
+    "canonical_name": "BNP",
+    "loinc_candidates": [],
+    "aliases": [
+      "bnp"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "pg/mL",
+    "accepted_report_units": [
+      "pg/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0094-01",
+        "metric_id": "METRIC-0094",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "pg/mL",
+        "applies_to": {},
+        "reference_text": "assay-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0095",
+    "canonical_name": "NT-proBNP",
+    "loinc_candidates": [],
+    "aliases": [
+      "nt-probnp"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "pg/mL",
+    "accepted_report_units": [
+      "pg/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0095-01",
+        "metric_id": "METRIC-0095",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "pg/mL",
+        "applies_to": {},
+        "reference_text": "assay-/age-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0096",
+    "canonical_name": "Color",
+    "loinc_candidates": [],
+    "aliases": [
+      "color",
+      "colour"
+    ],
+    "result_type": "text",
+    "canonical_unit_ucum": "text",
+    "accepted_report_units": [
+      "text"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0096-01",
+        "metric_id": "METRIC-0096",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "text",
+        "applies_to": {},
+        "reference_text": "pale yellow to dark yellow",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0097",
+    "canonical_name": "Clarity / appearance",
+    "loinc_candidates": [],
+    "aliases": [
+      "appearance",
+      "clarity",
+      "clarity / appearance",
+      "clarity appearance"
+    ],
+    "result_type": "text",
+    "canonical_unit_ucum": "text",
+    "accepted_report_units": [
+      "text"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0097-01",
+        "metric_id": "METRIC-0097",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "text",
+        "applies_to": {},
+        "reference_text": "clear",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0098",
+    "canonical_name": "Specific gravity",
+    "loinc_candidates": [],
+    "aliases": [
+      "sg",
+      "specific gravity",
+      "urine specific gravity"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "1",
+    "accepted_report_units": [
+      "1"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0098-01",
+        "metric_id": "METRIC-0098",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "1",
+        "applies_to": {},
+        "reference_text": "1.005–1.030",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0099",
+    "canonical_name": "pH",
+    "loinc_candidates": [],
+    "aliases": [
+      "ph",
+      "urine ph"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "1",
+    "accepted_report_units": [
+      "1"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0099-01",
+        "metric_id": "METRIC-0099",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "1",
+        "applies_to": {},
+        "reference_text": "4.6–8.0",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0100",
+    "canonical_name": "Protein, urine dipstick",
+    "loinc_candidates": [],
+    "aliases": [
+      "protein",
+      "protein urine",
+      "protein, urine dipstick",
+      "urine albumin dipstick",
+      "urine dipstick protein",
+      "urine protein"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0100-01",
+        "metric_id": "METRIC-0100",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / not detectable",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0101",
+    "canonical_name": "Glucose, urine",
+    "loinc_candidates": [],
+    "aliases": [
+      "glucose",
+      "glucose urine",
+      "glucose, urine",
+      "urine glucose"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0101-01",
+        "metric_id": "METRIC-0101",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / not detectable",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0102",
+    "canonical_name": "Ketones, urine",
+    "loinc_candidates": [],
+    "aliases": [
+      "ketone",
+      "ketones",
+      "ketones, urine",
+      "urine ketone",
+      "urine ketones"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0102-01",
+        "metric_id": "METRIC-0102",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / not detectable",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0103",
+    "canonical_name": "Bilirubin, urine",
+    "loinc_candidates": [],
+    "aliases": [
+      "bilirubin urine",
+      "bilirubin, urine",
+      "urine bilirubin"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0103-01",
+        "metric_id": "METRIC-0103",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / not detectable",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0104",
+    "canonical_name": "Blood / hemoglobin, urine",
+    "loinc_candidates": [],
+    "aliases": [
+      "urine hemoglobin",
+      "urine blood / hemoglobin",
+      "blood / hemoglobin, urine",
+      "hemoglobin, urine"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0104-01",
+        "metric_id": "METRIC-0104",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / not detectable",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0105",
+    "canonical_name": "Nitrite, urine",
+    "loinc_candidates": [],
+    "aliases": [
+      "nitrite",
+      "nitrite, urine",
+      "urine nitrite"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0105-01",
+        "metric_id": "METRIC-0105",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / not detectable",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0106",
+    "canonical_name": "Leukocyte esterase",
+    "loinc_candidates": [],
+    "aliases": [
+      "leukocyte esterase"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0106-01",
+        "metric_id": "METRIC-0106",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / not detectable",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0107",
+    "canonical_name": "Urobilinogen",
+    "loinc_candidates": [],
+    "aliases": [
+      "urine urobilinogen",
+      "urobilinogen"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "EU/dL",
+    "accepted_report_units": [
+      "EU/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0107-01",
+        "metric_id": "METRIC-0107",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "EU/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific / normal trace only",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0108",
+    "canonical_name": "RBC, urine microscopy",
+    "loinc_candidates": [],
+    "aliases": [
+      "rbc urine",
+      "rbc, urine microscopy",
+      "red blood cells urine",
+      "red cells",
+      "urine microscopy rbc",
+      "urine rbc"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "/HPF",
+    "accepted_report_units": [
+      "/HPF"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0108-01",
+        "metric_id": "METRIC-0108",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "/HPF",
+        "applies_to": {},
+        "reference_text": "none normally found",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0109",
+    "canonical_name": "WBC, urine microscopy",
+    "loinc_candidates": [],
+    "aliases": [
+      "pus cells",
+      "urine microscopy wbc",
+      "urine wbc",
+      "wbc urine",
+      "wbc, urine microscopy"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "/HPF",
+    "accepted_report_units": [
+      "/HPF"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0109-01",
+        "metric_id": "METRIC-0109",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "/HPF",
+        "applies_to": {},
+        "reference_text": "none normally found",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0110",
+    "canonical_name": "Squamous epithelial cells",
+    "loinc_candidates": [],
+    "aliases": [
+      "epithelial",
+      "epithelial cells",
+      "squamous epithelial cells"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "/HPF",
+    "accepted_report_units": [
+      "/HPF"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0110-01",
+        "metric_id": "METRIC-0110",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "/HPF",
+        "applies_to": {},
+        "reference_text": "none to few / lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0111",
+    "canonical_name": "Renal epithelial cells",
+    "loinc_candidates": [],
+    "aliases": [
+      "renal epithelial cells"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "/HPF",
+    "accepted_report_units": [
+      "/HPF"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0111-01",
+        "metric_id": "METRIC-0111",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "/HPF",
+        "applies_to": {},
+        "reference_text": "none / lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0112",
+    "canonical_name": "Transitional epithelial cells",
+    "loinc_candidates": [],
+    "aliases": [
+      "transitional epithelial cells"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "/HPF",
+    "accepted_report_units": [
+      "/HPF"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0112-01",
+        "metric_id": "METRIC-0112",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "/HPF",
+        "applies_to": {},
+        "reference_text": "none / lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0113",
+    "canonical_name": "Bacteria",
+    "loinc_candidates": [],
+    "aliases": [
+      "bacteria"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0113-01",
+        "metric_id": "METRIC-0113",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "none",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0114",
+    "canonical_name": "Yeast",
+    "loinc_candidates": [],
+    "aliases": [
+      "yeast"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0114-01",
+        "metric_id": "METRIC-0114",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "none",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0115",
+    "canonical_name": "Mucus",
+    "loinc_candidates": [],
+    "aliases": [
+      "mucus"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0115-01",
+        "metric_id": "METRIC-0115",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "none to trace / lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0116",
+    "canonical_name": "Hyaline casts",
+    "loinc_candidates": [],
+    "aliases": [
+      "hyaline casts"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "/LPF",
+    "accepted_report_units": [
+      "/LPF"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0116-01",
+        "metric_id": "METRIC-0116",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "/LPF",
+        "applies_to": {},
+        "reference_text": "none to few / lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0117",
+    "canonical_name": "Granular casts",
+    "loinc_candidates": [],
+    "aliases": [
+      "granular casts"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "/LPF",
+    "accepted_report_units": [
+      "/LPF"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0117-01",
+        "metric_id": "METRIC-0117",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "/LPF",
+        "applies_to": {},
+        "reference_text": "none",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0118",
+    "canonical_name": "Crystals",
+    "loinc_candidates": [],
+    "aliases": [
+      "crystals",
+      "urine crystals"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0118-01",
+        "metric_id": "METRIC-0118",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "none / lab-specific type",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0119",
+    "canonical_name": "Urine albumin",
+    "loinc_candidates": [],
+    "aliases": [
+      "urine albumin"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/L",
+    "accepted_report_units": [
+      "mg/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0119-01",
+        "metric_id": "METRIC-0119",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/L",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0120",
+    "canonical_name": "Urine creatinine",
+    "loinc_candidates": [],
+    "aliases": [
+      "urine creatinine"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0120-01",
+        "metric_id": "METRIC-0120",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "lab-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0121",
+    "canonical_name": "ACR (repeat here if urine module standalone)",
+    "loinc_candidates": [],
+    "aliases": [
+      "acr (repeat here if urine module standalone)"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/g{creat}",
+    "accepted_report_units": [
+      "mg/g{creat}"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0121-01",
+        "metric_id": "METRIC-0121",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/g{creat}",
+        "applies_to": {},
+        "reference_text": "report-/guideline-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0122",
+    "canonical_name": "HBsAg",
+    "loinc_candidates": [],
+    "aliases": [
+      "hbs ag",
+      "hbsag",
+      "hepatitis b surface antigen"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0122-01",
+        "metric_id": "METRIC-0122",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / nonreactive",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0123",
+    "canonical_name": "Anti-HBs",
+    "loinc_candidates": [],
+    "aliases": [
+      "anti-hbs"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mIU/mL",
+    "accepted_report_units": [
+      "mIU/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0123-01",
+        "metric_id": "METRIC-0123",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mIU/mL",
+        "applies_to": {},
+        "reference_text": "assay-/immunity-threshold specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0124",
+    "canonical_name": "Anti-HBc IgM",
+    "loinc_candidates": [],
+    "aliases": [
+      "anti-hbc igm"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0124-01",
+        "metric_id": "METRIC-0124",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / nonreactive",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0125",
+    "canonical_name": "Anti-HCV",
+    "loinc_candidates": [],
+    "aliases": [
+      "anti-hcv"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0125-01",
+        "metric_id": "METRIC-0125",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / nonreactive",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0126",
+    "canonical_name": "HIV Ag/Ab",
+    "loinc_candidates": [],
+    "aliases": [
+      "hiv",
+      "hiv 1 2 ab ag",
+      "hiv 1/2 ab/ag",
+      "hiv ab",
+      "hiv ab ag",
+      "hiv ag",
+      "hiv ag ab",
+      "hiv ag ab p24",
+      "hiv ag/ab",
+      "hiv i and ii",
+      "hiv i ii",
+      "hiv i ii ab ag",
+      "hiv i ii ab ag p24",
+      "hiv i ii ab ag with p24",
+      "hiv i ii ab ag with p24 ag"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0126-01",
+        "metric_id": "METRIC-0126",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / nonreactive",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0127",
+    "canonical_name": "HAV IgM",
+    "loinc_candidates": [],
+    "aliases": [
+      "hav igm"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0127-01",
+        "metric_id": "METRIC-0127",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / nonreactive",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0128",
+    "canonical_name": "RPR / VDRL",
+    "loinc_candidates": [],
+    "aliases": [
+      "rpr / vdrl"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "qual or titer",
+    "accepted_report_units": [
+      "qual or titer"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0128-01",
+        "metric_id": "METRIC-0128",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual or titer",
+        "applies_to": {},
+        "reference_text": "nonreactive",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0129",
+    "canonical_name": "Dengue NS1",
+    "loinc_candidates": [],
+    "aliases": [
+      "dengue ns1"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0129-01",
+        "metric_id": "METRIC-0129",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative / nonreactive",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0130",
+    "canonical_name": "Stool occult blood / FIT",
+    "loinc_candidates": [],
+    "aliases": [
+      "stool occult blood / fit",
+      "stool occult blood"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "qual",
+    "accepted_report_units": [
+      "qual"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0130-01",
+        "metric_id": "METRIC-0130",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "qual",
+        "applies_to": {},
+        "reference_text": "negative",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0131",
+    "canonical_name": "hCG, pregnancy",
+    "loinc_candidates": [],
+    "aliases": [
+      "hcg, pregnancy",
+      "pregnancy hcg"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "IU/L",
+    "accepted_report_units": [
+      "IU/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0131-01",
+        "metric_id": "METRIC-0131",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "IU/L",
+        "applies_to": {},
+        "reference_text": "context-/method-specific",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0132",
+    "canonical_name": "PSA",
+    "loinc_candidates": [],
+    "aliases": [
+      "psa",
+      "prostate specific antigen",
+      "psa total",
+      "psa prostate specific antigen total",
+      "prostate-specific antigen"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ng/mL",
+    "accepted_report_units": [
+      "ng/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0132-01",
+        "metric_id": "METRIC-0132",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ng/mL",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0133",
+    "canonical_name": "IgE",
+    "loinc_candidates": [],
+    "aliases": [
+      "ige",
+      "immunoglobulin e",
+      "total ige"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "IU/mL",
+    "accepted_report_units": [
+      "IU/mL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0133-01",
+        "metric_id": "METRIC-0133",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "IU/mL",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0134",
+    "canonical_name": "Homocysteine",
+    "loinc_candidates": [],
+    "aliases": [
+      "homocysteine",
+      "homocysteine serum",
+      "hcy"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "micromol/L",
+    "accepted_report_units": [
+      "micromol/L"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0134-01",
+        "metric_id": "METRIC-0134",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "micromol/L",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0135",
+    "canonical_name": "Hb A",
+    "loinc_candidates": [],
+    "aliases": [
+      "hb a",
+      "hba",
+      "hemoglobin a",
+      "adult hemoglobin a"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0135-01",
+        "metric_id": "METRIC-0135",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0136",
+    "canonical_name": "Hb A2",
+    "loinc_candidates": [],
+    "aliases": [
+      "hb a2",
+      "hba2",
+      "hemoglobin a2"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0136-01",
+        "metric_id": "METRIC-0136",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0137",
+    "canonical_name": "Foetal Hb",
+    "loinc_candidates": [],
+    "aliases": [
+      "foetal hb",
+      "fetal hb",
+      "hbf",
+      "foetal hemoglobin",
+      "fetal hemoglobin",
+      "hemoglobin f"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0137-01",
+        "metric_id": "METRIC-0137",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0138",
+    "canonical_name": "P2 Peak",
+    "loinc_candidates": [],
+    "aliases": [
+      "p2 peak",
+      "p2"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0138-01",
+        "metric_id": "METRIC-0138",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0139",
+    "canonical_name": "P3 Peak",
+    "loinc_candidates": [],
+    "aliases": [
+      "p3 peak",
+      "p3"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0139-01",
+        "metric_id": "METRIC-0139",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0140",
+    "canonical_name": "F Concentration",
+    "loinc_candidates": [],
+    "aliases": [
+      "f concentration"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0140-01",
+        "metric_id": "METRIC-0140",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0141",
+    "canonical_name": "A2 Concentration",
+    "loinc_candidates": [],
+    "aliases": [
+      "a2 concentration"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "%",
+    "accepted_report_units": [
+      "%"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0141-01",
+        "metric_id": "METRIC-0141",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "%",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0142",
+    "canonical_name": "CHOL/HDL Ratio",
+    "loinc_candidates": [],
+    "aliases": [
+      "chol/hdl ratio",
+      "chol hdl ratio"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ratio",
+    "accepted_report_units": [
+      "ratio"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0142-01",
+        "metric_id": "METRIC-0142",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ratio",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0143",
+    "canonical_name": "A/G Ratio",
+    "loinc_candidates": [],
+    "aliases": [
+      "a/g ratio",
+      "ag ratio",
+      "a g ratio",
+      "albumin globulin ratio",
+      "albumin/globulin ratio"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "ratio",
+    "accepted_report_units": [
+      "ratio"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0143-01",
+        "metric_id": "METRIC-0143",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "ratio",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0144",
+    "canonical_name": "Mean Blood Glucose",
+    "loinc_candidates": [],
+    "aliases": [
+      "mean blood glucose",
+      "mbg",
+      "estimated average glucose",
+      "eag"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "mg/dL",
+    "accepted_report_units": [
+      "mg/dL"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0144-01",
+        "metric_id": "METRIC-0144",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "mg/dL",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0145",
+    "canonical_name": "Casts",
+    "loinc_candidates": [],
+    "aliases": [
+      "casts",
+      "cast",
+      "urine casts",
+      "hyaline casts",
+      "granular casts"
+    ],
+    "result_type": "numeric",
+    "canonical_unit_ucum": "/hpf",
+    "accepted_report_units": [
+      "/hpf"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0145-01",
+        "metric_id": "METRIC-0145",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "/hpf",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0146",
+    "canonical_name": "Amorphous Material",
+    "loinc_candidates": [],
+    "aliases": [
+      "amorphous material",
+      "amorphous",
+      "amorphous deposits"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": "text",
+    "accepted_report_units": [
+      "text"
+    ],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0146-01",
+        "metric_id": "METRIC-0146",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "text",
+        "applies_to": {},
+        "reference_text": "see printed range",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0147",
+    "canonical_name": "ABO Type",
+    "loinc_candidates": [],
+    "aliases": [
+      "abo type",
+      "abo",
+      "abo group",
+      "blood group"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": null,
+    "accepted_report_units": [],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0147-01",
+        "metric_id": "METRIC-0147",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "",
+        "applies_to": {},
+        "reference_text": "see printed",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0148",
+    "canonical_name": "Rh(D) Type",
+    "loinc_candidates": [],
+    "aliases": [
+      "rh d type",
+      "rh type",
+      "rh",
+      "rh(d) type",
+      "rh d",
+      "rh factor"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": null,
+    "accepted_report_units": [],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0148-01",
+        "metric_id": "METRIC-0148",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "",
+        "applies_to": {},
+        "reference_text": "see printed",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0149",
+    "canonical_name": "RBC Morphology",
+    "loinc_candidates": [],
+    "aliases": [
+      "rbc morphology"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": null,
+    "accepted_report_units": [],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0149-01",
+        "metric_id": "METRIC-0149",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "",
+        "applies_to": {},
+        "reference_text": "see printed",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0150",
+    "canonical_name": "WBC Morphology",
+    "loinc_candidates": [],
+    "aliases": [
+      "wbc morphology"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": null,
+    "accepted_report_units": [],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0150-01",
+        "metric_id": "METRIC-0150",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "",
+        "applies_to": {},
+        "reference_text": "see printed",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0151",
+    "canonical_name": "Platelets Morphology",
+    "loinc_candidates": [],
+    "aliases": [
+      "platelets morphology",
+      "platelet morphology"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": null,
+    "accepted_report_units": [],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0151-01",
+        "metric_id": "METRIC-0151",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "",
+        "applies_to": {},
+        "reference_text": "see printed",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0152",
+    "canonical_name": "Parasites",
+    "loinc_candidates": [],
+    "aliases": [
+      "parasites",
+      "parasite",
+      "malarial parasite"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": null,
+    "accepted_report_units": [],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0152-01",
+        "metric_id": "METRIC-0152",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "",
+        "applies_to": {},
+        "reference_text": "see printed",
+        "priority": 100
+      }
+    ]
+  },
+  {
+    "metric_id": "METRIC-0153",
+    "canonical_name": "Electrophoresis Interpretation",
+    "loinc_candidates": [],
+    "aliases": [
+      "electrophoresis interpretation",
+      "interpretation",
+      "hemoglobin electrophoresis interpretation"
+    ],
+    "result_type": "qualitative",
+    "canonical_unit_ucum": null,
+    "accepted_report_units": [],
+    "default_reference_profiles": [
+      {
+        "profile_id": "REF-0153-01",
+        "metric_id": "METRIC-0153",
+        "source_type": "canonical_default",
+        "target_unit_ucum": "",
+        "applies_to": {},
+        "reference_text": "see printed",
+        "priority": 100
+      }
+    ]
+  }
+]

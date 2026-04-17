@@ -8,7 +8,6 @@ from pathlib import Path
 from app.schemas.artifact import ClinicianArtifactSchema, PatientArtifactSchema
 from app.schemas.lineage import LineageBundleSchema
 
-
 ROOT = Path(__file__).resolve().parents[3]
 CONTRACTS_DIR = ROOT / "contracts"
 EXAMPLES_DIR = CONTRACTS_DIR / "examples"

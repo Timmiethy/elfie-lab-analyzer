@@ -1,0 +1,30 @@
+[
+  {
+    "document_id": "09bd7b8c-f079-5c98-a648-cbd6b3817893",
+    "source_page": 1,
+    "row_hash": "row-glucose",
+    "raw_text": "Glucose 180 mg/dL",
+    "raw_analyte_label": "glucose fasting",
+    "raw_value_string": "180",
+    "raw_unit_string": "mg/dL",
+    "raw_reference_range": "70-99",
+    "parsed_numeric_value": 180.0,
+    "specimen_context": "serum",
+    "language_id": "en",
+    "extraction_confidence": 0.99
+  },
+  {
+    "document_id": "09bd7b8c-f079-5c98-a648-cbd6b3817893",
+    "source_page": 1,
+    "row_hash": "row-hba1c",
+    "raw_text": "HbA1c 6.8 %",
+    "raw_analyte_label": "hba1c",
+    "raw_value_string": "6.8",
+    "raw_unit_string": "%",
+    "raw_reference_range": "<5.7",
+    "parsed_numeric_value": 6.8,
+    "specimen_context": "blood",
+    "language_id": "en",
+    "extraction_confidence": 0.98
+  }
+]

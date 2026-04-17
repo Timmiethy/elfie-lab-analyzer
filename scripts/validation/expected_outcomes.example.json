@@ -1,0 +1,10 @@
+{
+  "default": {
+    "expected_upload_status_codes": [200],
+    "allowed_job_statuses": ["completed", "partial", "failed", "dead_lettered"],
+    "require_artifacts_on_job_statuses": ["completed", "partial"],
+    "require_proof_pack": true,
+    "expected_detail_substrings": []
+  },
+  "overrides": {}
+}

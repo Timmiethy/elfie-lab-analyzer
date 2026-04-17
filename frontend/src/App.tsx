@@ -12,7 +12,6 @@ import {
   SurfaceCard,
 } from './components/common';
 import AppHeader, { type HeaderNavItem } from './components/common/AppHeader';
-import { MockDataBanner } from './components/common/mockBanner';
 import { STITCH_COLORS } from './components/common/system';
 import type { LaneType, PatientArtifact as PatientArtifactType } from './types';
 import { getPatientArtifact } from './services/api';
@@ -193,9 +192,9 @@ function App() {
     },
     {
       id: 'guided_ask',
-      label: 'Chat with Elfie',
-      description: 'Your AI health assistant',
-      icon: '💬',
+      label: 'Guided questions',
+      description: 'Ask follow-ups',
+      icon: '?',
       onSelect: () => setState('guided_ask'),
       disabled: !hasArtifact,
     },
@@ -316,12 +315,10 @@ function App() {
           ? 'vi'
           : 'en'
         : previewFixture.language;
-      const currentArtifact = jobId ? artifact : previewFixture.patientArtifact;
 
       return (
         <GuidedAsk
           language={effectiveLanguage}
-          currentArtifact={currentArtifact ?? null}
           onNavigateBack={handleReturnToArtifact}
         />
       );
@@ -576,7 +573,6 @@ function App() {
   return (
     <>
       <AppHeader navItems={navItems} activeItemId={state} />
-      <MockDataBanner />
       {renderBody()}
     </>
   );

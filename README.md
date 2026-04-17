@@ -8,7 +8,7 @@ Elfie Labs Analyzer is a full-stack lab report understanding system. It accepts 
 - **Frontend (`frontend/`)**: Vite + React + TypeScript web app.
 - **Terminology and mapping data (`data/`)**: LOINC and related mapping inputs.
 - **Generated artifacts (`artifacts/`)**: Output files created by analysis jobs.
-- **Docs and design references (`docs/`, `labs_analyzer_v13_final_architecture_definition.md`)**: Product and architecture guidance.
+- **Docs and design references (`docs/`, `labs_analyzer_v10_*.md`)**: Product and architecture guidance.
 
 ## Core Pipeline (High Level)
 
@@ -90,6 +90,24 @@ mypy .
 alembic upgrade head
 ```
 
+### Fast Validation Loop (Strict Full Stack)
+
+Use these when iterating on parser/mapping/rules so runs fail fast if DB/backend readiness is degraded:
+
+```powershell
+# One-file smoke (starts db+backend, waits for ready checks, fail-fast on first failure)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1 --max-files 1 --tiers easy
+
+# Full corpus (same strict readiness gate)
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1
+```
+
+Advanced options can be passed through to `scripts/validation/run_backend_corpus_validation.py`, for example:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1 --fail-fast --tiers easy medium
+```
+
 ### Frontend (`frontend/`)
 
 ```bash
@@ -144,4 +162,4 @@ Contract examples are available in `contracts/examples/` and companion notes in 
 
 ---
 
-If you're making larger architectural/product changes, review `labs_analyzer_v13_final_architecture_definition.md` first, then supporting operational docs in `docs/`.
+If you're making larger architectural/product changes, review the design references in `docs/` and `labs_analyzer_v10_*.md` before implementation.

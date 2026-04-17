@@ -6,15 +6,9 @@ import asyncio
 from types import SimpleNamespace
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
+from sqlalchemy.exc import IntegrityError
+
 from app.workers import pipeline as pipeline_module
-from tests.support.pdf_builder import build_text_pdf
-
-
-def _sample_trusted_pdf_bytes() -> bytes:
-    return build_text_pdf([
-        "Glucose 180 mg/dL 70-99",
-        "HbA1c 6.8 % <5.7",
-    ])
 
 
 def test_pipeline_persists_row_level_entities_when_db_session_is_provided(monkeypatch) -> None:
@@ -63,8 +57,6 @@ def test_pipeline_persists_row_level_entities_when_db_session_is_provided(monkey
     result = asyncio.run(
         pipeline_module.PipelineOrchestrator().run(
             "phase-10-row-persist",
-            file_bytes=_sample_trusted_pdf_bytes(),
-            lane_type="trusted_pdf",
             db_session=object(),
         )
     )
@@ -118,8 +110,6 @@ def test_pipeline_policy_events_reference_created_rule_events(monkeypatch) -> No
     asyncio.run(
         pipeline_module.PipelineOrchestrator().run(
             "phase-10-policy-linkage",
-            file_bytes=_sample_trusted_pdf_bytes(),
-            lane_type="trusted_pdf",
             db_session=object(),
         )
     )
@@ -127,3 +117,147 @@ def test_pipeline_policy_events_reference_created_rule_events(monkeypatch) -> No
     assert created_rule_event_ids
     assert created_policy_event_rule_ids
     assert set(created_policy_event_rule_ids) <= set(created_rule_event_ids)
+
+
+def test_pipeline_prefers_bulk_row_persistence_when_available(monkeypatch) -> None:
+    calls = {
+        "bulk_extracted": 0,
+        "bulk_observations": 0,
+        "bulk_candidates": 0,
+        "bulk_rules": 0,
+        "bulk_policies": 0,
+        "per_row": 0,
+    }
+
+    class FakeStore:
+        def __init__(self, session: object) -> None:
+            self.session = session
+
+        async def bulk_create_extracted_rows(self, *, rows):
+            calls["bulk_extracted"] += 1
+            return {str(row["row_hash"]): uuid4() for row in rows}
+
+        async def bulk_create_observations(self, *, rows):
+            calls["bulk_observations"] += 1
+            return {row["observation_uuid"]: row["observation_uuid"] for row in rows}
+
+        async def bulk_create_mapping_candidates(self, *, rows):
+            calls["bulk_candidates"] += len(rows)
+
+        async def bulk_create_rule_events(self, *, rows):
+            calls["bulk_rules"] += len(rows)
+            return {row["id"]: row["id"] for row in rows}
+
+        async def bulk_create_policy_events(self, *, rows):
+            calls["bulk_policies"] += len(rows)
+
+        async def create_extracted_row(self, **kwargs):
+            calls["per_row"] += 1
+            raise AssertionError("per-row path should not run when bulk methods exist")
+
+        async def create_observation(self, **kwargs):
+            calls["per_row"] += 1
+            raise AssertionError("per-row path should not run when bulk methods exist")
+
+        async def create_mapping_candidate(self, **kwargs):
+            calls["per_row"] += 1
+            raise AssertionError("per-row path should not run when bulk methods exist")
+
+        async def create_rule_event(self, **kwargs):
+            calls["per_row"] += 1
+            raise AssertionError("per-row path should not run when bulk methods exist")
+
+        async def create_policy_event(self, **kwargs):
+            calls["per_row"] += 1
+            raise AssertionError("per-row path should not run when bulk methods exist")
+
+        async def persist_top_level_bundle(self, **kwargs):
+            return None
+
+    monkeypatch.setattr(pipeline_module, "TopLevelLifecycleStore", FakeStore)
+
+    result = asyncio.run(
+        pipeline_module.PipelineOrchestrator().run(
+            "phase-10-bulk-path",
+            db_session=object(),
+        )
+    )
+
+    assert result["row_level_persistence"]["extracted_rows"] >= 1
+    assert result["row_level_persistence"]["observations"] >= 1
+    assert calls["bulk_extracted"] == 1
+    assert calls["bulk_observations"] == 1
+    assert calls["bulk_candidates"] >= 1
+    assert calls["bulk_rules"] >= 1
+    assert calls["bulk_policies"] >= 1
+    assert calls["per_row"] == 0
+
+
+def test_pipeline_falls_back_to_per_row_on_bulk_integrity_error(monkeypatch) -> None:
+    calls = {
+        "bulk_extracted": 0,
+        "per_row_extracted": 0,
+        "per_row_observations": 0,
+        "per_row_candidates": 0,
+        "per_row_rules": 0,
+        "per_row_policies": 0,
+    }
+
+    class FakeStore:
+        def __init__(self, session: object) -> None:
+            self.session = session
+
+        async def bulk_create_extracted_rows(self, *, rows):
+            calls["bulk_extracted"] += 1
+            raise IntegrityError("insert", {}, Exception("duplicate key"))
+
+        async def bulk_create_observations(self, *, rows):
+            raise AssertionError("bulk observations should not run after bulk extracted failure")
+
+        async def bulk_create_mapping_candidates(self, *, rows):
+            raise AssertionError("bulk mapping candidates should not run after fallback")
+
+        async def bulk_create_rule_events(self, *, rows):
+            raise AssertionError("bulk rule events should not run after fallback")
+
+        async def bulk_create_policy_events(self, *, rows):
+            raise AssertionError("bulk policy events should not run after fallback")
+
+        async def create_extracted_row(self, **kwargs):
+            calls["per_row_extracted"] += 1
+            return SimpleNamespace(id=uuid4())
+
+        async def create_observation(self, **kwargs):
+            calls["per_row_observations"] += 1
+            return SimpleNamespace(id=uuid4())
+
+        async def create_mapping_candidate(self, **kwargs):
+            calls["per_row_candidates"] += 1
+            return SimpleNamespace(id=uuid4())
+
+        async def create_rule_event(self, **kwargs):
+            calls["per_row_rules"] += 1
+            return SimpleNamespace(id=uuid4())
+
+        async def create_policy_event(self, **kwargs):
+            calls["per_row_policies"] += 1
+            return SimpleNamespace(id=uuid4())
+
+        async def persist_top_level_bundle(self, **kwargs):
+            return None
+
+    monkeypatch.setattr(pipeline_module, "TopLevelLifecycleStore", FakeStore)
+
+    result = asyncio.run(
+        pipeline_module.PipelineOrchestrator().run(
+            "phase-10-bulk-fallback",
+            db_session=object(),
+        )
+    )
+
+    assert calls["bulk_extracted"] == 1
+    assert calls["per_row_extracted"] == result["row_level_persistence"]["extracted_rows"]
+    assert calls["per_row_observations"] == result["row_level_persistence"]["observations"]
+    assert calls["per_row_candidates"] == result["row_level_persistence"]["mapping_candidates"]
+    assert calls["per_row_rules"] == result["row_level_persistence"]["rule_events"]
+    assert calls["per_row_policies"] == result["row_level_persistence"]["policy_events"]

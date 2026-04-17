@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import settings
@@ -19,7 +19,9 @@ pytestmark = pytest.mark.asyncio
 
 
 def _build_text_pdf(lines: list[str]) -> bytes:
-    escaped_lines = [line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in lines]
+    escaped_lines = [
+        line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in lines
+    ]
     content_lines = ["BT", "/F1 12 Tf", "72 720 Td"]
     for index, line in enumerate(escaped_lines):
         if index:
@@ -39,7 +41,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     )
     objects.append(
         b"4 0 obj\n"
-        + f"<< /Length {len(stream)} >>\n".encode("utf-8")
+        + f"<< /Length {len(stream)} >>\n".encode()
         + b"stream\n"
         + stream
         + b"\nendstream\nendobj\n"
@@ -47,17 +49,17 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     objects.append(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     buffer = BytesIO()
-    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode())
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
         buffer.write(obj)
 
     xref_offset = buffer.tell()
-    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode("utf-8"))
+    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode())
     buffer.write(b"0000000000 65535 f \n")
     for offset in offsets[1:]:
-        buffer.write(f"{offset:010d} 00000 n \n".encode("utf-8"))
+        buffer.write(f"{offset:010d} 00000 n \n".encode())
     buffer.write(
         (
             "trailer\n"
@@ -65,7 +67,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
             "startxref\n"
             f"{xref_offset}\n"
             "%%EOF\n"
-        ).encode("utf-8")
+        ).encode()
     )
     return buffer.getvalue()
 
@@ -93,7 +95,9 @@ async def integration_runtime_isolation(
 
 async def _latest_job(session_factory: async_sessionmaker[AsyncSession]) -> Job:
     async with session_factory() as session:
-        result = await session.execute(select(Job).order_by(Job.created_at.desc(), Job.id.desc()).limit(1))
+        result = await session.execute(
+            select(Job).order_by(Job.created_at.desc(), Job.id.desc()).limit(1)
+        )
         job = result.scalar_one_or_none()
         if job is None:
             raise AssertionError("expected persisted job")
@@ -121,12 +125,16 @@ async def test_phase_22_recent_jobs_endpoint_lists_operator_view(
 ) -> None:
     completed_upload = await api_client.post(
         "/api/upload",
-        files={"file": ("recent-good.pdf", _build_text_pdf(["Glucose 180 mg/dL"]), "application/pdf")},
+        data={"age_years": 42.0, "sex": "female"},
+        files={
+            "file": ("recent-good.pdf", _build_text_pdf(["Glucose 180 mg/dL"]), "application/pdf")
+        },
     )
     assert completed_upload.status_code == 200, completed_upload.text
 
     failed_upload = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("recent-bad.pdf", _build_text_pdf([]), "application/pdf")},
     )
     assert failed_upload.status_code == 422
@@ -148,7 +156,14 @@ async def test_phase_22_job_audit_endpoint_reports_share_and_benchmark_activity(
 ) -> None:
     upload_response = await api_client.post(
         "/api/upload",
-        files={"file": ("audit.pdf", _build_text_pdf(["Glucose 180 mg/dL", "HbA1c 6.8 %"]), "application/pdf")},
+        data={"age_years": 42.0, "sex": "female"},
+        files={
+            "file": (
+                "audit.pdf",
+                _build_text_pdf(["Glucose 180 mg/dL", "HbA1c 6.8 %"]),
+                "application/pdf",
+            )
+        },
     )
     assert upload_response.status_code == 200, upload_response.text
     job_id = upload_response.json()["job_id"]
@@ -176,6 +191,7 @@ async def test_phase_22_retry_preview_explains_reprocessing_readiness(
 ) -> None:
     failed_upload = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("preview-bad.pdf", _build_text_pdf([]), "application/pdf")},
     )
     assert failed_upload.status_code == 422

@@ -58,7 +58,13 @@ def get_current_user_id(request: Request) -> uuid.UUID:
             detail="missing_subject",
         )
 
-    return uuid.UUID(sub)
+    try:
+        return uuid.UUID(str(sub))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_subject",
+        )
 
 
 CurrentUserId = Annotated[uuid.UUID, Depends(get_current_user_id)]

@@ -20,31 +20,13 @@ class TrustStatus(StrEnum):
     NON_TRUSTED_BETA = "non_trusted_beta"
 
 
-class PromotionStatus(StrEnum):
-    NOT_APPLICABLE = "not_applicable"
-    BETA_PENDING = "beta_pending"
-    PROMOTED_TO_TRUSTED = "promoted_to_trusted"
-    REMAINS_BETA = "remains_beta"
-    UNSUPPORTED = "unsupported"
-
-
 class UnsupportedReason(StrEnum):
     NO_EXTRACTABLE_TEXT = "no_extractable_text"
-    UNSUPPORTED_FAMILY = "unsupported_family"
+    UNSUPPORTED_ANALYTE_FAMILY = "unsupported_analyte_family"
     UNSUPPORTED_UNIT_OR_REFERENCE_RANGE = "unsupported_unit_or_reference_range"
     THRESHOLD_CONFLICT = "threshold_conflict"
     COMPARABLE_HISTORY_UNAVAILABLE = "comparable_history_unavailable"
     INSUFFICIENT_SUPPORT = "insufficient_support"
-    UNREADABLE_VALUE = "unreadable_value"
-    UNIT_PARSE_FAIL = "unit_parse_fail"
-    BILINGUAL_LABEL_UNRESOLVED = "bilingual_label_unresolved"
-    AMBIGUOUS_ANALYTE = "ambiguous_analyte"
-    MISSING_OVERLAY_CONTEXT = "missing_overlay_context"
-    DERIVED_OBSERVATION_UNBOUND = "derived_observation_unbound"
-    SPECIMEN_OR_METHOD_CONFLICT = "specimen_or_method_conflict"
-    UNSUPPORTED_BETA_ROW = "unsupported_beta_row"
-    PASSWORD_PROTECTED_PDF = "password_protected_pdf"
-    CORRUPT_PDF = "corrupt_pdf"
 
 
 class FlaggedCard(BaseModel):
@@ -59,7 +41,6 @@ class FlaggedCard(BaseModel):
 class UnsupportedItem(BaseModel):
     raw_label: str
     reason: UnsupportedReason
-    internal_reason: str | None = None
 
 
 class ComparableHistoryStatus(StrEnum):
@@ -86,19 +67,11 @@ class ComparableHistoryCard(BaseModel):
     comparability_status: ComparableHistoryStatus
 
 
-class TraceRefs(BaseModel):
-    proof_pack: str | None = None
-    parser_trace: str | None = None
-    normalization_trace: str | None = None
-    suppression_report: str | None = None
-
-
 class PatientArtifactSchema(BaseModel):
     contract_version: str = OBSERVATION_CONTRACT_VERSION
     job_id: UUID
     support_banner: SupportBanner
     trust_status: TrustStatus
-    promotion_status: PromotionStatus = PromotionStatus.NOT_APPLICABLE
     overall_severity: SeverityClass
     flagged_cards: list[FlaggedCard] = []
     reviewed_not_flagged: list[str] = []
@@ -110,7 +83,6 @@ class PatientArtifactSchema(BaseModel):
     language_id: str = "en"
     explanation: dict | None = None
     comparable_history: ComparableHistoryCard | None = None
-    trace_refs: TraceRefs | None = None
 
 
 class ClinicianArtifactSchema(BaseModel):
@@ -122,7 +94,5 @@ class ClinicianArtifactSchema(BaseModel):
     nextstep_classes: list[NextStepClass] = []
     support_coverage: SupportBanner
     trust_status: TrustStatus
-    promotion_status: PromotionStatus = PromotionStatus.NOT_APPLICABLE
     not_assessed: list[UnsupportedItem] = []
     provenance_link: str | None = None
-    trace_refs: TraceRefs | None = None

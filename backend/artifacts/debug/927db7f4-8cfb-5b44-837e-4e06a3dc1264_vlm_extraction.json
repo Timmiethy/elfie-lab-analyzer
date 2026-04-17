@@ -1,0 +1,16 @@
+[
+  {
+    "document_id": "927db7f4-8cfb-5b44-837e-4e06a3dc1264",
+    "source_page": 1,
+    "row_hash": "row-glucose-threshold-conflict",
+    "raw_text": "Glucose 95 mg/dL 60-90",
+    "raw_analyte_label": "glucose fasting",
+    "raw_value_string": "95",
+    "raw_unit_string": "mg/dL",
+    "raw_reference_range": "60-90",
+    "parsed_numeric_value": 95.0,
+    "specimen_context": "serum",
+    "language_id": "en",
+    "extraction_confidence": 0.99
+  }
+]

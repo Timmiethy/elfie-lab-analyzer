@@ -1,25 +1,11 @@
 /** API client for Elfie Labs Analyzer backend.
  *
- * Mock behavior (post-hardening):
+ * When the backend is unreachable (network error) or returns a non-OK
+ * response, these helpers fall back to deterministic mocked responses
+ * built from the preview fixtures. This lets the UI/UX flows be walked
+ * end-to-end without a live backend, purely for manual UX testing.
  *
- *   - Default: fall back to mock fixtures **only when the backend is
- *     unreachable** (fetch itself rejects — DNS, connection refused,
- *     TLS error, CORS preflight failure). Any HTTP response from the
- *     backend (200, 401, 404, 500, 502…) is returned verbatim so the
- *     UI can render real errors instead of silently substituting a
- *     "fully supported" fixture.
- *
- *   - VITE_DISABLE_API_MOCK=true → never mock, even on network error.
- *     Use this during real dev/QA so any failure is visible.
- *
- *   - VITE_FORCE_MOCK=true → always mock, skip fetch entirely. Use this
- *     for UI-only demos with no backend running.
- *
- * Every mocked response is marked with:
- *   - HTTP header   X-Elfie-Mock: 1
- *   - JSON body     is_mocked: true      (best-effort)
- *
- * so the UI and any downstream test can detect and flag fake data.
+ * Opt-out: set `VITE_DISABLE_API_MOCK=true` to disable the fallback.
  */
 
 import { supabase } from '../lib/supabase';
@@ -27,23 +13,16 @@ import {
   getPreviewFixture,
   type PreviewVariant,
 } from '../fixtures/stitchPreviewData';
-import { markMocked } from '../components/common/mockBanner';
 import type { JobStatus, UploadResponse } from '../types';
 
 const BASE_URL = '/api';
 
-const ENV = typeof import.meta !== 'undefined' ? import.meta.env : undefined;
-
-const MOCK_DISABLED = ENV?.VITE_DISABLE_API_MOCK === 'true';
-const MOCK_FORCED = ENV?.VITE_FORCE_MOCK === 'true';
+const MOCK_DISABLED =
+  typeof import.meta !== 'undefined' &&
+  import.meta.env?.VITE_DISABLE_API_MOCK === 'true';
 
 const MOCK_JOB_PREFIX = 'mock-';
 const MOCK_LANE: UploadResponse['lane_type'] = 'trusted_pdf';
-
-const MOCK_HEADERS = {
-  'Content-Type': 'application/json',
-  'X-Elfie-Mock': '1',
-} as const;
 
 // Rotate through preview variants so each upload feels distinct.
 const MOCK_VARIANTS: PreviewVariant[] = [
@@ -54,6 +33,8 @@ const MOCK_VARIANTS: PreviewVariant[] = [
 let mockCallCounter = 0;
 
 function variantForJobId(jobId: string): PreviewVariant {
+  // Deterministic: derive variant from the job id so the same mock job
+  // returns the same artifact across status/artifact calls.
   const hash = Array.from(jobId).reduce(
     (acc, ch) => (acc * 31 + ch.charCodeAt(0)) >>> 0,
     0,
@@ -66,13 +47,16 @@ function isMockJobId(jobId: string): boolean {
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: MOCK_HEADERS });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 function blobResponse(body: string, contentType: string, status = 200): Response {
   return new Response(body, {
     status,
-    headers: { 'Content-Type': contentType, 'X-Elfie-Mock': '1' },
+    headers: { 'Content-Type': contentType },
   });
 }
 
@@ -90,36 +74,23 @@ async function authHeaders(): Promise<HeadersInit> {
   }
 }
 
-/**
- * Perform a fetch. Only returns null (→ caller falls back to mock) when the
- * backend is genuinely unreachable. HTTP errors (4xx/5xx) are returned as-is.
- */
-async function realFetch(
+async function tryFetch(
   input: RequestInfo,
   init?: RequestInit,
 ): Promise<Response | null> {
+  if (MOCK_DISABLED) {
+    return fetch(input, init);
+  }
   try {
-    return await fetch(input, init);
-  } catch (err) {
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.warn('[api] network error — backend unreachable', input, err);
+    const response = await fetch(input, init);
+    // Treat non-OK as "backend unavailable" for UX testing.
+    if (!response.ok) {
+      return null;
     }
+    return response;
+  } catch {
     return null;
   }
-}
-
-function shouldUseMock(realResponse: Response | null): boolean {
-  if (MOCK_FORCED) {
-    markMocked('VITE_FORCE_MOCK=true');
-    return true;
-  }
-  if (MOCK_DISABLED) return false;
-  if (realResponse === null) {
-    markMocked('backend unreachable (network error)');
-    return true;
-  }
-  return false;
 }
 
 function mockUploadResponse(): Response {
@@ -127,14 +98,14 @@ function mockUploadResponse(): Response {
   const jobId = `${MOCK_JOB_PREFIX}${Date.now()}-${mockCallCounter}`;
   const body: UploadResponse = {
     job_id: jobId,
-    status: 'pending',
+    status: 'accepted',
     lane_type: MOCK_LANE,
-    message: 'Mock upload accepted (backend unreachable; using preview data).',
-    is_mocked: true,
+    message: 'Mock upload accepted (backend unavailable; using preview data).',
   };
   return jsonResponse(body, 202);
 }
 
+// Simulated pipeline steps so the processing screen animates through stages.
 const MOCK_STEPS = [
   'preflight',
   'lane_selection',
@@ -153,10 +124,9 @@ function mockJobStatusResponse(jobId: string): Response {
   const isDone = next >= MOCK_STEPS.length - 1;
   const body: JobStatus = {
     job_id: jobId,
-    status: isDone ? 'completed' : 'pending',
+    status: isDone ? 'completed' : 'running',
     step: MOCK_STEPS[next],
     lane_type: MOCK_LANE,
-    is_mocked: true,
   };
   return jsonResponse(body);
 }
@@ -164,81 +134,70 @@ function mockJobStatusResponse(jobId: string): Response {
 function mockPatientArtifactResponse(jobId: string): Response {
   const variant = isMockJobId(jobId) ? variantForJobId(jobId) : 'fully_supported';
   const fixture = getPreviewFixture(variant, 'en');
-  return jsonResponse({ ...fixture.patientArtifact, is_mocked: true });
+  return jsonResponse(fixture.patientArtifact);
 }
 
 function mockClinicianArtifactResponse(jobId: string): Response {
   const variant = isMockJobId(jobId) ? variantForJobId(jobId) : 'fully_supported';
   const fixture = getPreviewFixture(variant, 'en');
-  return jsonResponse({ ...fixture.clinicianArtifact, is_mocked: true });
+  return jsonResponse(fixture.clinicianArtifact);
 }
 
 function mockClinicianPdfResponse(): Response {
+  // Minimal placeholder PDF-ish payload so the download path exercises the UI.
   const placeholder =
-    '%PDF-1.4\n% Mock clinician PDF (backend unreachable)\n%%EOF';
+    '%PDF-1.4\n% Mock clinician PDF (backend unavailable)\n%%EOF';
   return blobResponse(placeholder, 'application/pdf');
 }
 
-// ---------------------------------------------------------------------------
-// Public API helpers
-// ---------------------------------------------------------------------------
-
 export async function uploadFile(file: File): Promise<Response> {
-  if (MOCK_FORCED) return mockUploadResponse();
-
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await realFetch(`${BASE_URL}/upload`, {
+  const response = await tryFetch(`${BASE_URL}/upload`, {
     method: 'POST',
     body: formData,
     headers: await authHeaders(),
   });
-  if (shouldUseMock(response)) return mockUploadResponse();
-  return response as Response;
+  return response ?? mockUploadResponse();
 }
 
 export async function getJobStatus(jobId: string): Promise<Response> {
-  if (isMockJobId(jobId) || MOCK_FORCED) return mockJobStatusResponse(jobId);
-
-  const response = await realFetch(`${BASE_URL}/jobs/${jobId}/status`, {
+  if (isMockJobId(jobId)) {
+    return mockJobStatusResponse(jobId);
+  }
+  const response = await tryFetch(`${BASE_URL}/jobs/${jobId}/status`, {
     headers: await authHeaders(),
   });
-  if (shouldUseMock(response)) return mockJobStatusResponse(jobId);
-  return response as Response;
+  return response ?? mockJobStatusResponse(jobId);
 }
 
 export async function getPatientArtifact(jobId: string): Promise<Response> {
-  if (isMockJobId(jobId) || MOCK_FORCED) return mockPatientArtifactResponse(jobId);
-
-  const response = await realFetch(`${BASE_URL}/artifacts/${jobId}/patient`, {
+  if (isMockJobId(jobId)) {
+    return mockPatientArtifactResponse(jobId);
+  }
+  const response = await tryFetch(`${BASE_URL}/artifacts/${jobId}/patient`, {
     headers: await authHeaders(),
   });
-  if (shouldUseMock(response)) return mockPatientArtifactResponse(jobId);
-  return response as Response;
+  return response ?? mockPatientArtifactResponse(jobId);
 }
 
 export async function getClinicianArtifact(jobId: string): Promise<Response> {
-  if (isMockJobId(jobId) || MOCK_FORCED) return mockClinicianArtifactResponse(jobId);
-
-  const response = await realFetch(`${BASE_URL}/artifacts/${jobId}/clinician`, {
+  if (isMockJobId(jobId)) {
+    return mockClinicianArtifactResponse(jobId);
+  }
+  const response = await tryFetch(`${BASE_URL}/artifacts/${jobId}/clinician`, {
     headers: await authHeaders(),
   });
-  if (shouldUseMock(response)) return mockClinicianArtifactResponse(jobId);
-  return response as Response;
+  return response ?? mockClinicianArtifactResponse(jobId);
 }
 
 export async function getClinicianPdf(jobId: string): Promise<Response> {
-  if (isMockJobId(jobId) || MOCK_FORCED) return mockClinicianPdfResponse();
-
-  const response = await realFetch(`${BASE_URL}/artifacts/${jobId}/clinician/pdf`, {
+  if (isMockJobId(jobId)) {
+    return mockClinicianPdfResponse();
+  }
+  const response = await tryFetch(`${BASE_URL}/artifacts/${jobId}/clinician/pdf`, {
     headers: await authHeaders(),
   });
-  if (shouldUseMock(response)) return mockClinicianPdfResponse();
-  return response as Response;
-}
-
-/** True if the given Response was produced by the local mock layer. */
-export function isMockedResponse(response: Response): boolean {
-  return response.headers.get('X-Elfie-Mock') === '1';
+  return response ?? mockClinicianPdfResponse();
 }

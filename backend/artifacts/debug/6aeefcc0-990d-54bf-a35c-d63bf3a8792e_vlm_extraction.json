@@ -1,0 +1,257 @@
+[
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-0",
+    "raw_text": "Sodium \u94a0 141 mmol/L (135-145)",
+    "raw_analyte_label": "sodium",
+    "raw_value_string": "141",
+    "raw_unit_string": "mmol/L",
+    "raw_reference_range": "(135-145)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-1",
+    "raw_text": "Potassium \u94be 4.1 mmol/L (3.5-5.1)",
+    "raw_analyte_label": "potassium",
+    "raw_value_string": "4.1",
+    "raw_unit_string": "mmol/L",
+    "raw_reference_range": "(3.5-5.1)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-2",
+    "raw_text": "Chloride \u6c2f\u5316\u7269 99 mmol/L (95-110)",
+    "raw_analyte_label": "chloride",
+    "raw_value_string": "99",
+    "raw_unit_string": "mmol/L",
+    "raw_reference_range": "(95-110)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-4",
+    "raw_text": "Creatinine \u808c\u9178\u9150 88 umol/L (44-110)",
+    "raw_analyte_label": "creatinine",
+    "raw_value_string": "88",
+    "raw_unit_string": "umol/L",
+    "raw_reference_range": "(44-110)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-5",
+    "raw_text": "eGFR \u4f30\u8a08\u814e\u5c0f\u7403\u6ffe\u904e\u7387 60 mL/min/1.73m2",
+    "raw_analyte_label": "egfr",
+    "raw_value_string": "60",
+    "raw_unit_string": "mL/min/1.73m2",
+    "raw_reference_range": null,
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-6",
+    "raw_text": "Uric Acid \u5c3f\u9178 0.21 mmol/L (0.15-0.45)",
+    "raw_analyte_label": "uric acid",
+    "raw_value_string": "0.21",
+    "raw_unit_string": "mmol/L",
+    "raw_reference_range": "(0.15-0.45)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-9",
+    "raw_text": "Glucose \u8461\u8404\u7cd6 5.6 mmol/L (3.9 - 6.0)",
+    "raw_analyte_label": "glucose fasting",
+    "raw_value_string": "5.6",
+    "raw_unit_string": "mmol/L",
+    "raw_reference_range": "(3.9 - 6.0)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 2,
+    "row_hash": "row-10",
+    "raw_text": "HbA1c \u8461\u8404\u7cd6\u8840\u7ea2\u86cb\u767d 5.2% 33 mmol/mol",
+    "raw_analyte_label": "hba1c",
+    "raw_value_string": "5.2",
+    "raw_unit_string": "%",
+    "raw_reference_range": "< 5.7",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 2,
+    "row_hash": "row-11",
+    "raw_text": "HbA1c \u8461\u8404\u7cd6\u8840\u7ea2\u86cb\u767d 5.2% 33 mmol/mol",
+    "raw_analyte_label": "hba1c",
+    "raw_value_string": "33",
+    "raw_unit_string": "mmol/mol",
+    "raw_reference_range": "< 39",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 3,
+    "row_hash": "row-12",
+    "raw_text": "Urine Albumin 1.5 mg/L (< 20.1)",
+    "raw_analyte_label": "urine albumin",
+    "raw_value_string": "1.5",
+    "raw_unit_string": "mg/L",
+    "raw_reference_range": "(< 20.1)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 3,
+    "row_hash": "row-13",
+    "raw_text": "Urine Creatinine 16.80 mmol/L (4.00-25.00)",
+    "raw_analyte_label": "urine creatinine",
+    "raw_value_string": "16.80",
+    "raw_unit_string": "mmol/L",
+    "raw_reference_range": "(4.00-25.00)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-3",
+    "raw_text": "Urea \u5c3f\u7d20 7.1 mmol/L (3.0-10.0)",
+    "raw_analyte_label": "Urea",
+    "raw_value_string": "7.1",
+    "raw_unit_string": "mmol/L",
+    "raw_reference_range": "(3.0-10.0)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-7",
+    "raw_text": "AST \u8c37\u8349\u8f6c\u6c28\u57fa\u9176 33 U/L (< 41)",
+    "raw_analyte_label": "AST",
+    "raw_value_string": "33",
+    "raw_unit_string": "U/L",
+    "raw_reference_range": "(< 41)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 1,
+    "row_hash": "row-8",
+    "raw_text": "ALT \u8c37\u4e19\u8f6c\u6c28\u57fa\u9176 25 U/L (< 51)",
+    "raw_analyte_label": "ALT",
+    "raw_value_string": "25",
+    "raw_unit_string": "U/L",
+    "raw_reference_range": "(< 51)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "document_id": "6aeefcc0-990d-54bf-a35c-d63bf3a8792e",
+    "source_page": 3,
+    "row_hash": "row-14",
+    "raw_text": "ACR < 0.1 mg Alb/mmol (< 3.5)",
+    "raw_analyte_label": "ACR",
+    "raw_value_string": "<0.1",
+    "raw_unit_string": "mg Alb/mmol",
+    "raw_reference_range": "(< 3.5)",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+]

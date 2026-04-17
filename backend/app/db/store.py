@@ -12,10 +12,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
-from sqlalchemy import update as sql_update
+from sqlalchemy import func, insert, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tables import (
@@ -41,23 +41,15 @@ def _coerce_uuid(value: UUID | str) -> UUID:
     return value if isinstance(value, UUID) else UUID(str(value))
 
 
-def _json_clone(value: Any) -> Any:
-    if isinstance(value, UUID):
-        return str(value)
-    if isinstance(value, Mapping):
-        return {str(key): _json_clone(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_json_clone(item) for item in value]
-    return value
+def _normalize_storage_path(raw_path: str) -> Path:
+    # Stored paths can move between Windows host and Linux container runtimes.
+    return Path(raw_path.replace("\\", "/"))
 
 
-def _bounded_str(value: object | None, *, max_length: int) -> str | None:
+def _clip(value: str | None, max_len: int) -> str | None:
     if value is None:
         return None
-    rendered = str(value)
-    if len(rendered) <= max_length:
-        return rendered
-    return rendered[:max_length]
+    return value if len(value) <= max_len else value[:max_len]
 
 
 async def _add_and_flush(session: AsyncSession, entity: T) -> T:
@@ -125,12 +117,6 @@ class TopLevelLifecycleStore:
         lane_type: str,
         storage_path: str,
         page_count: int | None = None,
-        document_class: str | None = None,
-        preflight_failure_code: str | None = None,
-        duplicate_state: str | None = None,
-        promotion_status: str | None = None,
-        text_extractability: str | None = None,
-        image_density: str | None = None,
         language_id: str | None = None,
         region: str | None = None,
         user_id: UUID | None = None,
@@ -142,12 +128,6 @@ class TopLevelLifecycleStore:
             file_size_bytes=file_size_bytes,
             page_count=page_count,
             lane_type=lane_type,
-            document_class=document_class,
-            preflight_failure_code=preflight_failure_code,
-            duplicate_state=duplicate_state,
-            promotion_status=promotion_status,
-            text_extractability=text_extractability,
-            image_density=image_density,
             language_id=language_id,
             region=region,
             storage_path=storage_path,
@@ -182,6 +162,46 @@ class TopLevelLifecycleStore:
             user_id=user_id,
         )
         return await _add_and_flush(self.session, job)
+
+    async def create_job_on_conflict_do_nothing(
+        self,
+        *,
+        document_id: UUID | str,
+        idempotency_key: str,
+        input_checksum: str,
+        lane_type: str,
+        status: str = "pending",
+        retry_count: int = 0,
+        dead_letter: bool = False,
+        operator_note: str | None = None,
+        region: str | None = None,
+        user_id: UUID | None = None,
+    ) -> Job | None:
+        stmt = (
+            pg_insert(Job)
+            .values(
+                document_id=_coerce_uuid(document_id),
+                idempotency_key=idempotency_key,
+                input_checksum=input_checksum,
+                lane_type=lane_type,
+                status=status,
+                retry_count=retry_count,
+                dead_letter=dead_letter,
+                operator_note=operator_note,
+                region=region,
+                user_id=user_id,
+            )
+            .on_conflict_do_nothing(index_elements=[Job.idempotency_key])
+            .returning(Job.id)
+        )
+        result = await self.session.execute(stmt)
+        created_job_id = result.scalar_one_or_none()
+        if created_job_id is None:
+            return None
+        job = await self.get_job(created_job_id, user_id=user_id)
+        if job is None:
+            raise LookupError("job_not_found_after_insert")
+        return job
 
     async def get_job_by_idempotency_key(
         self, idempotency_key: str, *, user_id: UUID | None = None
@@ -219,43 +239,21 @@ class TopLevelLifecycleStore:
         retry_count: int | None = None,
         dead_letter: bool | None = None,
         operator_note: str | None = None,
-        clear_operator_note: bool = False,
     ) -> Job:
-        values: dict[str, Any] = {
-            "status": status,
-            "updated_at": utc_now(),
-        }
-        if retry_count is not None:
-            values["retry_count"] = retry_count
-        if dead_letter is not None:
-            values["dead_letter"] = dead_letter
-        if operator_note is not None:
-            values["operator_note"] = operator_note
-        if clear_operator_note:
-            values["operator_note"] = None
-
-        result = await self.session.execute(
-            sql_update(Job)
-            .where(Job.id == _coerce_uuid(job_id))
-            .values(**values)
-        )
-        if result.rowcount == 0:
-            raise LookupError("job_not_found")
-
-        await self.session.flush()
         job = await self.get_job(job_id)
         if job is None:
             raise LookupError("job_not_found")
+
         job.status = status
-        job.updated_at = values["updated_at"]
+        job.updated_at = utc_now()
         if retry_count is not None:
             job.retry_count = retry_count
         if dead_letter is not None:
             job.dead_letter = dead_letter
-        if clear_operator_note:
-            job.operator_note = None
-        elif operator_note is not None:
+        if operator_note is not None:
             job.operator_note = operator_note
+
+        await self.session.flush()
         return job
 
     async def create_patient_artifact(
@@ -295,13 +293,7 @@ class TopLevelLifecycleStore:
         *,
         job_id: UUID | str,
         source_checksum: str,
-        parser_backend: str | None = None,
-        parser_backend_version: str | None = None,
         parser_version: str,
-        adapter_version: str | None = None,
-        row_assembly_version: str | None = None,
-        row_type_rule_set_version: str | None = None,
-        formula_version: str | None = None,
         terminology_release: str,
         mapping_threshold_config: Mapping[str, Any],
         unit_engine_version: str,
@@ -316,13 +308,7 @@ class TopLevelLifecycleStore:
         lineage_run = LineageRun(
             job_id=_coerce_uuid(job_id),
             source_checksum=source_checksum,
-            parser_backend=parser_backend,
-            parser_backend_version=parser_backend_version,
             parser_version=parser_version,
-            adapter_version=adapter_version,
-            row_assembly_version=row_assembly_version,
-            row_type_rule_set_version=row_type_rule_set_version,
-            formula_version=formula_version,
             ocr_version=ocr_version,
             terminology_release=terminology_release,
             mapping_threshold_config=dict(mapping_threshold_config),
@@ -362,12 +348,6 @@ class TopLevelLifecycleStore:
         raw_value_string: str | None = None,
         raw_unit_string: str | None = None,
         raw_reference_range: str | None = None,
-        source_block_id: str | None = None,
-        source_row_id: str | None = None,
-        row_type: str | None = None,
-        block_type: str | None = None,
-        family_adapter_id: str | None = None,
-        failure_code: str | None = None,
         extraction_confidence: float | None = None,
         id: UUID | str | None = None,
     ) -> ExtractedRow:
@@ -376,18 +356,12 @@ class TopLevelLifecycleStore:
             document_id=_coerce_uuid(document_id),
             job_id=_coerce_uuid(job_id),
             source_page=source_page,
-            row_hash=_bounded_str(row_hash, max_length=128) or row_hash,
+            row_hash=row_hash,
             raw_text=raw_text,
             raw_analyte_label=raw_analyte_label,
-            raw_value_string=_bounded_str(raw_value_string, max_length=64),
-            raw_unit_string=_bounded_str(raw_unit_string, max_length=64),
-            raw_reference_range=_bounded_str(raw_reference_range, max_length=128),
-            source_block_id=_bounded_str(source_block_id, max_length=128),
-            source_row_id=_bounded_str(source_row_id, max_length=128),
-            row_type=_bounded_str(row_type, max_length=64),
-            block_type=_bounded_str(block_type, max_length=64),
-            family_adapter_id=_bounded_str(family_adapter_id, max_length=64),
-            failure_code=_bounded_str(failure_code, max_length=64),
+            raw_value_string=_clip(raw_value_string, 64),
+            raw_unit_string=_clip(raw_unit_string, 64),
+            raw_reference_range=_clip(raw_reference_range, 128),
             extraction_confidence=extraction_confidence,
         )
         return await _add_and_flush(self.session, extracted_row)
@@ -404,20 +378,6 @@ class TopLevelLifecycleStore:
         raw_value_string: str | None = None,
         raw_unit_string: str | None = None,
         parsed_numeric_value: float | None = None,
-        source_block_id: str | None = None,
-        source_row_id: str | None = None,
-        row_type: str | None = None,
-        measurement_kind: str | None = None,
-        support_code: str | None = None,
-        failure_code: str | None = None,
-        family_adapter_id: str | None = None,
-        parsed_locale: str | None = None,
-        parsed_comparator: str | None = None,
-        primary_result: Any | None = None,
-        secondary_result: Any | None = None,
-        candidate_trace: Any | None = None,
-        derived_formula_id: str | None = None,
-        source_observation_ids: list[UUID | str] | None = None,
         accepted_analyte_code: str | None = None,
         accepted_analyte_display: str | None = None,
         specimen_context: str | None = None,
@@ -437,36 +397,20 @@ class TopLevelLifecycleStore:
             job_id=_coerce_uuid(job_id),
             extracted_row_id=_coerce_uuid(extracted_row_id),
             source_page=source_page,
-            row_hash=_bounded_str(row_hash, max_length=128) or row_hash,
+            row_hash=row_hash,
             raw_analyte_label=raw_analyte_label,
-            raw_value_string=_bounded_str(raw_value_string, max_length=64),
-            raw_unit_string=_bounded_str(raw_unit_string, max_length=64),
+            raw_value_string=_clip(raw_value_string, 64),
+            raw_unit_string=_clip(raw_unit_string, 64),
             parsed_numeric_value=parsed_numeric_value,
-            source_block_id=_bounded_str(source_block_id, max_length=128),
-            source_row_id=_bounded_str(source_row_id, max_length=128),
-            row_type=_bounded_str(row_type, max_length=64),
-            measurement_kind=_bounded_str(measurement_kind, max_length=64),
-            support_code=_bounded_str(support_code, max_length=64),
-            failure_code=_bounded_str(failure_code, max_length=64),
-            family_adapter_id=_bounded_str(family_adapter_id, max_length=64),
-            parsed_locale=_bounded_str(parsed_locale, max_length=32),
-            parsed_comparator=_bounded_str(parsed_comparator, max_length=16),
-            primary_result=_json_clone(primary_result) if primary_result is not None else None,
-            secondary_result=_json_clone(secondary_result) if secondary_result is not None else None,
-            candidate_trace=_json_clone(candidate_trace) if candidate_trace is not None else None,
-            derived_formula_id=_bounded_str(derived_formula_id, max_length=64),
-            source_observation_ids=[_coerce_uuid(value) for value in source_observation_ids]
-            if source_observation_ids is not None
-            else None,
-            accepted_analyte_code=_bounded_str(accepted_analyte_code, max_length=32),
-            accepted_analyte_display=_bounded_str(accepted_analyte_display, max_length=256),
-            specimen_context=_bounded_str(specimen_context, max_length=128),
-            method_context=_bounded_str(method_context, max_length=128),
-            raw_reference_range=_bounded_str(raw_reference_range, max_length=128),
-            canonical_unit=_bounded_str(canonical_unit, max_length=32),
+            accepted_analyte_code=accepted_analyte_code,
+            accepted_analyte_display=accepted_analyte_display,
+            specimen_context=specimen_context,
+            method_context=method_context,
+            raw_reference_range=_clip(raw_reference_range, 128),
+            canonical_unit=canonical_unit,
             canonical_value=canonical_value,
-            language_id=_bounded_str(language_id, max_length=8),
-            support_state=_bounded_str(support_state, max_length=32) or support_state,
+            language_id=language_id,
+            support_state=support_state,
             suppression_reasons=list(suppression_reasons)
             if suppression_reasons is not None
             else None,
@@ -556,6 +500,170 @@ class TopLevelLifecycleStore:
         )
         return await _add_and_flush(self.session, policy_event)
 
+    async def bulk_create_extracted_rows(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> dict[str, UUID]:
+        if not rows:
+            return {}
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            payloads.append(
+                {
+                    "id": _coerce_uuid(row.get("id")) if row.get("id") is not None else uuid4(),
+                    "document_id": _coerce_uuid(row["document_id"]),
+                    "job_id": _coerce_uuid(row["job_id"]),
+                    "source_page": int(row["source_page"]),
+                    "row_hash": str(row["row_hash"]),
+                    "raw_text": str(row["raw_text"]),
+                    "raw_analyte_label": row.get("raw_analyte_label"),
+                    "raw_value_string": _clip(row.get("raw_value_string"), 64),
+                    "raw_unit_string": _clip(row.get("raw_unit_string"), 64),
+                    "raw_reference_range": _clip(row.get("raw_reference_range"), 128),
+                    "extraction_confidence": row.get("extraction_confidence"),
+                }
+            )
+
+        stmt = insert(ExtractedRow).returning(ExtractedRow.id, ExtractedRow.row_hash)
+        result = await self.session.execute(stmt, payloads)
+        return {str(row_hash): row_id for row_id, row_hash in result.all()}
+
+    async def bulk_create_observations(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> dict[UUID, UUID]:
+        if not rows:
+            return {}
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            observation_uuid = _coerce_uuid(row.get("observation_uuid") or row.get("id") or uuid4())
+            payloads.append(
+                {
+                    "id": observation_uuid,
+                    "document_id": _coerce_uuid(row["document_id"]),
+                    "job_id": _coerce_uuid(row["job_id"]),
+                    "extracted_row_id": _coerce_uuid(row["extracted_row_id"]),
+                    "source_page": int(row["source_page"]),
+                    "row_hash": str(row["row_hash"]),
+                    "raw_analyte_label": str(row["raw_analyte_label"]),
+                    "raw_value_string": _clip(row.get("raw_value_string"), 64),
+                    "raw_unit_string": _clip(row.get("raw_unit_string"), 64),
+                    "parsed_numeric_value": row.get("parsed_numeric_value"),
+                    "accepted_analyte_code": row.get("accepted_analyte_code"),
+                    "accepted_analyte_display": row.get("accepted_analyte_display"),
+                    "specimen_context": row.get("specimen_context"),
+                    "method_context": row.get("method_context"),
+                    "raw_reference_range": _clip(row.get("raw_reference_range"), 128),
+                    "canonical_unit": row.get("canonical_unit"),
+                    "canonical_value": row.get("canonical_value"),
+                    "language_id": row.get("language_id"),
+                    "support_state": str(row["support_state"]),
+                    "suppression_reasons": list(row["suppression_reasons"])
+                    if row.get("suppression_reasons") is not None
+                    else None,
+                    "lineage_id": _coerce_uuid(row["lineage_id"])
+                    if row.get("lineage_id") is not None
+                    else None,
+                }
+            )
+
+        stmt = insert(Observation).returning(Observation.id)
+        result = await self.session.execute(stmt, payloads)
+        persisted_ids = [row_id for (row_id,) in result.all()]
+        return {observation_id: observation_id for observation_id in persisted_ids}
+
+    async def bulk_create_mapping_candidates(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> None:
+        if not rows:
+            return
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            payloads.append(
+                {
+                    "id": _coerce_uuid(row.get("id")) if row.get("id") is not None else uuid4(),
+                    "observation_id": _coerce_uuid(row["observation_id"]),
+                    "candidate_code": str(row["candidate_code"]),
+                    "candidate_display": str(row["candidate_display"]),
+                    "score": float(row.get("score", 0.0)),
+                    "threshold_used": float(row.get("threshold_used", 0.9)),
+                    "accepted": bool(row.get("accepted", False)),
+                    "rejection_reason": row.get("rejection_reason"),
+                }
+            )
+
+        await self.session.execute(insert(MappingCandidate), payloads)
+
+    async def bulk_create_rule_events(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> dict[UUID, UUID]:
+        if not rows:
+            return {}
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            rule_event_id = _coerce_uuid(row.get("id") or uuid4())
+            payloads.append(
+                {
+                    "id": rule_event_id,
+                    "job_id": _coerce_uuid(row["job_id"]),
+                    "observation_id": _coerce_uuid(row["observation_id"]),
+                    "rule_id": str(row["rule_id"]),
+                    "finding_id": str(row["finding_id"]),
+                    "threshold_source": str(row["threshold_source"]),
+                    "supporting_observation_ids": [
+                        _coerce_uuid(value)
+                        for value in row.get("supporting_observation_ids", [])
+                    ]
+                    or None,
+                    "suppression_conditions": dict(row["suppression_conditions"])
+                    if row.get("suppression_conditions") is not None
+                    else None,
+                    "severity_class_candidate": row.get("severity_class_candidate"),
+                    "nextstep_class_candidate": row.get("nextstep_class_candidate"),
+                }
+            )
+
+        stmt = insert(RuleEvent).returning(RuleEvent.id)
+        result = await self.session.execute(stmt, payloads)
+        persisted_ids = [row_id for (row_id,) in result.all()]
+        return {rule_event_id: rule_event_id for rule_event_id in persisted_ids}
+
+    async def bulk_create_policy_events(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> None:
+        if not rows:
+            return
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            payloads.append(
+                {
+                    "id": _coerce_uuid(row.get("id")) if row.get("id") is not None else uuid4(),
+                    "job_id": _coerce_uuid(row["job_id"]),
+                    "rule_event_id": _coerce_uuid(row["rule_event_id"]),
+                    "severity_class": str(row["severity_class"]),
+                    "nextstep_class": str(row["nextstep_class"]),
+                    "severity_policy_version": str(row["severity_policy_version"]),
+                    "nextstep_policy_version": str(row["nextstep_policy_version"]),
+                    "suppression_active": bool(row.get("suppression_active", False)),
+                    "suppression_reason": row.get("suppression_reason"),
+                }
+            )
+
+        await self.session.execute(insert(PolicyEvent), payloads)
+
     async def create_share_event(
         self,
         *,
@@ -629,13 +737,43 @@ class TopLevelLifecycleStore:
             benchmark_run=persisted_benchmark,
         )
 
-    async def get_job(
-        self, job_id: UUID | str, *, user_id: UUID | None = None
-    ) -> Job | None:
+    async def get_job(self, job_id: UUID | str, *, user_id: UUID | None = None) -> Job | None:
         job = await self.session.get(Job, _coerce_uuid(job_id))
         if job is not None and user_id is not None and job.user_id != user_id:
             return None
         return job
+
+    async def get_job_for_update(self, job_id: UUID | str) -> Job | None:
+        """Fetch a job row with a row-level lock to prevent concurrent retry races."""
+        result = await self.session.execute(
+            select(Job).where(Job.id == _coerce_uuid(job_id)).with_for_update()
+        )
+        return result.scalar_one_or_none()
+
+    async def increment_retry_count_if_below(
+        self,
+        job_id: UUID | str,
+        *,
+        max_retry_count: int,
+    ) -> int | None:
+        stmt = (
+            update(Job)
+            .where(
+                Job.id == _coerce_uuid(job_id),
+                Job.dead_letter.is_(False),
+                Job.retry_count < max_retry_count,
+            )
+            .values(
+                retry_count=Job.retry_count + 1,
+                updated_at=utc_now(),
+            )
+            .returning(Job.retry_count)
+        )
+        result = await self.session.execute(stmt)
+        retry_count = result.scalar_one_or_none()
+        if retry_count is None:
+            return None
+        return int(retry_count)
 
     async def get_document(self, document_id: UUID | str) -> Document | None:
         return await self.session.get(Document, _coerce_uuid(document_id))
@@ -703,11 +841,12 @@ class TopLevelLifecycleStore:
             )
         return jobs
 
-    async def get_job_audit_data(self, job_id: UUID | str) -> dict[str, Any]:
-        job = await self.get_job(job_id)
+    async def get_job_audit_data(
+        self, job_id: UUID | str, *, user_id: UUID | None = None
+    ) -> dict[str, Any]:
+        job = await self.get_job(job_id, user_id=user_id)
         if job is None:
             raise LookupError("job_not_found")
-        document = await self.get_document(job.document_id)
 
         lineage_runs_count = await self.count_lineage_runs(job_id)
         latest_lineage = await self.get_latest_lineage_run(job_id)
@@ -751,16 +890,6 @@ class TopLevelLifecycleStore:
             "dead_letter": bool(job.dead_letter),
             "operator_note": job.operator_note,
             "lineage_runs_count": lineage_runs_count,
-            "document": None
-            if document is None
-            else {
-                "document_class": document.document_class,
-                "preflight_failure_code": document.preflight_failure_code,
-                "duplicate_state": document.duplicate_state,
-                "promotion_status": document.promotion_status,
-                "text_extractability": document.text_extractability,
-                "image_density": document.image_density,
-            },
             "latest_lineage_run": None
             if latest_lineage is None
             else {"id": str(latest_lineage.id)},
@@ -773,13 +902,16 @@ class TopLevelLifecycleStore:
         job_id: UUID | str,
         *,
         max_retry_count: int,
+        user_id: UUID | None = None,
     ) -> dict[str, Any]:
-        job = await self.get_job(job_id)
+        job = await self.get_job(job_id, user_id=user_id)
         if job is None:
             raise LookupError("job_not_found")
 
         document = await self.get_document(job.document_id)
-        document_present = document is not None and Path(document.storage_path).is_file()
+        document_present = (
+            document is not None and _normalize_storage_path(document.storage_path).is_file()
+        )
         dead_letter = bool(job.dead_letter)
         retry_count = int(job.retry_count or 0)
         retry_block_reason: str | None = None

@@ -18,7 +18,9 @@ pytestmark = pytest.mark.asyncio
 
 
 def _build_text_pdf(lines: list[str]) -> bytes:
-    escaped_lines = [line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in lines]
+    escaped_lines = [
+        line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in lines
+    ]
     content_lines = ["BT", "/F1 12 Tf", "72 720 Td"]
     for index, line in enumerate(escaped_lines):
         if index:
@@ -38,7 +40,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     )
     objects.append(
         b"4 0 obj\n"
-        + f"<< /Length {len(stream)} >>\n".encode("utf-8")
+        + f"<< /Length {len(stream)} >>\n".encode()
         + b"stream\n"
         + stream
         + b"\nendstream\nendobj\n"
@@ -46,17 +48,17 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     objects.append(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     buffer = BytesIO()
-    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode())
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
         buffer.write(obj)
 
     xref_offset = buffer.tell()
-    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode("utf-8"))
+    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode())
     buffer.write(b"0000000000 65535 f \n")
     for offset in offsets[1:]:
-        buffer.write(f"{offset:010d} 00000 n \n".encode("utf-8"))
+        buffer.write(f"{offset:010d} 00000 n \n".encode())
     buffer.write(
         (
             "trailer\n"
@@ -64,7 +66,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
             "startxref\n"
             f"{xref_offset}\n"
             "%%EOF\n"
-        ).encode("utf-8")
+        ).encode()
     )
     return buffer.getvalue()
 
@@ -94,6 +96,7 @@ async def test_phase_24_partial_support_runtime_keeps_unsupported_rows_visible_i
 
     upload_response = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("partial-support.pdf", pdf_bytes, "application/pdf")},
     )
 
@@ -116,3 +119,10 @@ async def test_phase_24_partial_support_runtime_keeps_unsupported_rows_visible_i
     assert clinician.not_assessed, "clinician artifact must preserve unsupported row visibility"
     assert {item.raw_label for item in patient.not_assessed} >= {"MysteryMarker"}
     assert {item.raw_label for item in clinician.not_assessed} >= {"MysteryMarker"}
+
+    patient_pairs = {(item.raw_label, item.reason.value) for item in patient.not_assessed}
+    clinician_pairs = {(item.raw_label, item.reason.value) for item in clinician.not_assessed}
+
+    assert len(patient_pairs) == len(patient.not_assessed)
+    assert len(clinician_pairs) == len(clinician.not_assessed)
+    assert patient_pairs == clinician_pairs

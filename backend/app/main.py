@@ -1,5 +1,3 @@
-from collections.abc import Awaitable, Callable
-
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -27,6 +25,10 @@ def create_app() -> FastAPI:
     _verify_terminology_snapshot()
     TerminologyLoader().load_loinc(str(settings.loinc_path))
     observability_metrics.reset()
+    allow_credentials = settings.cors_allow_credentials
+    if "*" in settings.cors_origins and allow_credentials:
+        raise RuntimeError("cors_misconfiguration:wildcard_origin_with_credentials")
+
     app = FastAPI(
         title="Elfie Labs Analyzer",
         version="0.1.0",
@@ -36,17 +38,14 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=allow_credentials,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", CORRELATION_ID_HEADER],
         expose_headers=[CORRELATION_ID_HEADER],
     )
 
     @app.middleware("http")
-    async def add_correlation_id(
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
+    async def add_correlation_id(request: Request, call_next) -> Response:
         correlation_id = request.headers.get(CORRELATION_ID_HEADER) or generate_correlation_id()
         set_current_correlation_id(correlation_id)
         response = await call_next(request)
@@ -59,10 +58,8 @@ def create_app() -> FastAPI:
 
 
 try:
-    app: FastAPI | None = create_app()
-except RuntimeError as e:
-    import sys
-    print(f"FAILED TO START APP: {e}", file=sys.stderr)
+    app = create_app()
+except RuntimeError:
     app = None  # deferred; tests call create_app() directly with patched settings
 
 if __name__ == "__main__":

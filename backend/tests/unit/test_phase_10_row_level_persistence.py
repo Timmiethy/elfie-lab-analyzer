@@ -68,7 +68,7 @@ def test_store_creates_observation_records_linked_to_extracted_rows() -> None:
             raw_value_string="180",
             raw_unit_string="mg/dL",
             parsed_numeric_value=180.0,
-            accepted_analyte_code="2345-7",
+            accepted_analyte_code="METRIC-0019",
             accepted_analyte_display="Glucose [Mass/volume] in Serum or Plasma",
             specimen_context="serum",
             method_context=None,
@@ -85,7 +85,7 @@ def test_store_creates_observation_records_linked_to_extracted_rows() -> None:
     assert observation.document_id == document_id
     assert observation.job_id == job_id
     assert observation.extracted_row_id == extracted_row_id
-    assert observation.accepted_analyte_code == "2345-7"
+    assert observation.accepted_analyte_code == "METRIC-0019"
     assert observation.lineage_id == lineage_id
     assert session.flush_calls == 1
 
@@ -100,7 +100,7 @@ def test_store_creates_mapping_candidate_rule_event_and_policy_event_records() -
     mapping_candidate = asyncio.run(
         store.create_mapping_candidate(
             observation_id=observation_id,
-            candidate_code="2345-7",
+            candidate_code="METRIC-0019",
             candidate_display="Glucose [Mass/volume] in Serum or Plasma",
             score=0.99,
             threshold_used=0.9,

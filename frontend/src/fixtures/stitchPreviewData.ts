@@ -141,13 +141,11 @@ const EN_PARTIAL_NOT_FLAGGED: string[] = [
 const EN_PARTIAL_NOT_ASSESSED: UnsupportedItem[] = [
   {
     raw_label: 'Urine microalbumin',
-    reason: 'ambiguous_analyte',
-    internal_reason: 'Could not map to a known standard analyte in the supported list.',
+    reason: 'Could not map to a known standard analyte in the supported list.',
   },
   {
     raw_label: 'Vitamin D (25-OH)',
-    reason: 'unsupported_family',
-    internal_reason: 'Outside the current supported analyte set.',
+    reason: 'Outside the current supported analyte set.',
   },
 ];
 
@@ -209,8 +207,7 @@ const EN_CNA_ARTIFACT: PatientArtifact = {
   not_assessed: [
     {
       raw_label: 'All rows',
-      reason: 'no_extractable_text',
-      internal_reason:
+      reason:
         'The document could not be parsed into supported structured rows.',
     },
   ],
@@ -226,6 +223,7 @@ const EN_CNA_ARTIFACT: PatientArtifact = {
     previous_date: null,
     direction: 'trend_unavailable',
     comparability_status: 'unavailable',
+    comparability_reason: 'No prior comparable history is available.',
   },
 };
 
@@ -320,8 +318,7 @@ const VI_PARTIAL_NOT_FLAGGED: string[] = [
 const VI_PARTIAL_NOT_ASSESSED: UnsupportedItem[] = [
   {
     raw_label: 'Vitamin D (25-OH)',
-    reason: 'unsupported_family',
-    internal_reason: 'Nằm ngoài tập hợp chất phân tích được hỗ trợ hiện tại.',
+    reason: 'Nằm ngoài tập hợp chất phân tích được hỗ trợ hiện tại.',
   },
 ];
 
@@ -383,8 +380,7 @@ const VI_CNA_ARTIFACT: PatientArtifact = {
   not_assessed: [
     {
       raw_label: 'Tất cả các dòng',
-      reason: 'no_extractable_text',
-      internal_reason:
+      reason:
         'Không thể phân tích tài liệu thành các dòng có cấu trúc được hỗ trợ.',
     },
   ],

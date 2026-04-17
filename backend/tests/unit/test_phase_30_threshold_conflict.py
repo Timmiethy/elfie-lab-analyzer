@@ -21,7 +21,7 @@ def _supported_observation(value: float, *, raw_reference_range: str) -> dict:
         "parsed_numeric_value": value,
         "canonical_value": value,
         "canonical_unit": "mg/dL",
-        "accepted_analyte_code": "2345-7",
+        "accepted_analyte_code": "METRIC-0019",
         "accepted_analyte_display": "Glucose",
         "specimen_context": "serum",
         "raw_reference_range": raw_reference_range,
@@ -29,8 +29,14 @@ def _supported_observation(value: float, *, raw_reference_range: str) -> dict:
     }
 
 
-def test_phase_30_rule_engine_emits_threshold_conflict_when_printed_range_and_policy_disagree(
-) -> None:
+def test_phase_30_rule_engine_emits_threshold_conflict_when_printed_range_and_policy_disagree() -> (
+    None
+):
+    """When printed range says abnormal but policy thresholds wouldn't fire,
+    we trust the report's own category (printed-range-first) and emit an
+    actionable S2 keyed to the printed range. Prior behavior emitted an
+    SX threshold_conflict; the product spec now mandates interpreting via
+    the printed range, so the finding is surfaced as actionable."""
     rule_engine = RuleEngine()
     severity_policy = SeverityPolicyEngine()
     nextstep_policy = NextStepPolicyEngine()
@@ -43,15 +49,21 @@ def test_phase_30_rule_engine_emits_threshold_conflict_when_printed_range_and_po
     findings = nextstep_policy.assign(findings, {"age_years": 42, "sex": "female"})
 
     assert len(findings) == 1
-    assert findings[0]["rule_id"] == "glucose_threshold_conflict"
-    assert findings[0]["threshold_source"] == "conflicting_threshold_sources"
-    assert findings[0]["suppression_active"] is True
-    assert findings[0]["suppression_reason"] == "threshold_conflict"
-    assert findings[0]["severity_class"] == "SX"
-    assert findings[0]["nextstep_class"] == "AX"
+    assert findings[0]["rule_id"] == "glucose_high_threshold"
+    assert findings[0]["threshold_source"] == "reference_range:60-90"
+    assert findings[0]["suppression_active"] is False
+    assert findings[0]["severity_class"] == "S2"
 
 
 def test_phase_30_rule_engine_keeps_policy_stricter_than_printed_range_actionable() -> None:
+    """When the printed range accepts a value, trust the report (printed-range-first).
+
+    Prior behavior applied the hardcoded policy even when the lab's own range
+    said normal. That contradicts the product spec: "interpret only through the
+    report's own range, not a hardcoded universal range." A value of 105 mg/dL
+    sits inside the printed 70-110 range, so the finding is S0 with the printed
+    range as threshold source.
+    """
     rule_engine = RuleEngine()
     severity_policy = SeverityPolicyEngine()
     nextstep_policy = NextStepPolicyEngine()
@@ -66,12 +78,13 @@ def test_phase_30_rule_engine_keeps_policy_stricter_than_printed_range_actionabl
     assert len(findings) == 1
     assert findings[0]["rule_id"] == "glucose_high_threshold"
     assert findings[0]["suppression_active"] is False
-    assert findings[0]["severity_class"] == "S1"
-    assert findings[0]["nextstep_class"] == "A1"
+    assert findings[0]["severity_class"] == "S0"
+    assert findings[0]["nextstep_class"] == "A0"
+    assert findings[0]["threshold_source"] == "reference_range:70-110"
 
 
 def test_phase_30_pipeline_surfaces_threshold_conflict_in_patient_artifact(monkeypatch) -> None:
-    async def fake_extract_rows(job_uuid, *, file_bytes, lane_type):
+    async def fake_extract_rows(job_uuid, *, file_bytes, lane_type=None):
         return [
             {
                 "document_id": job_uuid,
@@ -100,9 +113,11 @@ def test_phase_30_pipeline_surfaces_threshold_conflict_in_patient_artifact(monke
         )
     )
 
-    assert result["patient_artifact"]["support_banner"] == "could_not_assess"
-    assert result["patient_artifact"]["flagged_cards"] == []
-    assert {item["reason"] for item in result["patient_artifact"]["not_assessed"]} >= {
-        "threshold_conflict"
-    }
-    assert result["findings"][0]["rule_id"] == "glucose_threshold_conflict"
+    assert result["patient_artifact"]["support_banner"] in (
+        "fully_supported",
+        "partially_supported",
+    )
+    assert len(result["patient_artifact"]["flagged_cards"]) == 1
+    assert result["findings"][0]["rule_id"] == "glucose_high_threshold"
+    assert result["findings"][0]["threshold_source"] == "reference_range:60-90"
+    assert result["findings"][0]["severity_class"] == "S2"

@@ -62,6 +62,41 @@ def test_phase_11_contract_examples_use_closed_unsupported_reason_taxonomy() -> 
         patient = PatientArtifactSchema.model_validate(_load_json(filename))
         for item in patient.not_assessed:
             assert isinstance(item.reason, UnsupportedReason)
+            assert set(item.model_dump().keys()) == {"raw_label", "reason"}
+
+
+def test_phase_11_renderer_coerces_not_assessed_reason_into_closed_taxonomy() -> None:
+    renderer = ArtifactRenderer()
+    findings = [
+        {
+            "finding_id": "unsupported_analyte::row-001",
+            "rule_id": "unsupported_analyte",
+            "observation_ids": [str(uuid4())],
+            "threshold_source": "none",
+            "severity_class": "SX",
+            "nextstep_class": "AX",
+            "suppression_conditions": None,
+            "suppression_active": True,
+            "suppression_reason": "unsupported_analyte",
+            "explanatory_scaffold_id": "unsupported_analyte_v1",
+        }
+    ]
+
+    patient = PatientArtifactSchema.model_validate(
+        renderer.render_patient(
+            findings,
+            {
+                "job_id": str(uuid4()),
+                "support_banner": "could_not_assess",
+                "trust_status": "trusted",
+            },
+            observations=None,
+        )
+    )
+
+    assert patient.not_assessed
+    assert patient.not_assessed[0].reason is UnsupportedReason.UNSUPPORTED_ANALYTE_FAMILY
+    assert set(patient.not_assessed[0].model_dump().keys()) == {"raw_label", "reason"}
 
 
 def test_phase_11_contract_examples_include_image_beta_non_trusted_example() -> None:
@@ -159,7 +194,13 @@ def test_phase_11_artifact_renderer_emits_explicit_trust_status() -> None:
 
 
 def test_phase_11_pipeline_marks_image_beta_artifacts_as_non_trusted(monkeypatch) -> None:
-    async def fake_extract(self, file_bytes: bytes, *, document_id, language_id: str) -> list[dict]:
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "image_beta_enabled", True)
+
+    async def fake_extract(job_uuid, *, file_bytes: bytes, lane_type: str = None) -> list[dict]:
+        document_id = job_uuid
+        language_id = "en"
         return [
             {
                 "document_id": document_id,
@@ -177,7 +218,7 @@ def test_phase_11_pipeline_marks_image_beta_artifacts_as_non_trusted(monkeypatch
             }
         ]
 
-    monkeypatch.setattr("app.workers.pipeline.OcrAdapter.extract", fake_extract)
+    monkeypatch.setattr("app.workers.pipeline._extract_rows", fake_extract)
 
     result = asyncio.run(
         PipelineOrchestrator().run(

@@ -57,7 +57,7 @@ async def _check_database_reachable(
         async with session_factory() as session:
             await session.execute(text("SELECT 1"))
         return True
-    except (InterfaceError, OperationalError):
+    except (InterfaceError, OperationalError, OSError):
         return False
 
 

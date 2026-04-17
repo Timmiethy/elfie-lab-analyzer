@@ -1,0 +1,19 @@
+[
+  {
+    "document_id": "a27f79b7-a522-5fd5-bd94-a57689042f04",
+    "source_page": 1,
+    "row_hash": "row-0",
+    "raw_text": "Glucose 180 mg/dL",
+    "raw_analyte_label": "glucose fasting",
+    "raw_value_string": "180",
+    "raw_unit_string": "mg/dL",
+    "raw_reference_range": "70-99",
+    "extraction_confidence": 0.99,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+]

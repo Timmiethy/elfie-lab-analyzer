@@ -29,13 +29,9 @@ class Document(Base):
     mime_type: Mapped[str] = mapped_column(String(64), nullable=False)
     file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     page_count: Mapped[int | None] = mapped_column(Integer)
-    lane_type: Mapped[str] = mapped_column(String(32), nullable=False)  # trusted_pdf | image_beta | unsupported
-    document_class: Mapped[str | None] = mapped_column(String(64))
-    preflight_failure_code: Mapped[str | None] = mapped_column(String(64))
-    duplicate_state: Mapped[str | None] = mapped_column(String(32))
-    promotion_status: Mapped[str | None] = mapped_column(String(32))
-    text_extractability: Mapped[str | None] = mapped_column(String(32))
-    image_density: Mapped[str | None] = mapped_column(String(32))
+    lane_type: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # trusted_pdf | image_beta | structured
     language_id: Mapped[str | None] = mapped_column(String(8))
     region: Mapped[str | None] = mapped_column(String(8))
     storage_path: Mapped[str] = mapped_column(Text, nullable=False)
@@ -54,13 +50,15 @@ class Job(Base):
     input_checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     lane_type: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
-    retry_count: Mapped[int] = mapped_column(Integer, default=0)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     dead_letter: Mapped[bool] = mapped_column(default=False)
     operator_note: Mapped[str | None] = mapped_column(Text)
     region: Mapped[str | None] = mapped_column(String(8))
     user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
 
 
 class ExtractedRow(Base):
@@ -78,12 +76,6 @@ class ExtractedRow(Base):
     raw_value_string: Mapped[str | None] = mapped_column(String(64))
     raw_unit_string: Mapped[str | None] = mapped_column(String(64))
     raw_reference_range: Mapped[str | None] = mapped_column(String(128))
-    source_block_id: Mapped[str | None] = mapped_column(String(128))
-    source_row_id: Mapped[str | None] = mapped_column(String(128))
-    row_type: Mapped[str | None] = mapped_column(String(64))
-    block_type: Mapped[str | None] = mapped_column(String(64))
-    family_adapter_id: Mapped[str | None] = mapped_column(String(64))
-    failure_code: Mapped[str | None] = mapped_column(String(64))
     extraction_confidence: Mapped[float | None] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
@@ -96,27 +88,15 @@ class Observation(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("documents.id"), nullable=False)
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), nullable=False)
-    extracted_row_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("extracted_rows.id"), nullable=False)
+    extracted_row_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("extracted_rows.id"), nullable=False
+    )
     source_page: Mapped[int] = mapped_column(Integer, nullable=False)
     row_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     raw_analyte_label: Mapped[str] = mapped_column(Text, nullable=False)
     raw_value_string: Mapped[str | None] = mapped_column(String(64))
     raw_unit_string: Mapped[str | None] = mapped_column(String(64))
     parsed_numeric_value: Mapped[float | None] = mapped_column(Float)
-    source_block_id: Mapped[str | None] = mapped_column(String(128))
-    source_row_id: Mapped[str | None] = mapped_column(String(128))
-    row_type: Mapped[str | None] = mapped_column(String(64))
-    measurement_kind: Mapped[str | None] = mapped_column(String(64))
-    support_code: Mapped[str | None] = mapped_column(String(64))
-    failure_code: Mapped[str | None] = mapped_column(String(64))
-    family_adapter_id: Mapped[str | None] = mapped_column(String(64))
-    parsed_locale: Mapped[str | None] = mapped_column(String(32))
-    parsed_comparator: Mapped[str | None] = mapped_column(String(16))
-    primary_result: Mapped[dict | None] = mapped_column(JSON)
-    secondary_result: Mapped[dict | None] = mapped_column(JSON)
-    candidate_trace: Mapped[dict | list | None] = mapped_column(JSON)
-    derived_formula_id: Mapped[str | None] = mapped_column(String(64))
-    source_observation_ids: Mapped[list | None] = mapped_column(ARRAY(UUID(as_uuid=True)))
     accepted_analyte_code: Mapped[str | None] = mapped_column(String(32))
     accepted_analyte_display: Mapped[str | None] = mapped_column(String(256))
     specimen_context: Mapped[str | None] = mapped_column(String(128))
@@ -125,7 +105,9 @@ class Observation(Base):
     canonical_unit: Mapped[str | None] = mapped_column(String(32))
     canonical_value: Mapped[float | None] = mapped_column(Float)
     language_id: Mapped[str | None] = mapped_column(String(8))
-    support_state: Mapped[str] = mapped_column(String(32), nullable=False)  # supported | unsupported | partial
+    support_state: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # supported | unsupported | partial
     suppression_reasons: Mapped[list | None] = mapped_column(ARRAY(Text))
     lineage_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("lineage_runs.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
@@ -216,12 +198,6 @@ class LineageRun(Base):
     job_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("jobs.id"), nullable=False)
     source_checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     parser_version: Mapped[str] = mapped_column(String(32), nullable=False)
-    parser_backend: Mapped[str | None] = mapped_column(String(32))
-    parser_backend_version: Mapped[str | None] = mapped_column(String(64))
-    adapter_version: Mapped[str | None] = mapped_column(String(32))
-    row_assembly_version: Mapped[str | None] = mapped_column(String(32))
-    row_type_rule_set_version: Mapped[str | None] = mapped_column(String(32))
-    formula_version: Mapped[str | None] = mapped_column(String(32))
     ocr_version: Mapped[str | None] = mapped_column(String(32))
     terminology_release: Mapped[str] = mapped_column(String(32), nullable=False)
     mapping_threshold_config: Mapped[dict] = mapped_column(JSON, nullable=False)

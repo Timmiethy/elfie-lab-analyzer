@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getJobStatus } from '../../services/api';
 import type { JobStatus, LaneType } from '../../types';
 import {
@@ -14,14 +14,6 @@ import {
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 180;
-/** How often the client advances its synthetic progress bar when the backend
- *  doesn't emit fine-grained pipeline substeps (common in the trusted-PDF
- *  lane where `step` flips from `preflight` → `lineage_persist`). */
-const SYNTHETIC_TICK_MS = 400;
-/** Target duration of the synthetic progress animation between "pending"
- *  and "completed" for a real backend job. Real jobs typically finish in
- *  5–20s; this pacing keeps the UI feeling live without racing past. */
-const SYNTHETIC_TOTAL_MS = 14000;
 
 const BACKEND_STEP_LABELS: Record<string, string> = {
   preflight: 'Upload received',
@@ -51,34 +43,40 @@ const DISPLAY_STAGES = [
 const LANE_LABELS: Record<LaneType, string> = {
   trusted_pdf: 'Trusted PDF',
   image_beta: 'Image beta',
-  unsupported: 'Unsupported',
+  structured: 'Structured',
 };
 
-const KNOWN_BACKEND_STEPS: Record<string, number> = {
-  preflight: 0,
-  lane_selection: 1,
-  extraction: 2,
-  extraction_qa: 2,
-  observation_build: 2,
-  analyte_mapping: 3,
-  ucum_conversion: 3,
-  panel_reconstruction: 3,
-  rule_evaluation: 3,
-  severity_assignment: 3,
-  nextstep_assignment: 3,
-  patient_artifact: 4,
-  clinician_artifact: 4,
-  lineage_persist: 4,
-};
+function displayStageIndex(step: string): number {
+  if (!step) {
+    return 0;
+  }
 
-/** Map a known backend step to a display-stage index. Returns null when the
- *  step is unknown (e.g. raw status strings like "running") so the caller
- *  can fall back to synthetic progress instead of snapping to the last
- *  stage like the previous implementation did. */
-function displayStageIndexFromStep(step: string): number | null {
-  if (!step) return null;
-  const idx = KNOWN_BACKEND_STEPS[step];
-  return idx === undefined ? null : idx;
+  if (step === 'preflight') {
+    return 0;
+  }
+
+  if (step === 'lane_selection') {
+    return 1;
+  }
+
+  if (['extraction', 'extraction_qa', 'observation_build'].includes(step)) {
+    return 2;
+  }
+
+  if (
+    [
+      'analyte_mapping',
+      'ucum_conversion',
+      'panel_reconstruction',
+      'rule_evaluation',
+      'severity_assignment',
+      'nextstep_assignment',
+    ].includes(step)
+  ) {
+    return 3;
+  }
+
+  return 4;
 }
 
 interface Props {
@@ -96,10 +94,6 @@ export default function Processing({
 }: Props) {
   const [status, setStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** Monotonic client-side synthetic progress in range [0, 1]. Used when
-   *  the backend does not expose fine-grained pipeline substeps. */
-  const [syntheticProgress, setSyntheticProgress] = useState(0);
-  const startedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
     let attemptsSoFar = 0;
@@ -126,7 +120,6 @@ export default function Processing({
       if (intervalId !== null) {
         window.clearInterval(intervalId);
       }
-      setSyntheticProgress(1);
       onCompleted();
     };
 
@@ -195,55 +188,19 @@ export default function Processing({
     };
   }, [jobId, onCompleted, onFailed]);
 
-  // Synthetic progress ticker: drives the UI smoothly from 0 → ~0.95 over
-  // SYNTHETIC_TOTAL_MS even when the backend only emits coarse statuses
-  // ("pending" → "running" → "completed"). Capped below 1 until the poll
-  // loop confirms completion, so the UI never claims success prematurely.
-  useEffect(() => {
-    if (error) return undefined;
-    const tick = window.setInterval(() => {
-      const elapsed = Date.now() - startedAtRef.current;
-      // Ease-out cubic so early stages feel responsive and late stages slow
-      // down, mimicking real pipeline behavior where late phases are heavier.
-      const raw = Math.min(elapsed / SYNTHETIC_TOTAL_MS, 1);
-      const eased = 1 - Math.pow(1 - raw, 3);
-      // Keep capped at 0.95 until the backend confirms completion.
-      setSyntheticProgress((prev) => Math.max(prev, Math.min(eased, 0.95)));
-    }, SYNTHETIC_TICK_MS);
-    return () => window.clearInterval(tick);
-  }, [error]);
-
   const currentStep = status?.step ?? '';
-  const backendStageIndex = displayStageIndexFromStep(currentStep);
-  const syntheticStageIndex = Math.min(
-    Math.floor(syntheticProgress * DISPLAY_STAGES.length),
-    DISPLAY_STAGES.length - 1,
-  );
-  // Prefer the backend step when it names a real pipeline stage; otherwise
-  // fall back to the synthetic ticker. Never regress the displayed stage.
-  const activeStageIndex = Math.max(
-    backendStageIndex ?? syntheticStageIndex,
-    syntheticStageIndex,
-  );
+  const activeStageIndex = displayStageIndex(currentStep);
   const isImageBeta = laneType === 'image_beta';
-  // Progress percent blends the stage-based view (so it snaps cleanly
-  // when a known backend step arrives) with the synthetic ticker (so it
-  // moves between polls instead of freezing). Uses whichever is greater.
-  const stagePercent = Math.round(
+  const progressPercent = Math.round(
     ((activeStageIndex + 1) / DISPLAY_STAGES.length) * 100,
-  );
-  const syntheticPercent = Math.round(syntheticProgress * 100);
-  const progressPercent = Math.min(
-    100,
-    Math.max(stagePercent, syntheticPercent),
   );
   const circleRadius = 92;
   const circumference = 2 * Math.PI * circleRadius;
   const dashOffset =
     circumference - (Math.min(progressPercent, 100) / 100) * circumference;
   const backendLabel = currentStep
-    ? BACKEND_STEP_LABELS[currentStep] ?? DISPLAY_STAGES[activeStageIndex]
-    : DISPLAY_STAGES[activeStageIndex];
+    ? BACKEND_STEP_LABELS[currentStep] ?? 'Running checks'
+    : 'Running checks';
 
   if (error) {
     return (

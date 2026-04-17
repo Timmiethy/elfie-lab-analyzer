@@ -9,7 +9,6 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from sqlalchemy import text
 
 from app.api.deps import get_session_factory
 from app.config import settings
@@ -20,7 +19,9 @@ pytestmark = pytest.mark.asyncio
 
 
 def _build_text_pdf(lines: list[str]) -> bytes:
-    escaped_lines = [line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in lines]
+    escaped_lines = [
+        line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)") for line in lines
+    ]
     content_lines = ["BT", "/F1 12 Tf", "72 720 Td"]
     for index, line in enumerate(escaped_lines):
         if index:
@@ -40,7 +41,7 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     )
     objects.append(
         b"4 0 obj\n"
-        + f"<< /Length {len(stream)} >>\n".encode("utf-8")
+        + f"<< /Length {len(stream)} >>\n".encode()
         + b"stream\n"
         + stream
         + b"\nendstream\nendobj\n"
@@ -48,17 +49,17 @@ def _build_text_pdf(lines: list[str]) -> bytes:
     objects.append(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     buffer = BytesIO()
-    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode("utf-8"))
+    buffer.write(f"%PDF-1.4\n%fixture:{uuid4()}\n".encode())
     offsets = [0]
     for obj in objects:
         offsets.append(buffer.tell())
         buffer.write(obj)
 
     xref_offset = buffer.tell()
-    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode("utf-8"))
+    buffer.write(f"xref\n0 {len(objects) + 1}\n".encode())
     buffer.write(b"0000000000 65535 f \n")
     for offset in offsets[1:]:
-        buffer.write(f"{offset:010d} 00000 n \n".encode("utf-8"))
+        buffer.write(f"{offset:010d} 00000 n \n".encode())
     buffer.write(
         (
             "trailer\n"
@@ -66,13 +67,13 @@ def _build_text_pdf(lines: list[str]) -> bytes:
             "startxref\n"
             f"{xref_offset}\n"
             "%%EOF\n"
-        ).encode("utf-8")
+        ).encode()
     )
     return buffer.getvalue()
 
 
 class _FailingSessionFactory:
-    def __call__(self) -> "_FailingSessionFactory":
+    def __call__(self) -> _FailingSessionFactory:
         return self
 
     async def __aenter__(self):
@@ -112,7 +113,14 @@ async def test_phase_15_readiness_and_metrics_cover_success_failure_and_partial(
 
     success_response = await api_client.post(
         "/api/upload",
-        files={"file": ("success.pdf", _build_text_pdf(["Glucose 180 mg/dL", "HbA1c 6.8 %"]), "application/pdf")},
+        data={"age_years": 42.0, "sex": "female"},
+        files={
+            "file": (
+                "success.pdf",
+                _build_text_pdf(["Glucose 180 mg/dL", "HbA1c 6.8 %"]),
+                "application/pdf",
+            )
+        },
         headers={"x-correlation-id": "obs-success"},
     )
     assert success_response.status_code == 200, success_response.text
@@ -120,7 +128,14 @@ async def test_phase_15_readiness_and_metrics_cover_success_failure_and_partial(
 
     partial_response = await api_client.post(
         "/api/upload",
-        files={"file": ("partial.pdf", _build_text_pdf(["Glucose 180 mg/dL", "MysteryMarker 7.2 zz"]), "application/pdf")},
+        data={"age_years": 42.0, "sex": "female"},
+        files={
+            "file": (
+                "partial.pdf",
+                _build_text_pdf(["Glucose 180 mg/dL", "MysteryMarker 7.2 zz"]),
+                "application/pdf",
+            )
+        },
         headers={"x-correlation-id": "obs-partial"},
     )
     assert partial_response.status_code == 200, partial_response.text
@@ -128,6 +143,7 @@ async def test_phase_15_readiness_and_metrics_cover_success_failure_and_partial(
 
     failed_response = await api_client.post(
         "/api/upload",
+        data={"age_years": 42.0, "sex": "female"},
         files={"file": ("failed.pdf", _build_text_pdf([]), "application/pdf")},
         headers={"x-correlation-id": "obs-failed"},
     )
@@ -155,13 +171,22 @@ async def test_phase_15_correlation_id_and_metrics_cover_persistence_fallback(
 
     upload_response = await api_client.post(
         "/api/upload",
-        files={"file": ("fallback.pdf", _build_text_pdf(["Glucose 180 mg/dL", "HbA1c 6.8 %"]), "application/pdf")},
+        data={"age_years": 42.0, "sex": "female"},
+        files={
+            "file": (
+                "fallback.pdf",
+                _build_text_pdf(["Glucose 180 mg/dL", "HbA1c 6.8 %"]),
+                "application/pdf",
+            )
+        },
         headers={"x-correlation-id": "fallback-123"},
     )
     assert upload_response.status_code == 200, upload_response.text
     assert upload_response.headers["x-correlation-id"] == "fallback-123"
 
-    metrics_response = await api_client.get("/api/health/metrics", headers={"x-correlation-id": "metrics-123"})
+    metrics_response = await api_client.get(
+        "/api/health/metrics", headers={"x-correlation-id": "metrics-123"}
+    )
     assert metrics_response.status_code == 200, metrics_response.text
     assert metrics_response.headers["x-correlation-id"] == "metrics-123"
     metrics_payload = metrics_response.json()

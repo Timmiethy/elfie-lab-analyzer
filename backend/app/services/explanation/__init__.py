@@ -93,7 +93,9 @@ class ExplanationAdapter:
 
             normalized_finding = validated.model_dump(mode="json")
             if isinstance(finding, dict):
-                normalized_finding.update({key: value for key, value in finding.items() if key not in normalized_finding})
+                normalized_finding.update(
+                    {key: value for key, value in finding.items() if key not in normalized_finding}
+                )
             normalized.append(normalized_finding)
 
         normalized.sort(key=ExplanationAdapter._sort_key)
@@ -157,7 +159,11 @@ class ExplanationAdapter:
 
     @staticmethod
     def _render_finding_bullet(finding: dict, copy: dict[str, str]) -> str:
-        label = finding.get("explanatory_scaffold_id") or finding.get("rule_id") or copy["finding_label"]
+        label = (
+            finding.get("explanatory_scaffold_id")
+            or finding.get("rule_id")
+            or copy["finding_label"]
+        )
         parts = [f"{label}:"]
 
         observed_value = finding.get("observed_value")
@@ -166,22 +172,22 @@ class ExplanationAdapter:
             value_text = str(observed_value)
             if observed_unit:
                 value_text = f"{value_text} {observed_unit}"
-            parts.append(f'{copy["observed_value"]} {value_text}')
+            parts.append(f"{copy['observed_value']} {value_text}")
 
         severity_class = finding.get("severity_class")
         nextstep_class = finding.get("nextstep_class")
         if severity_class is not None:
-            parts.append(f'{copy["severity_class"]} {severity_class}')
+            parts.append(f"{copy['severity_class']} {severity_class}")
         if nextstep_class is not None:
-            parts.append(f'{copy["nextstep_class"]} {nextstep_class}')
+            parts.append(f"{copy['nextstep_class']} {nextstep_class}")
 
         threshold_source = finding.get("threshold_source")
         if threshold_source:
-            parts.append(f'{copy["threshold_source"]} {threshold_source}')
+            parts.append(f"{copy['threshold_source']} {threshold_source}")
 
         if finding.get("suppression_active"):
             reason = finding.get("suppression_reason")
-            parts.append(f'{copy["suppressed"]}{f": {reason}" if reason else ""}')
+            parts.append(f"{copy['suppressed']}{f': {reason}' if reason else ''}")
 
         return ", ".join(parts) + "."
 

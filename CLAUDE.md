@@ -1,372 +1,282 @@
-# AGENTS.md
+# CLAUDE.md
 
-Compact always-on workflow contract.
+Guidance for Claude Code (claude.ai/code) in this repo.
 
-Use this file as the default agent operating spec in the repo.
-Use `ultimate-workflow-reference.md` for deeper guidance.
-Use `subagent-task-template.md` for substantial delegation.
+Elfie Labs Analyzer: full-stack lab report understanding system. Processes PDF/image lab reports, extracts structured observations, maps analytes to LOINC, evaluates clinical rules, generates patient + clinician artifacts.
 
-## 1. Priority
+## What This Project Does
 
-Follow instructions in this order:
+End-to-end pipeline:
+1. Ingestion - Accept PDF/image uploads
+2. Extraction - Parse + extract observations via OCR (Mineru + optional VLM)
+3. Normalization - Normalize analytes, resolve to LOINC
+4. Enrichment - Validate units (UCUM), reconstruct panels, evaluate rules
+5. Output - Patient + clinician artifacts with lineage/provenance
 
-1. system, platform, and safety rules
-2. the user's explicit request
-3. repo-specific source-of-truth docs
-4. this file
-5. supplemental reference docs
+Stack:
+- Backend: Python FastAPI + async SQLAlchemy + PostgreSQL
+- Frontend: React 19 + TypeScript + Vite
+- Data: LOINC snapshots, alias tables, UCUM mappings, policy packs
 
-If instructions conflict and the answer is not obvious, say so and choose the safest interpretation.
+---
 
-## 2. Non-Negotiables
+## Architecture
 
-- Never bluff.
-- Never pretend to know what you do not know.
-- If you need to inspect files, run code, or search externally, say so.
-- Never claim completion without evidence.
-- Never hide uncertainty behind confident wording.
-- Never optimize for appearances over correctness.
+### Pipeline Stages (Intentional Separation)
+See backend/app/workers/pipeline.py:
 
-## 3. Execution Loop
+1. EXTRACTION (InputGateway classifies + Mineru/OCR)
+2. OBSERVATION_BUILD (ObservationBuilder normalizes)
+3. ANALYTE_MAPPING (AnalyteResolver -> LOINC)
+4. UCUM_CONVERSION (UcumEngine validates units)
+5. PANEL_RECONSTRUCTION (PanelReconstructor)
+6. RULE_EVALUATION (RuleEngine)
+7. SEVERITY_ASSIGNMENT (SeverityPolicyEngine)
+8. NEXTSTEP_ASSIGNMENT (NextStepPolicyEngine)
+9. PATIENT_ARTIFACT (ArtifactRenderer)
+10. CLINICIAN_ARTIFACT (ArtifactRenderer)
+11. LINEAGE_PERSIST (LineageLogger)
 
-1. Plan first for any non-trivial task.
-   Treat a task as non-trivial if it has 3 or more meaningful steps, risky edits, architectural consequences, unclear requirements, or non-obvious verification.
-   For non-trivial work, write an explicit plan, define success criteria and verification, identify risks/unknowns/dependencies, and stop to re-plan if the facts change.
+Key Pattern: No skip/flatten stages. Each output feeds next, independently testable.
 
-2. Understand before acting.
-   Identify the artifact to change, what done means, the minimum proof needed to show success, and any assumptions.
-   Ask only when the answer materially affects architecture, data integrity, security, irreversible changes, or major time/cost. Otherwise make a reasonable assumption and state it.
+### Directory Structure
 
-3. Read before edit.
-   Never edit an unread file.
-   For non-trivial changes, inspect the target file, nearby code, usages or call sites, tests if they exist, and relevant project conventions.
-   Editing unread or under-read code is a serious quality smell.
+backend/
+  app/
+    api/routes/ - upload, jobs, artifacts, health endpoints
+    services/ - pipeline modules (resolver, renderer, etc.)
+    workers/pipeline.py - PipelineOrchestrator
+    models/tables.py - SQLAlchemy ORM
+    schemas/ - Pydantic validation
+  tests/ - unit/ and integration/ suites
 
-4. Execute surgically.
-   Keep scope tight, avoid unrelated cleanup, remove only dead code caused by your own change, prefer the simplest solution that fully solves the task, and fix root causes instead of symptoms.
-   Every changed line should trace to the request or required verification.
+frontend/
+  src/ - React components, API client, types
 
-5. Verify before done.
-   Never mark work complete without proof.
-   Verification may include tests, reproducers, diffs, logs, build output, before/after behavior checks, or explicit manual inspection.
-   If something could not be verified, say exactly what remains unproven and why.
+data/ - LOINC, UCUM, alias tables
+artifacts/ - Generated outputs
+contracts/ - API examples
 
-6. Close the loop.
-   Summarize what changed, what was verified, residual risks, and record durable corrections in `tasks/lessons.md` when relevant.
+---
 
-## 4. Communication
+## Commands
 
-- before substantial exploration, say what you are inspecting and why
-- before substantial edits, say what you are changing and why
-- during long tasks, give short progress updates
-- if new facts change the plan, say so and re-plan
+### Backend (Python)
 
-Do not:
+cd backend
 
-- hide confusion
-- silently change scope
-- treat plausibility as verification
-- ask "should I continue?" when the task is still clearly in scope
+Install:
+pip install -e ".[dev]"              # Standard
+pip install -e ".[dev,image-beta]"   # With OCR
 
-## 5. Task Tracking
+Run:
+uvicorn app.main:app --reload        # Port 8000
 
-If the repo uses task files, use them.
+Tests:
+pytest                               # All tests
+pytest tests/unit/ -xvs              # Unit only
+pytest tests/unit/test_analyte_resolver_strict_alias.py::test_name -xvs
 
-For non-trivial tasks:
+Lint/Format:
+ruff check .      # Lint
+ruff format .     # Format
+mypy .            # Type check (strict)
 
-- write the active plan into `tasks/todo.md`
-- mark progress as you go
-- add a short review summary when done
+Database:
+alembic upgrade head     # Run migrations
+alembic downgrade -1     # Revert one
 
-After any user correction:
+### Frontend (TypeScript)
 
-- capture the mistake pattern in `tasks/lessons.md`
-- write a rule that would have prevented it
+cd frontend
 
-## 6. Bug Fixing
+npm install       # Install
+npm run dev       # Dev server (port 5173)
+npm run build     # Production build
+npm run lint      # ESLint
 
-When given a bug report:
+### Docker
 
-- reproduce or triangulate it
-- inspect logs, errors, tests, and code paths
-- identify the root cause
-- fix it without hand-holding
-- verify the fix
-- report evidence
+docker compose up         # Start Postgres + services
 
-## 7. Orchestration
+### Full-Stack Validation (Windows)
 
-Treat multi-agent work as a real orchestration problem.
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1 --max-files 1 --tiers easy
 
-- the primary agent is the coordinator and integrator
-- subagents are bounded workers, not replacements for ownership
-- delegate only well-bounded, low-coupling, independently verifiable work
-- never let multiple agents casually edit the same file set
-- use the lightest capable worker first
-- do not delegate the main blocking task by reflex
+---
 
-Every substantial delegated task should define owned scope, forbidden scope, source of truth, validated assumptions, open unknowns, and an output contract.
-Use `subagent-task-template.md` for the full format.
+## Running a Single Test
 
-## 8. Regression Hardening
+cd backend
+pytest tests/unit/test_analyte_resolver_strict_alias.py::test_strict_matching -xvs
 
-Do not assume the model will always think deeply or behave consistently.
+Flags: -x (stop first fail), -v (verbose), -s (show prints), -k "pattern"
 
-Externalize quality through explicit plans, assumptions, boundaries, verification, and evidence.
+---
 
-Protect against common degradation patterns:
+## Environment
 
-- enforce read-before-edit
-- ban premature stopping
-- detect thrash early
-- re-check convention adherence
-- keep context lean
-- reduce concurrency if many weak agents create supervision overhead
-- pin behavior-critical settings when the platform supports it
+cp .env.example .env
 
-If the workflow starts degrading, watch signals like repeated corrections, retries, loops, unfinished tasks, stop-seeking behavior, convention drift, quota burn, latency spikes, and time-of-day sensitivity.
+Key vars (prefix ELFIE_):
+- DATABASE_URL - PostgreSQL async URL
+- QWEN_API_KEY - VLM API key (optional)
+- IMAGE_BETA_ENABLED - Enable VLM lane (default: false)
+- CORS_ORIGINS - Allowed origins (default: localhost:5173)
+- MAX_UPLOAD_SIZE_MB - Upload limit (default: 20)
 
-Do not jump from symptoms to a single cause. Harden the workflow around the symptoms you observe.
+See backend/app/config.py for full list.
 
-## 9. Done Standard
+---
 
-Before presenting work, verify that:
+## Testing
 
-- the task was understood
-- the scope stayed controlled
-- the plan was explicit when needed
-- the change is simple and surgical
-- the work was verified
-- assumptions were surfaced
-- no bluffing occurred
-- no premature stopping occurred
+Unit tests (tests/unit/):
+- Mock external deps (DB, VLM, Qwen)
+- Fast, isolated
+- Examples: test_analyte_resolver_strict_alias.py, test_contract_examples*.py
 
-The result should still hold up if the model is weaker tomorrow than it is today.
+Integration tests (tests/integration/):
+- Real DB, full async pipeline
+- Examples: test_phase_12_api_flow.py, test_phase_14_operational_runtime.py
 
-## 10. Companion Files
+Fixtures (tests/conftest.py):
+- mock_vlm_for_pipeline - Auto-mock VLM for all tests
+- async_session_factory - DB session
+- async_client - FastAPI test client
 
-For the full workflow bundle, see:
+---
 
-- `ultimate-workflow-reference.md`
-- `subagent-task-template.md`
+## API
 
-If the repo uses them, also maintain:
+All routes JSON. See backend/app/api/routes/:
 
-- `tasks/todo.md`
-- `tasks/lessons.md`
+POST /api/upload
+  Form: file (PDF/PNG/JPG), age_years?, sex?
+  Response: { job_id, lane, status }
 
-## 11. Repo Identity
+GET /api/jobs/{job_id}
+  Response: { id, status, message }
 
-This repository is `Elfie Labs Analyzer`, a full-stack lab report understanding system.
+GET /api/artifacts/{job_id}/patient
+  Response: PatientArtifact with findings + explanations
 
-The product goal is narrow and proof-oriented:
+GET /api/artifacts/{job_id}/clinician
+  Response: ClinicianArtifact with full clinical data
 
-- accept PDF or image lab reports
-- route them safely into the correct trust lane
-- extract only structurally defensible lab data
-- normalize observations deterministically
-- apply deterministic findings, severity, and next-step policy
-- produce a patient artifact, clinician artifact, and lineage/proof outputs
+GET /api/health
+  Response: { status: "healthy" }
 
-The core product stance is:
+---
 
-- extraction is open-world
-- interpretation is closed-world
-- unsupported or uncertain content must stay visible
-- honesty beats polish
+## Domain Concepts
 
-## 12. Repo-Specific Source Of Truth
+- Observation - Single extracted analyte-value-unit triplet
+- Analyte - Measured quantity (Glucose, HbA1c, etc.)
+- LOINC - Standard terminology codes for lab tests
+- Panel - Group of related analytes (CMP, CBC, etc.)
+- Artifact - Generated patient or clinician report
+- Lineage - Provenance: how each finding derived
+- Severity - Clinical assessment (normal, low, moderate, high, critical)
 
-When working in this repo, use this read order:
+---
 
-1. `labs_analyzer_v13_final_architecture_definition.md`
-2. `contracts/README.md`
-3. relevant files in `contracts/examples/`
-4. `README.md`
-5. `tasks/todo.md`
-6. `tasks/lessons.md`
-7. the code, tests, and scripts you are changing
+## Common Workflows
 
-Important implications:
+### Adding a Service
 
-- `labs_analyzer_v13_final_architecture_definition.md` is the active architecture authority
-- contract examples are representative payloads, not throwaway fixtures
-- if backend/frontend contract behavior changes, examples must stay aligned
+1. Create backend/app/services/<name>/__init__.py
+2. Implement with Pydantic schemas for I/O
+3. Add unit tests in backend/tests/unit/
+4. Integrate into PipelineOrchestrator in pipeline.py
+5. Update API schemas in backend/app/schemas/
 
-## 13. Active Architecture Guardrails
+### Modifying API Contract
 
-Agents must understand and preserve these repo-specific boundaries:
+1. Update Pydantic schema in backend/app/schemas/
+2. Update route in backend/app/api/routes/
+3. Sync frontend src/services/api.ts
+4. Document breaking changes in contracts/
 
-- trusted born-digital PDF is the primary proof lane
-- image/scanned parsing is a separate `image_beta` lane
-- born-digital parsing uses `PyMuPDF`
-- image/scanned parsing uses the Qwen OCR lane configured in the repo
-- parser backends emit `PageParseArtifactV4`, not observations directly
-- the typed bridge goes through block graph and row assembly before normalization
-- interpretation stays deterministic: no LLM sets findings, severity, or next-step classes in the trusted path
-- unsupported input must be rejected or downgraded explicitly, never silently promoted
-- threshold conflicts, unsupported rows, and not-assessed content must remain visible in artifacts
-- longitudinal wording must stay neutral: `increased`, `decreased`, `similar`, or `trend unavailable`
+### Adding a Rule
 
-Key output contracts named by the architecture:
+1. Define logic in backend/app/services/rule_engine.py
+2. Add YAML/JSON to backend/policy_tables/ if needed
+3. Test with pytest tests/unit/test_rule_engine.py
+4. Integrate into pipeline
 
-- `PageParseArtifactV4`
-- `BlockGraphV1`
-- `CandidateRowV3`
-- `CanonicalObservationV3`
-- `SuppressionReportV1`
-- `PatientArtifactV2`
-- `ClinicianArtifactV2`
-- `CorpusBenchmarkReportV2`
+---
 
-If a change cannot be tied back to one of those artifacts or the systems supporting them, stop and re-check scope.
+## Persistence
 
-## 14. Repository Map
+- ORM: backend/app/models/tables.py (SQLAlchemy)
+- Migrations: backend/app/migrations/versions/ (Alembic)
+- Store: backend/app/db/store.py (TopLevelLifecycleStore)
 
-Key top-level directories:
+cd backend
+alembic upgrade head      # Apply pending
+alembic current           # Show current version
 
-- `backend/`: FastAPI app, schemas, services, migrations, workers, tests
-- `frontend/`: Vite + React + TypeScript UI
-- `contracts/`: shared payload freeze docs and example artifacts
-- `data/`: terminology, alias, UCUM, family config, and policy inputs
-- `artifacts/`: generated reports, proof packs, and uploads
-- `scripts/`: helper scripts for DB setup, terminology import, and corpus validation
-- `tasks/`: task tracking and durable lessons
+---
 
-Backend map:
+## Observability
 
-- `backend/app/api/routes/`: HTTP entrypoints for health, upload, jobs, artifacts
-- `backend/app/services/document_system/`: routing, parsing substrate, block graph, and row assembly architecture
-- `backend/app/services/input_gateway/`: file intake and lane eligibility
-- `backend/app/services/parser/`, `ocr/`, `qwen_vl_parser/`: parser/OCR implementations
-- `backend/app/services/observation_builder/`, `analyte_resolver/`, `ucum/`: normalization stack
-- `backend/app/services/rule_engine/`, `severity_policy/`, `nextstep_policy/`, `panel_reconstructor/`: deterministic policy layer
-- `backend/app/services/artifact_renderer/`, `explanation/`, `lineage/`, `proof_pack/`: output and provenance layer
-- `backend/app/workers/`: pipeline orchestration entrypoints
-- `backend/app/templates/en` and `backend/app/templates/vi`: language-specific rendering templates
+- Correlation IDs: X-Correlation-ID header (auto-gen or passed)
+- Logging: backend/app/services/observability.py
+- Metrics: backend/app/services/benchmark.py
 
-Frontend map:
+---
 
-- `frontend/src/components/patient_artifact/`: patient-facing artifact UI
-- `frontend/src/components/clinician_share/`: clinician-share UI
-- `frontend/src/components/upload/` and `processing/`: upload and job-status flows
-- `frontend/src/components/history_card/` and `guided_ask/`: supporting UX surfaces
-- `frontend/src/services/api.ts`: frontend API client
-- `frontend/src/types/`: frontend contract mirrors
-- `frontend/src/i18n/`: English and Vietnamese UI strings
+## Guidelines
 
-## 15. Contract And Change Boundaries
+Do:
+- Keep pipeline stages isolated + independently testable
+- Type hints everywhere (mypy --strict)
+- Tests near behavior validated
+- Preserve stage boundaries
+- Sync backend + frontend API changes
 
-Be explicit about which surface you are changing.
+Don't:
+- Skip/flatten pipeline stages
+- Commit secrets, real patient data, generated artifacts
+- Non-async code in hot paths
+- Bypass Pydantic validation
+- Hard-code paths (use config.py settings)
 
-Truth-engine work usually lives in:
+---
 
-- `backend/app/**`
-- `backend/tests/**`
-- `data/**`
-- parser and validation scripts under `scripts/`
+## Troubleshooting
 
-Patient-surface work usually lives in:
+Postgres connection:
+  docker ps | grep postgres
+  echo $ELFIE_DATABASE_URL
+  psql "postgresql://elfie:elfie@localhost:5432/elfie_labs"
 
-- `frontend/index.html`
-- `frontend/public/**`
-- `frontend/src/**`
+VLM / Image Beta:
+  Set ELFIE_IMAGE_BETA_ENABLED=true
+  Provide ELFIE_QWEN_API_KEY
+  Check mock in tests/conftest.py
 
-Shared-contract work includes:
+Frontend API errors:
+  Frontend API client: frontend/src/services/api.ts
+  Check backend /api/health
+  Verify CORS in .env
 
-- `contracts/**`
-- `contracts/examples/**`
-- `backend/app/schemas/**`
-- `backend/app/api/**`
-- `frontend/src/services/api.ts`
-- `frontend/src/types/**`
+Test failures:
+  Run with -xvs
+  Check conftest mocks
+  Verify alembic current
+  Check correlation ID in logs
 
-Rules for shared-contract changes:
+---
 
-- inspect the current examples first
-- change examples deliberately when the contract changes
-- keep backend and frontend mirrors aligned in the same task
-- never silently widen a contract just to unblock UI work
+## References
 
-## 16. Verification Defaults
+- Design docs: docs/, labs_analyzer_v10_*.md
+- Contracts: contracts/examples/, contracts/README.md
+- Architecture: AGENTS.md, GEMINI.md, PLAN.md
+- Config: backend/pyproject.toml, frontend/package.json
 
-Use the smallest honest verification scope that proves the change.
+---
 
-Backend verification from `backend/`:
-
-- `python -m pytest`
-- `python -m ruff check .`
-- `python -m mypy .`
-
-Frontend verification from `frontend/`:
-
-- `npm run lint`
-- `npm run build`
-
-Useful focused backend verification:
-
-- `pytest tests/unit/`
-- `pytest tests/integration/`
-- phase-specific tests under `backend/tests/unit/` and `backend/tests/integration/`
-
-Repo helper scripts:
-
-- `python scripts/run_corpus_bench.py`
-- `python scripts/run_ground_truth_validation.py`
-- `python scripts/run_v11_corpus_validation.py`
-- `./scripts/setup_db.sh`
-- `python scripts/import_loinc.py`
-
-Use script-level or corpus-level validation when the change affects parsing quality, routing, proof-pack outputs, or public readiness claims.
-
-## 17. How Tests Are Organized
-
-Tests in this repo are phase-oriented and often encode rollout gates.
-
-Patterns to know:
-
-- `backend/tests/unit/test_contract_examples*.py`: contract example validity and coverage
-- `backend/tests/unit/test_person_a_subagent_gates.py`: acceptance-style guardrails for delegated phase work
-- `backend/tests/unit/test_phase_4x_*.py`: newer architecture, routing, parser, and row-assembly guardrails
-- `backend/tests/integration/test_phase_*.py`: runtime and workflow behavior across API and pipeline stages
-
-Do not treat a green unit subset as proof of production readiness if the source-of-truth runtime path is still unverified.
-
-## 18. Repo Workflow Expectations
-
-For non-trivial tasks in this repo:
-
-- rewrite `tasks/todo.md` before major edits
-- keep the checklist current while you work
-- add a short review and verification summary when done
-- if the user corrects a mistake, add a prevention rule to `tasks/lessons.md`
-
-Worktree discipline:
-
-- inspect `git status --short` before editing
-- do not revert unrelated user changes
-- keep doc-only tasks isolated from frontend/backend work already in progress
-
-## 19. Hard Stops
-
-Stop and surface the issue if any of these become true:
-
-- the task starts changing medical meaning, severity policy, or next-step policy without explicit intent
-- a parser change starts bypassing `PageParseArtifactV4`, block graphing, or row assembly
-- the UI needs backend behavior or contract fields that do not exist
-- contract examples no longer describe the intended shape
-- a change would blur trusted PDF and `image_beta` trust levels
-- verification failures suggest wider scope than the current task
-- you cannot show evidence for a completion claim
-
-## 20. Practical Defaults
-
-Assume these defaults unless the user says otherwise:
-
-- Python version target: `3.11`
-- backend lint/type/test commands come from `backend/pyproject.toml`
-- frontend scripts come from `frontend/package.json`
-- frontend contract touchpoints are `frontend/src/services/api.ts` and `frontend/src/types/`
-- do not commit secrets, real patient data, or sensitive generated artifacts
-
-If this file and a repo source-of-truth document disagree, follow the higher-priority source and update this file when appropriate.
+Last updated: 2026-04-17

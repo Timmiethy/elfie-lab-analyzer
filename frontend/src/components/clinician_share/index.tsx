@@ -8,7 +8,6 @@ import type {
   SupportBanner,
   TrustStatus,
 } from '../../types';
-import { unsupportedReasonDisplay } from '../../types';
 import {
   PageChrome,
   PillBadge,
@@ -664,7 +663,7 @@ export default function ClinicianShare({
                       <strong style={{ color: STITCH_COLORS.textHeading }}>
                         {item.raw_label}
                       </strong>{' '}
-                      — {unsupportedReasonDisplay(item)}
+                      — {item.reason}
                     </li>
                   ))}
                 </ul>
