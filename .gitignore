@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Node
+node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Environment
+.env
+
+# Local agent workflow scratch files
+tasks/*
+!tasks/.gitkeep
+!tasks/todo.example.md
+!tasks/lessons.example.md
+
+# Data artifacts (LOINC not committed per license)
+data/loinc/*.csv
+data/loinc/*.zip
+artifacts/*.json
+artifacts/*.html
+artifacts/*.pdf
+
+# Postgres
+pgdata/
+
+# OS
+.DS_Store
+Thumbs.db
+
+#AI Agents
+.claw/*
+artifacts/*
+docs/orchestration/*
+scripts/orchestration/*
+.clawd-todos.json
+.claude/*
+.gemini/*
+.github/*
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+artifacts/uploads/*
+docs/*
+tasks/*
+pdfs/*

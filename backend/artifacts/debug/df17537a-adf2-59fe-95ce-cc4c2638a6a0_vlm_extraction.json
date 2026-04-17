@@ -1,0 +1,19 @@
+[
+  {
+    "document_id": "df17537a-adf2-59fe-95ce-cc4c2638a6a0",
+    "source_page": 1,
+    "row_hash": "row-0",
+    "raw_text": "Glucose 105 mg/dL",
+    "raw_analyte_label": "glucose fasting",
+    "raw_value_string": "105",
+    "raw_unit_string": "mg/dL",
+    "raw_reference_range": "70-99",
+    "extraction_confidence": 1.0,
+    "row_bbox": [
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+]

@@ -1,0 +1,1634 @@
+{
+  "version": "launch-scope-analyte-aliases-v2",
+  "analytes": [
+    {
+      "canonical_label": "wbc",
+      "candidate_display": "WBC",
+      "codes": [
+        "METRIC-0001"
+      ],
+      "aliases": [
+        "wbc"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "rbc",
+      "candidate_display": "RBC",
+      "codes": [
+        "METRIC-0002"
+      ],
+      "aliases": [
+        "rbc"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hemoglobin",
+      "candidate_display": "Hemoglobin",
+      "codes": [
+        "METRIC-0003"
+      ],
+      "aliases": [
+        "hemoglobin"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hematocrit",
+      "candidate_display": "Hematocrit",
+      "codes": [
+        "METRIC-0004"
+      ],
+      "aliases": [
+        "hematocrit"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mcv",
+      "candidate_display": "MCV",
+      "codes": [
+        "METRIC-0005"
+      ],
+      "aliases": [
+        "mcv"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mch",
+      "candidate_display": "MCH",
+      "codes": [
+        "METRIC-0006"
+      ],
+      "aliases": [
+        "mch"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mchc",
+      "candidate_display": "MCHC",
+      "codes": [
+        "METRIC-0007"
+      ],
+      "aliases": [
+        "mchc"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "rdw-cv",
+      "candidate_display": "RDW-CV",
+      "codes": [
+        "METRIC-0008"
+      ],
+      "aliases": [
+        "rdw-cv"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "platelets",
+      "candidate_display": "Platelets",
+      "codes": [
+        "METRIC-0009"
+      ],
+      "aliases": [
+        "platelets"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mpv",
+      "candidate_display": "MPV",
+      "codes": [
+        "METRIC-0010"
+      ],
+      "aliases": [
+        "mpv"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "neutrophils, absolute",
+      "candidate_display": "Neutrophils, absolute",
+      "codes": [
+        "METRIC-0011"
+      ],
+      "aliases": [
+        "absolute neutrophils",
+        "neutrophils, absolute"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "lymphocytes, absolute",
+      "candidate_display": "Lymphocytes, absolute",
+      "codes": [
+        "METRIC-0012"
+      ],
+      "aliases": [
+        "lymphocytes, absolute",
+        "absolute lymphocytes"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "monocytes, absolute",
+      "candidate_display": "Monocytes, absolute",
+      "codes": [
+        "METRIC-0013"
+      ],
+      "aliases": [
+        "absolute monocytes",
+        "monocytes, absolute"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "eosinophils, absolute",
+      "candidate_display": "Eosinophils, absolute",
+      "codes": [
+        "METRIC-0014"
+      ],
+      "aliases": [
+        "eosinophils, absolute",
+        "absolute eosinophils"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "basophils, absolute",
+      "candidate_display": "Basophils, absolute",
+      "codes": [
+        "METRIC-0015"
+      ],
+      "aliases": [
+        "basophils, absolute",
+        "absolute basophils"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "immature granulocytes, absolute",
+      "candidate_display": "Immature granulocytes, absolute",
+      "codes": [
+        "METRIC-0016"
+      ],
+      "aliases": [
+        "immature granulocytes, absolute",
+        "absolute immature granulocytes"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "nrbc, absolute",
+      "candidate_display": "NRBC, absolute",
+      "codes": [
+        "METRIC-0017"
+      ],
+      "aliases": [
+        "absolute nrbc",
+        "nrbc, absolute"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "esr",
+      "candidate_display": "ESR",
+      "codes": [
+        "METRIC-0018"
+      ],
+      "aliases": [
+        "esr"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "glucose, fasting",
+      "candidate_display": "Glucose, fasting",
+      "codes": [
+        "METRIC-0019"
+      ],
+      "aliases": [
+        "glucose, fasting",
+        "fasting glucose"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "sodium",
+      "candidate_display": "Sodium",
+      "codes": [
+        "METRIC-0020"
+      ],
+      "aliases": [
+        "sodium"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "potassium",
+      "candidate_display": "Potassium",
+      "codes": [
+        "METRIC-0021"
+      ],
+      "aliases": [
+        "potassium"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "chloride",
+      "candidate_display": "Chloride",
+      "codes": [
+        "METRIC-0022"
+      ],
+      "aliases": [
+        "chloride"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "co2 / bicarbonate",
+      "candidate_display": "CO2 / bicarbonate",
+      "codes": [
+        "METRIC-0023"
+      ],
+      "aliases": [
+        "bicarbonate",
+        "co2",
+        "co2 / bicarbonate"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "calcium, total",
+      "candidate_display": "Calcium, total",
+      "codes": [
+        "METRIC-0024"
+      ],
+      "aliases": [
+        "calcium, total",
+        "total calcium"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "calcium, ionized",
+      "candidate_display": "Calcium, ionized",
+      "codes": [
+        "METRIC-0025"
+      ],
+      "aliases": [
+        "ionized calcium",
+        "calcium, ionized"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "phosphorus",
+      "candidate_display": "Phosphorus",
+      "codes": [
+        "METRIC-0026"
+      ],
+      "aliases": [
+        "phosphorus"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "magnesium",
+      "candidate_display": "Magnesium",
+      "codes": [
+        "METRIC-0027"
+      ],
+      "aliases": [
+        "magnesium"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "bun",
+      "candidate_display": "BUN",
+      "codes": [
+        "METRIC-0028"
+      ],
+      "aliases": [
+        "bun"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "creatinine",
+      "candidate_display": "Creatinine",
+      "codes": [
+        "METRIC-0029"
+      ],
+      "aliases": [
+        "creatinine"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "egfr",
+      "candidate_display": "eGFR",
+      "codes": [
+        "METRIC-0030"
+      ],
+      "aliases": [
+        "egfr"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "uric acid",
+      "candidate_display": "Uric acid",
+      "codes": [
+        "METRIC-0031"
+      ],
+      "aliases": [
+        "uric acid"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total protein",
+      "candidate_display": "Total protein",
+      "codes": [
+        "METRIC-0032"
+      ],
+      "aliases": [
+        "total protein"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "albumin",
+      "candidate_display": "Albumin",
+      "codes": [
+        "METRIC-0033"
+      ],
+      "aliases": [
+        "albumin"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "globulin",
+      "candidate_display": "Globulin",
+      "codes": [
+        "METRIC-0034"
+      ],
+      "aliases": [
+        "globulin"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "a/g ratio",
+      "candidate_display": "A/G ratio",
+      "codes": [
+        "METRIC-0035"
+      ],
+      "aliases": [
+        "a/g ratio",
+        "a",
+        "g ratio"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "bilirubin, total",
+      "candidate_display": "Bilirubin, total",
+      "codes": [
+        "METRIC-0036"
+      ],
+      "aliases": [
+        "total bilirubin",
+        "bilirubin, total"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "bilirubin, direct",
+      "candidate_display": "Bilirubin, direct",
+      "codes": [
+        "METRIC-0037"
+      ],
+      "aliases": [
+        "direct bilirubin",
+        "bilirubin, direct"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "bilirubin, indirect",
+      "candidate_display": "Bilirubin, indirect",
+      "codes": [
+        "METRIC-0038"
+      ],
+      "aliases": [
+        "bilirubin, indirect",
+        "indirect bilirubin"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ast / sgot",
+      "candidate_display": "AST / SGOT",
+      "codes": [
+        "METRIC-0039"
+      ],
+      "aliases": [
+        "ast",
+        "ast / sgot",
+        "sgot"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "alt / sgpt",
+      "candidate_display": "ALT / SGPT",
+      "codes": [
+        "METRIC-0040"
+      ],
+      "aliases": [
+        "sgpt",
+        "alt / sgpt",
+        "alt"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "alp",
+      "candidate_display": "ALP",
+      "codes": [
+        "METRIC-0041"
+      ],
+      "aliases": [
+        "alp"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ggt",
+      "candidate_display": "GGT",
+      "codes": [
+        "METRIC-0042"
+      ],
+      "aliases": [
+        "ggt"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "anion gap",
+      "candidate_display": "Anion gap",
+      "codes": [
+        "METRIC-0043"
+      ],
+      "aliases": [
+        "anion gap"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "osmolality, serum",
+      "candidate_display": "Osmolality, serum",
+      "codes": [
+        "METRIC-0044"
+      ],
+      "aliases": [
+        "serum osmolality",
+        "osmolality, serum"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "lactate",
+      "candidate_display": "Lactate",
+      "codes": [
+        "METRIC-0045"
+      ],
+      "aliases": [
+        "lactate"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "amylase",
+      "candidate_display": "Amylase",
+      "codes": [
+        "METRIC-0046"
+      ],
+      "aliases": [
+        "amylase"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "lipase",
+      "candidate_display": "Lipase",
+      "codes": [
+        "METRIC-0047"
+      ],
+      "aliases": [
+        "lipase"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ck / cpk",
+      "candidate_display": "CK / CPK",
+      "codes": [
+        "METRIC-0048"
+      ],
+      "aliases": [
+        "cpk",
+        "ck",
+        "ck / cpk"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ldh",
+      "candidate_display": "LDH",
+      "codes": [
+        "METRIC-0049"
+      ],
+      "aliases": [
+        "ldh"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ammonia",
+      "candidate_display": "Ammonia",
+      "codes": [
+        "METRIC-0050"
+      ],
+      "aliases": [
+        "ammonia"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total cholesterol",
+      "candidate_display": "Total cholesterol",
+      "codes": [
+        "METRIC-0051"
+      ],
+      "aliases": [
+        "total cholesterol"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hdl-c",
+      "candidate_display": "HDL-C",
+      "codes": [
+        "METRIC-0052"
+      ],
+      "aliases": [
+        "hdl-c"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ldl-c",
+      "candidate_display": "LDL-C",
+      "codes": [
+        "METRIC-0053"
+      ],
+      "aliases": [
+        "ldl-c"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "triglycerides",
+      "candidate_display": "Triglycerides",
+      "codes": [
+        "METRIC-0054"
+      ],
+      "aliases": [
+        "triglycerides"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "non-hdl cholesterol",
+      "candidate_display": "Non-HDL cholesterol",
+      "codes": [
+        "METRIC-0055"
+      ],
+      "aliases": [
+        "non-hdl cholesterol"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "vldl-c",
+      "candidate_display": "VLDL-C",
+      "codes": [
+        "METRIC-0056"
+      ],
+      "aliases": [
+        "vldl-c"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ldl/hdl ratio",
+      "candidate_display": "LDL/HDL ratio",
+      "codes": [
+        "METRIC-0057"
+      ],
+      "aliases": [
+        "hdl ratio",
+        "ldl/hdl ratio",
+        "ldl"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total cholesterol / hdl ratio",
+      "candidate_display": "Total cholesterol / HDL ratio",
+      "codes": [
+        "METRIC-0058"
+      ],
+      "aliases": [
+        "hdl ratio",
+        "total cholesterol / hdl ratio",
+        "total cholesterol"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "apob",
+      "candidate_display": "ApoB",
+      "codes": [
+        "METRIC-0059"
+      ],
+      "aliases": [
+        "apob"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "apoa1",
+      "candidate_display": "ApoA1",
+      "codes": [
+        "METRIC-0060"
+      ],
+      "aliases": [
+        "apoa1"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "apob/apoa1 ratio",
+      "candidate_display": "ApoB/ApoA1 ratio",
+      "codes": [
+        "METRIC-0061"
+      ],
+      "aliases": [
+        "apob/apoa1 ratio",
+        "apoa1 ratio",
+        "apob"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "lipoprotein(a)",
+      "candidate_display": "Lipoprotein(a)",
+      "codes": [
+        "METRIC-0062"
+      ],
+      "aliases": [
+        "lipoprotein(a)"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hba1c",
+      "candidate_display": "HbA1c",
+      "codes": [
+        "METRIC-0063"
+      ],
+      "aliases": [
+        "hba1c"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hba1c",
+      "candidate_display": "HbA1c",
+      "codes": [
+        "METRIC-0064"
+      ],
+      "aliases": [
+        "hba1c"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "insulin, fasting",
+      "candidate_display": "Insulin, fasting",
+      "codes": [
+        "METRIC-0065"
+      ],
+      "aliases": [
+        "fasting insulin",
+        "insulin, fasting"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "homa-ir",
+      "candidate_display": "HOMA-IR",
+      "codes": [
+        "METRIC-0066"
+      ],
+      "aliases": [
+        "homa-ir"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "fructosamine",
+      "candidate_display": "Fructosamine",
+      "codes": [
+        "METRIC-0067"
+      ],
+      "aliases": [
+        "fructosamine"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "microalbumin, urine",
+      "candidate_display": "Microalbumin, urine",
+      "codes": [
+        "METRIC-0068"
+      ],
+      "aliases": [
+        "urine microalbumin",
+        "microalbumin, urine"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "urine albumin/creatinine ratio (acr)",
+      "candidate_display": "Urine albumin/creatinine ratio (ACR)",
+      "codes": [
+        "METRIC-0069"
+      ],
+      "aliases": [
+        "creatinine ratio (acr)",
+        "urine albumin/creatinine ratio (acr)",
+        "urine albumin"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "protein/creatinine ratio (pcr)",
+      "candidate_display": "Protein/creatinine ratio (PCR)",
+      "codes": [
+        "METRIC-0070"
+      ],
+      "aliases": [
+        "protein",
+        "protein/creatinine ratio (pcr)",
+        "creatinine ratio (pcr)"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "iron, serum",
+      "candidate_display": "Iron, serum",
+      "codes": [
+        "METRIC-0071"
+      ],
+      "aliases": [
+        "iron, serum",
+        "serum iron"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "tibc",
+      "candidate_display": "TIBC",
+      "codes": [
+        "METRIC-0072"
+      ],
+      "aliases": [
+        "tibc"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "transferrin",
+      "candidate_display": "Transferrin",
+      "codes": [
+        "METRIC-0073"
+      ],
+      "aliases": [
+        "transferrin"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "transferrin saturation",
+      "candidate_display": "Transferrin saturation",
+      "codes": [
+        "METRIC-0074"
+      ],
+      "aliases": [
+        "transferrin saturation"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ferritin",
+      "candidate_display": "Ferritin",
+      "codes": [
+        "METRIC-0075"
+      ],
+      "aliases": [
+        "ferritin"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "vitamin b12",
+      "candidate_display": "Vitamin B12",
+      "codes": [
+        "METRIC-0076"
+      ],
+      "aliases": [
+        "vitamin b12"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "folate",
+      "candidate_display": "Folate",
+      "codes": [
+        "METRIC-0077"
+      ],
+      "aliases": [
+        "folate"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "25-oh vitamin d",
+      "candidate_display": "25-OH Vitamin D",
+      "codes": [
+        "METRIC-0078"
+      ],
+      "aliases": [
+        "25-oh vitamin d"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "tsh",
+      "candidate_display": "TSH",
+      "codes": [
+        "METRIC-0079"
+      ],
+      "aliases": [
+        "tsh"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "free t4",
+      "candidate_display": "Free T4",
+      "codes": [
+        "METRIC-0080"
+      ],
+      "aliases": [
+        "free t4"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total t4",
+      "candidate_display": "Total T4",
+      "codes": [
+        "METRIC-0081"
+      ],
+      "aliases": [
+        "total t4"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "free t3",
+      "candidate_display": "Free T3",
+      "codes": [
+        "METRIC-0082"
+      ],
+      "aliases": [
+        "free t3"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "total t3",
+      "candidate_display": "Total T3",
+      "codes": [
+        "METRIC-0083"
+      ],
+      "aliases": [
+        "total t3"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "anti-tpo ab",
+      "candidate_display": "Anti-TPO Ab",
+      "codes": [
+        "METRIC-0084"
+      ],
+      "aliases": [
+        "anti-tpo ab"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "crp",
+      "candidate_display": "CRP",
+      "codes": [
+        "METRIC-0085"
+      ],
+      "aliases": [
+        "crp"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hs-crp",
+      "candidate_display": "hs-CRP",
+      "codes": [
+        "METRIC-0086"
+      ],
+      "aliases": [
+        "hs-crp"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "pt",
+      "candidate_display": "PT",
+      "codes": [
+        "METRIC-0087"
+      ],
+      "aliases": [
+        "pt"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "inr",
+      "candidate_display": "INR",
+      "codes": [
+        "METRIC-0088"
+      ],
+      "aliases": [
+        "inr"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "aptt",
+      "candidate_display": "aPTT",
+      "codes": [
+        "METRIC-0089"
+      ],
+      "aliases": [
+        "aptt"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "fibrinogen",
+      "candidate_display": "Fibrinogen",
+      "codes": [
+        "METRIC-0090"
+      ],
+      "aliases": [
+        "fibrinogen"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "d-dimer",
+      "candidate_display": "D-dimer",
+      "codes": [
+        "METRIC-0091"
+      ],
+      "aliases": [
+        "d-dimer"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "troponin i",
+      "candidate_display": "Troponin I",
+      "codes": [
+        "METRIC-0092"
+      ],
+      "aliases": [
+        "troponin i"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "troponin t",
+      "candidate_display": "Troponin T",
+      "codes": [
+        "METRIC-0093"
+      ],
+      "aliases": [
+        "troponin t"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "bnp",
+      "candidate_display": "BNP",
+      "codes": [
+        "METRIC-0094"
+      ],
+      "aliases": [
+        "bnp"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "nt-probnp",
+      "candidate_display": "NT-proBNP",
+      "codes": [
+        "METRIC-0095"
+      ],
+      "aliases": [
+        "nt-probnp"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "color",
+      "candidate_display": "Color",
+      "codes": [
+        "METRIC-0096"
+      ],
+      "aliases": [
+        "color"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "clarity / appearance",
+      "candidate_display": "Clarity / appearance",
+      "codes": [
+        "METRIC-0097"
+      ],
+      "aliases": [
+        "clarity",
+        "clarity / appearance",
+        "appearance"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "specific gravity",
+      "candidate_display": "Specific gravity",
+      "codes": [
+        "METRIC-0098"
+      ],
+      "aliases": [
+        "specific gravity"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ph",
+      "candidate_display": "pH",
+      "codes": [
+        "METRIC-0099"
+      ],
+      "aliases": [
+        "ph"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "protein, urine dipstick",
+      "candidate_display": "Protein, urine dipstick",
+      "codes": [
+        "METRIC-0100"
+      ],
+      "aliases": [
+        "protein, urine dipstick",
+        "urine dipstick protein"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "glucose, urine",
+      "candidate_display": "Glucose, urine",
+      "codes": [
+        "METRIC-0101"
+      ],
+      "aliases": [
+        "urine glucose",
+        "glucose, urine"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "ketones, urine",
+      "candidate_display": "Ketones, urine",
+      "codes": [
+        "METRIC-0102"
+      ],
+      "aliases": [
+        "ketones, urine",
+        "urine ketones"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "bilirubin, urine",
+      "candidate_display": "Bilirubin, urine",
+      "codes": [
+        "METRIC-0103"
+      ],
+      "aliases": [
+        "urine bilirubin",
+        "bilirubin, urine"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "blood / hemoglobin, urine",
+      "candidate_display": "Blood / hemoglobin, urine",
+      "codes": [
+        "METRIC-0104"
+      ],
+      "aliases": [
+        "blood",
+        "blood / hemoglobin, urine",
+        "urine blood / hemoglobin",
+        "urine hemoglobin",
+        "hemoglobin, urine"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "nitrite, urine",
+      "candidate_display": "Nitrite, urine",
+      "codes": [
+        "METRIC-0105"
+      ],
+      "aliases": [
+        "nitrite, urine",
+        "urine nitrite"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "leukocyte esterase",
+      "candidate_display": "Leukocyte esterase",
+      "codes": [
+        "METRIC-0106"
+      ],
+      "aliases": [
+        "leukocyte esterase"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "urobilinogen",
+      "candidate_display": "Urobilinogen",
+      "codes": [
+        "METRIC-0107"
+      ],
+      "aliases": [
+        "urobilinogen"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "rbc, urine microscopy",
+      "candidate_display": "RBC, urine microscopy",
+      "codes": [
+        "METRIC-0108"
+      ],
+      "aliases": [
+        "urine microscopy rbc",
+        "rbc, urine microscopy"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "wbc, urine microscopy",
+      "candidate_display": "WBC, urine microscopy",
+      "codes": [
+        "METRIC-0109"
+      ],
+      "aliases": [
+        "wbc, urine microscopy",
+        "urine microscopy wbc"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "squamous epithelial cells",
+      "candidate_display": "Squamous epithelial cells",
+      "codes": [
+        "METRIC-0110"
+      ],
+      "aliases": [
+        "squamous epithelial cells"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "renal epithelial cells",
+      "candidate_display": "Renal epithelial cells",
+      "codes": [
+        "METRIC-0111"
+      ],
+      "aliases": [
+        "renal epithelial cells"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "transitional epithelial cells",
+      "candidate_display": "Transitional epithelial cells",
+      "codes": [
+        "METRIC-0112"
+      ],
+      "aliases": [
+        "transitional epithelial cells"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "bacteria",
+      "candidate_display": "Bacteria",
+      "codes": [
+        "METRIC-0113"
+      ],
+      "aliases": [
+        "bacteria"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "yeast",
+      "candidate_display": "Yeast",
+      "codes": [
+        "METRIC-0114"
+      ],
+      "aliases": [
+        "yeast"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "mucus",
+      "candidate_display": "Mucus",
+      "codes": [
+        "METRIC-0115"
+      ],
+      "aliases": [
+        "mucus"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hyaline casts",
+      "candidate_display": "Hyaline casts",
+      "codes": [
+        "METRIC-0116"
+      ],
+      "aliases": [
+        "hyaline casts"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "granular casts",
+      "candidate_display": "Granular casts",
+      "codes": [
+        "METRIC-0117"
+      ],
+      "aliases": [
+        "granular casts"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "crystals",
+      "candidate_display": "Crystals",
+      "codes": [
+        "METRIC-0118"
+      ],
+      "aliases": [
+        "crystals"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "urine albumin",
+      "candidate_display": "Urine albumin",
+      "codes": [
+        "METRIC-0119"
+      ],
+      "aliases": [
+        "urine albumin"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "urine creatinine",
+      "candidate_display": "Urine creatinine",
+      "codes": [
+        "METRIC-0120"
+      ],
+      "aliases": [
+        "urine creatinine"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "acr (repeat here if urine module standalone)",
+      "candidate_display": "ACR (repeat here if urine module standalone)",
+      "codes": [
+        "METRIC-0121"
+      ],
+      "aliases": [
+        "acr (repeat here if urine module standalone)"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hbsag",
+      "candidate_display": "HBsAg",
+      "codes": [
+        "METRIC-0122"
+      ],
+      "aliases": [
+        "hbsag"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "anti-hbs",
+      "candidate_display": "Anti-HBs",
+      "codes": [
+        "METRIC-0123"
+      ],
+      "aliases": [
+        "anti-hbs"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "anti-hbc igm",
+      "candidate_display": "Anti-HBc IgM",
+      "codes": [
+        "METRIC-0124"
+      ],
+      "aliases": [
+        "anti-hbc igm"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "anti-hcv",
+      "candidate_display": "Anti-HCV",
+      "codes": [
+        "METRIC-0125"
+      ],
+      "aliases": [
+        "anti-hcv"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hiv ag/ab",
+      "candidate_display": "HIV Ag/Ab",
+      "codes": [
+        "METRIC-0126"
+      ],
+      "aliases": [
+        "ab",
+        "hiv ag",
+        "hiv ag/ab"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hav igm",
+      "candidate_display": "HAV IgM",
+      "codes": [
+        "METRIC-0127"
+      ],
+      "aliases": [
+        "hav igm"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "rpr / vdrl",
+      "candidate_display": "RPR / VDRL",
+      "codes": [
+        "METRIC-0128"
+      ],
+      "aliases": [
+        "rpr",
+        "vdrl",
+        "rpr / vdrl"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "dengue ns1",
+      "candidate_display": "Dengue NS1",
+      "codes": [
+        "METRIC-0129"
+      ],
+      "aliases": [
+        "dengue ns1"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "stool occult blood / fit",
+      "candidate_display": "Stool occult blood / FIT",
+      "codes": [
+        "METRIC-0130"
+      ],
+      "aliases": [
+        "stool occult blood / fit",
+        "stool occult blood",
+        "fit"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    },
+    {
+      "canonical_label": "hcg, pregnancy",
+      "candidate_display": "hCG, pregnancy",
+      "codes": [
+        "METRIC-0131"
+      ],
+      "aliases": [
+        "pregnancy hcg",
+        "hcg, pregnancy"
+      ],
+      "panel_key": "general",
+      "threshold_used": 0.9
+    }
+  ]
+}

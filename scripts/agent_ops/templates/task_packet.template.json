@@ -1,0 +1,47 @@
+{
+  "schema_version": "task-packet-v1",
+  "task_id": "wave-a-task-001",
+  "objective": "Implement deterministic VLM extraction gateway wiring for image beta lane with strict abstention behavior.",
+  "repo_root": "d:/elfie-lab-analyzer",
+  "allowed_paths": [
+    "backend/app/workers/pipeline.py",
+    "backend/app/services/ocr/__init__.py",
+    "backend/tests/integration/test_phase_12_api_flow.py",
+    "backend/tests/unit/test_phase_28_pipeline_refactor_guards.py"
+  ],
+  "forbidden_paths": [
+    "contracts/examples",
+    "frontend",
+    "data/policy_tables/launch_scope_rules.json"
+  ],
+  "required_commands": [
+    "ruff check .",
+    "mypy ."
+  ],
+  "required_tests": [
+    "pytest tests/unit/test_phase_28_pipeline_refactor_guards.py",
+    "pytest tests/integration/test_phase_12_api_flow.py"
+  ],
+  "completion_definition": [
+    "All requested changes are implemented only within allowed_paths.",
+    "Required lint/type/test commands pass with evidence.",
+    "Worker result JSON is schema-valid and includes risks/followups."
+  ],
+  "max_prompt_tokens": 7000,
+  "max_tool_calls": 30,
+  "context_files": [
+    "AGENTS.md",
+    "GEMINI.md",
+    "contracts/README.md"
+  ],
+  "constraints": [
+    "Preserve trust_status semantics.",
+    "No policy table changes.",
+    "No contract version changes."
+  ],
+  "deliverables": [
+    "Code changes",
+    "Passing tests",
+    "worker_result.json"
+  ]
+}

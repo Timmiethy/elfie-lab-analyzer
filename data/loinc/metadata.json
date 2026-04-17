@@ -1,0 +1,5 @@
+{
+  "snapshot_version": "dev-placeholder",
+  "source": "local-dev",
+  "notes": "Placeholder metadata for local startup only. Replace with real LOINC snapshot metadata before production use."
+}
