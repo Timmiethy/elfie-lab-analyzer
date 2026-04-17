@@ -315,12 +315,10 @@ function App() {
           ? 'vi'
           : 'en'
         : previewFixture.language;
-      const currentArtifact = jobId ? artifact : previewFixture.patientArtifact;
 
       return (
         <GuidedAsk
           language={effectiveLanguage}
-          currentArtifact={currentArtifact ?? null}
           onNavigateBack={handleReturnToArtifact}
         />
       );

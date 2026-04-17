@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 import { STITCH_COLORS, STITCH_RADIUS } from '../common/system';
 
 export interface HeaderNavItem {

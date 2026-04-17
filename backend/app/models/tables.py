@@ -35,6 +35,7 @@ class Document(Base):
     language_id: Mapped[str | None] = mapped_column(String(8))
     region: Mapped[str | None] = mapped_column(String(8))
     storage_path: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
@@ -53,6 +54,7 @@ class Job(Base):
     dead_letter: Mapped[bool] = mapped_column(default=False)
     operator_note: Mapped[str | None] = mapped_column(Text)
     region: Mapped[str | None] = mapped_column(String(8))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now

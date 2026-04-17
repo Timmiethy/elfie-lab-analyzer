@@ -39,6 +39,9 @@ class Settings(_BaseSettings):
     qwen_model: str = "qwen-plus"
     qwen_vl_model: str = "qwen-vl-max"
 
+    # Auth
+    supabase_jwt_secret: str = ""
+
     # Terminology
     loinc_path: Path = Path("data/loinc")
     terminology_snapshot_path: Path = Path("data/loinc")

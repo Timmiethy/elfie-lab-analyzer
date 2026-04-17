@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.exc import IntegrityError, InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.auth import CurrentUserId
 from app.api.deps import get_session_factory
 from app.config import settings
 from app.db import TopLevelLifecycleStore
@@ -29,6 +30,7 @@ _PAYLOAD_LIMIT_ERRORS = {
 
 @router.post("")
 async def upload_lab_report(
+    user_id: CurrentUserId,
     file: UploadFile = File(...),
     age_years: float | None = Form(None),
     sex: str | None = Form(None),
@@ -68,6 +70,7 @@ async def upload_lab_report(
             file_bytes=file_bytes,
             pipeline=pipeline,
             session_factory=session_factory,
+            user_id=user_id,
             age_years=age_years,
             sex=sex,
         )
@@ -88,6 +91,7 @@ async def _persisted_upload_response(
     file_bytes: bytes,
     pipeline: PipelineOrchestrator,
     session_factory: async_sessionmaker[AsyncSession],
+    user_id: UUID,
     age_years: float | None = None,
     sex: str | None = None,
 ) -> UploadResponse:
@@ -100,11 +104,17 @@ async def _persisted_upload_response(
     try:
         async with session_factory() as session:
             store = TopLevelLifecycleStore(session)
-            existing_job = await store.get_job_by_idempotency_key(idempotency_key)
+            existing_job = await store.get_job_by_idempotency_key(
+                idempotency_key,
+                user_id=user_id,
+            )
             if existing_job is None:
                 get_by_checksum = getattr(store, "get_job_by_input_checksum", None)
                 if get_by_checksum is not None:
-                    existing_job = await get_by_checksum(classification["checksum"])
+                    existing_job = await get_by_checksum(
+                        classification["checksum"],
+                        user_id=user_id,
+                    )
 
             if existing_job is not None:
                 return UploadResponse(
@@ -127,6 +137,7 @@ async def _persisted_upload_response(
                 file_size_bytes=classification["file_size_bytes"],
                 lane_type=classification["lane_type"],
                 storage_path=storage_path.as_posix(),
+                user_id=user_id,
             )
             # Flush (not commit) so pipeline can see the row via FK without
             # persisting past a later rollback.
@@ -140,11 +151,15 @@ async def _persisted_upload_response(
                     input_checksum=classification["checksum"],
                     lane_type=classification["lane_type"],
                     status="pending",
+                    user_id=user_id,
                 )
                 if job is None:
                     # Another request won the idempotency race.
                     await session.rollback()
-                    existing_job = await store.get_job_by_idempotency_key(idempotency_key)
+                    existing_job = await store.get_job_by_idempotency_key(
+                        idempotency_key,
+                        user_id=user_id,
+                    )
                     if existing_job is None:
                         raise RuntimeError("idempotency_conflict_without_existing_job")
                     return UploadResponse(
@@ -161,11 +176,15 @@ async def _persisted_upload_response(
                         input_checksum=classification["checksum"],
                         lane_type=classification["lane_type"],
                         status="pending",
+                        user_id=user_id,
                     )
                 except IntegrityError:
                     # Compatibility path when store lacks ON CONFLICT helper.
                     await session.rollback()
-                    existing_job = await store.get_job_by_idempotency_key(idempotency_key)
+                    existing_job = await store.get_job_by_idempotency_key(
+                        idempotency_key,
+                        user_id=user_id,
+                    )
                     if existing_job is None:
                         raise
                     return UploadResponse(
