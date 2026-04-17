@@ -12,35 +12,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function LogoutButton() {
-  const { signOut, user } = useAuth();
-  if (!user) return null;
-  return (
-    <button
-      onClick={signOut}
-      style={{
-        position: 'fixed',
-        top: 16,
-        right: 20,
-        zIndex: 1000,
-        padding: '8px 18px',
-        borderRadius: 999,
-        border: '1px solid rgba(255,255,255,0.25)',
-        backgroundColor: 'rgba(18, 26, 51, 0.6)',
-        color: '#fff',
-        fontSize: '0.78rem',
-        fontWeight: 700,
-        cursor: 'pointer',
-        backdropFilter: 'blur(8px)',
-        letterSpacing: '0.03em',
-        minHeight: 36,
-      }}
-    >
-      Sign out
-    </button>
-  );
-}
-
 export default function AppRouter() {
   return (
     <Routes>
@@ -64,7 +35,6 @@ export default function AppRouter() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <LogoutButton />
             <App />
           </ProtectedRoute>
         }

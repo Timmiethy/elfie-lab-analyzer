@@ -17,27 +17,27 @@ const MAX_POLL_ATTEMPTS = 180;
 
 const BACKEND_STEP_LABELS: Record<string, string> = {
   preflight: 'Upload received',
-  lane_selection: 'Checking file format',
-  extraction: 'Reading supported rows',
-  extraction_qa: 'Validating extracted rows',
-  observation_build: 'Building structured observations',
-  analyte_mapping: 'Matching lab values',
+  lane_selection: 'Checking format',
+  extraction: 'Reading rows',
+  extraction_qa: 'Validating rows',
+  observation_build: 'Building observations',
+  analyte_mapping: 'Matching values',
   ucum_conversion: 'Normalizing units',
   panel_reconstruction: 'Reconstructing panels',
-  rule_evaluation: 'Evaluating support rules',
-  severity_assignment: 'Assigning severity classes',
-  nextstep_assignment: 'Determining next-step classes',
-  patient_artifact: 'Building your summary',
-  clinician_artifact: 'Rendering clinician summary',
-  lineage_persist: 'Saving provenance data',
+  rule_evaluation: 'Evaluating rules',
+  severity_assignment: 'Assigning severity',
+  nextstep_assignment: 'Determining next steps',
+  patient_artifact: 'Building summary',
+  clinician_artifact: 'Rendering clinician view',
+  lineage_persist: 'Saving provenance',
 };
 
 const DISPLAY_STAGES = [
   'Upload received',
-  'Checking file format',
-  'Reading supported rows',
-  'Matching lab values',
-  'Building your summary',
+  'Checking format',
+  'Reading rows',
+  'Matching values',
+  'Building summary',
 ] as const;
 
 const LANE_LABELS: Record<LaneType, string> = {
@@ -199,15 +199,15 @@ export default function Processing({
   const dashOffset =
     circumference - (Math.min(progressPercent, 100) / 100) * circumference;
   const backendLabel = currentStep
-    ? BACKEND_STEP_LABELS[currentStep] ?? 'Running support checks'
-    : 'Running support checks';
+    ? BACKEND_STEP_LABELS[currentStep] ?? 'Running checks'
+    : 'Running checks';
 
   if (error) {
     return (
       <PageChrome
         compact
         title="Analyzing Report"
-        subtitle="The processing run did not complete."
+        subtitle="Processing did not complete."
         rightSlot={<PillBadge tone="neutral">Retry required</PillBadge>}
       >
         <div
@@ -241,20 +241,22 @@ export default function Processing({
       }
       contentMaxWidth={980}
     >
-      <div className="stitch-processing-layout stitch-enter" style={{ marginTop: '1rem' }}>
+      <div className="stitch-enter" style={{ marginTop: '1rem' }}>
+        {/* ==================== SINGLE SECTION: PROGRESS ==================== */}
         <SurfaceCard
           style={{
             padding: '1.75rem 1.25rem 1.5rem',
             background:
               'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(255,246,248,0.94) 100%)',
+            textAlign: 'center',
           }}
         >
           <div
             style={{
               position: 'relative',
-              width: 220,
-              height: 220,
-              margin: '0 auto 1.5rem',
+              width: 200,
+              height: 200,
+              margin: '0 auto 1.25rem',
             }}
           >
             <svg
@@ -296,26 +298,9 @@ export default function Processing({
                 justifyContent: 'center',
               }}
             >
-              <div
-                style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: 14,
-                  backgroundColor: 'rgba(255, 21, 112, 0.12)',
-                  color: STITCH_COLORS.pink,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.15rem',
-                  fontWeight: 700,
-                  marginBottom: '0.5rem',
-                }}
-              >
-                ▣
-              </div>
               <span
                 style={{
-                  fontSize: '2.6rem',
+                  fontSize: '2.4rem',
                   fontWeight: 800,
                   color: STITCH_COLORS.textHeading,
                   letterSpacing: '-0.05em',
@@ -323,60 +308,49 @@ export default function Processing({
               >
                 {progressPercent}%
               </span>
+              <span
+                style={{
+                  marginTop: 4,
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: STITCH_COLORS.pink,
+                }}
+              >
+                {backendLabel}
+              </span>
             </div>
           </div>
 
           <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '0.5rem 0.9rem',
-              borderRadius: STITCH_RADIUS.pill,
-              backgroundColor: STITCH_COLORS.surfaceWhite,
-              border: `1px solid ${STITCH_COLORS.borderGhost}`,
-              marginBottom: '1.25rem',
-              fontSize: '0.86rem',
-              fontWeight: 700,
-              color: STITCH_COLORS.textHeading,
-            }}
+            className="stitch-flow"
+            style={{ gap: '0.45rem', textAlign: 'left', maxWidth: 420, margin: '0 auto' }}
           >
-            <span
-              aria-hidden="true"
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: STITCH_COLORS.pink,
-                display: 'inline-block',
-              }}
-            />
-            {backendLabel}
-          </div>
-
-          <div className="stitch-flow">
             {DISPLAY_STAGES.map((stage, index) => {
               const isDone = index < activeStageIndex;
               const isActive = index === activeStageIndex;
-
               return (
                 <div
                   key={stage}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '1rem',
+                    gap: '0.85rem',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: STITCH_RADIUS.md,
+                    backgroundColor: isActive
+                      ? 'rgba(255, 21, 112, 0.06)'
+                      : 'transparent',
                     color: isActive
                       ? STITCH_COLORS.textHeading
                       : STITCH_COLORS.textSecondary,
                     fontWeight: isActive ? 700 : 600,
-                    fontSize: '0.94rem',
+                    fontSize: '0.9rem',
                   }}
                 >
                   <div
                     style={{
-                      width: 38,
-                      height: 38,
+                      width: 26,
+                      height: 26,
                       borderRadius: STITCH_RADIUS.pill,
                       backgroundColor: isDone
                         ? '#6BFE9C'
@@ -392,6 +366,7 @@ export default function Processing({
                           ? STITCH_COLORS.pink
                           : STITCH_COLORS.textMuted,
                       flexShrink: 0,
+                      fontSize: '0.78rem',
                     }}
                   >
                     {isDone ? (
@@ -400,8 +375,8 @@ export default function Processing({
                       <span
                         aria-hidden="true"
                         style={{
-                          width: 16,
-                          height: 16,
+                          width: 12,
+                          height: 12,
                           borderRadius: '50%',
                           border: `2px solid ${STITCH_COLORS.pink}`,
                           borderTopColor: 'transparent',
@@ -418,48 +393,22 @@ export default function Processing({
               );
             })}
           </div>
-        </SurfaceCard>
 
-        <SurfaceCard
-          style={{
-            padding: '1.25rem 1.15rem',
-            backgroundColor: STITCH_COLORS.surfaceLow,
-            boxShadow: 'none',
-          }}
-        >
           <p
             style={{
-              margin: '0 0 0.3rem',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: STITCH_COLORS.textMuted,
-            }}
-          >
-            What to expect
-          </p>
-          <p
-            style={{
-              margin: 0,
-              fontSize: '1rem',
-              fontWeight: 700,
-              lineHeight: 1.5,
-              color: STITCH_COLORS.textHeading,
+              margin: '1.1rem auto 0',
+              maxWidth: 460,
+              fontSize: '0.84rem',
+              lineHeight: 1.55,
+              color: STITCH_COLORS.textSecondary,
             }}
           >
             {isImageBeta
-              ? 'Image uploads may return a partial preview.'
-              : 'We are checking the report row by row before summarizing it.'}
+              ? 'Image uploads may return a partial preview. '
+              : 'Checking each row before summarizing. '}
+            Only supported rows enter the summary; unsupported rows stay visible.
+            Usually a few seconds.
           </p>
-
-          <div className="stitch-divider" style={{ margin: '1rem 0' }} />
-
-          <ul className="stitch-helper-list">
-            <li>Only supported rows move into the patient summary.</li>
-            <li>Unsupported or unreadable rows stay visible instead of being hidden.</li>
-            <li>{backendLabel}. This usually takes a few seconds.</li>
-          </ul>
         </SurfaceCard>
       </div>
     </PageChrome>
