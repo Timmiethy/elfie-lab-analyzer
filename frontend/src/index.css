@@ -140,48 +140,87 @@ input::placeholder {
 .stitch-button {
   position: relative;
   overflow: hidden;
+  transition:
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 260ms ease,
+    filter 220ms ease,
+    opacity 220ms ease;
+  will-change: transform;
 }
 
 .stitch-button::after {
   content: '';
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background: linear-gradient(
     120deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.08) 48%,
+    rgba(255, 255, 255, 0.22) 48%,
     transparent 100%
   );
-  transform: translateX(-125%);
-  transition: transform 220ms ease;
+  transform: translateX(-130%) skewX(-18deg);
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (hover: hover) {
   .stitch-button:hover:not(:disabled)::after {
-    transform: translateX(125%);
+    transform: translateX(140%) skewX(-18deg);
   }
 
   .stitch-button:hover:not(:disabled) {
-    transform: translateY(-1px);
+    transform: translateY(-3px) scale(1.015);
+    filter: brightness(1.04);
+  }
+
+  .stitch-button--primary:hover:not(:disabled) {
+    box-shadow: 0 18px 34px rgba(255, 21, 112, 0.32);
   }
 }
 
 .stitch-button:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.97);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.stitch-button:focus-visible {
+  outline: 3px solid rgba(255, 21, 112, 0.45);
+  outline-offset: 3px;
 }
 
 .stitch-button--secondary {
   transition:
-    transform 140ms ease,
-    box-shadow 160ms ease,
-    border-color 160ms ease,
-    background-color 160ms ease;
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 260ms ease,
+    border-color 220ms ease,
+    background-color 220ms ease,
+    color 220ms ease;
 }
 
 @media (hover: hover) {
   .stitch-button--secondary:hover:not(:disabled) {
-    border-color: rgba(255, 21, 112, 0.16);
-    box-shadow: 0 12px 24px rgba(18, 26, 51, 0.08);
+    border-color: rgba(255, 21, 112, 0.35);
+    background-color: #fff9fb;
+    color: #e61168;
+    box-shadow: 0 14px 28px rgba(18, 26, 51, 0.10);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stitch-button,
+  .stitch-button::after,
+  .stitch-button--secondary,
+  .stitch-header-row,
+  .stitch-header-gear,
+  .stitch-header-chevron,
+  .stitch-header-icon,
+  .stitch-header-row-label,
+  .stitch-header-brand-heart,
+  .stitch-header-current-pill {
+    transition: none !important;
+    animation: none !important;
   }
 }
 

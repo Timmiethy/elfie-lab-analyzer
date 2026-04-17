@@ -253,6 +253,8 @@ export function PrimaryButton({
       onClick={onClick}
       disabled={disabled}
       style={{
+        position: 'relative',
+        overflow: 'hidden',
         width: '100%',
         minHeight: 56,
         borderRadius: STITCH_RADIUS.pill,
@@ -266,7 +268,8 @@ export function PrimaryButton({
         boxShadow: disabled ? 'none' : STITCH_SHADOWS.hero,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.85 : 1,
-        transition: 'transform 120ms ease, opacity 120ms ease',
+        transition:
+          'transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 260ms ease, opacity 220ms ease, filter 220ms ease',
         ...style,
       }}
     >
@@ -292,6 +295,8 @@ export function SecondaryButton({
       onClick={onClick}
       disabled={disabled}
       style={{
+        position: 'relative',
+        overflow: 'hidden',
         width: '100%',
         minHeight: 52,
         borderRadius: STITCH_RADIUS.pill,
@@ -301,6 +306,8 @@ export function SecondaryButton({
         color: STITCH_COLORS.navy,
         backgroundColor: STITCH_COLORS.surfaceWhite,
         cursor: disabled ? 'not-allowed' : 'pointer',
+        transition:
+          'transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 260ms ease, border-color 220ms ease, background-color 220ms ease, color 220ms ease',
         ...style,
       }}
     >

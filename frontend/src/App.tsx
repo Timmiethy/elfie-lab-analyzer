@@ -11,9 +11,11 @@ import {
   SecondaryButton,
   SurfaceCard,
 } from './components/common';
+import AppHeader, { type HeaderNavItem } from './components/common/AppHeader';
 import { STITCH_COLORS } from './components/common/system';
 import type { LaneType, PatientArtifact as PatientArtifactType } from './types';
 import { getPatientArtifact } from './services/api';
+import { addLabReportToHistory } from './services/labHistoryStore';
 import {
   getPreviewFixture,
   listPreviewFixtures,
@@ -100,6 +102,14 @@ function App() {
   };
 
   useEffect(() => {
+    if (state !== 'patient_artifact' || jobId) {
+      return;
+    }
+    // Preview/fixture mode — persist so the chat assistant has memory too.
+    addLabReportToHistory(previewFixture.patientArtifact);
+  }, [state, jobId, previewFixture.patientArtifact]);
+
+  useEffect(() => {
     if (state !== 'patient_artifact' || !jobId) {
       return;
     }
@@ -119,6 +129,7 @@ function App() {
         if (!cancelled) {
           setArtifact(data);
           setArtifactError(null);
+          addLabReportToHistory(data);
         }
       } catch (fetchError) {
         if (!cancelled) {
@@ -138,7 +149,187 @@ function App() {
     };
   }, [jobId, state]);
 
-  if (state === 'preview_selector') {
+  // Build header nav items — tabs the user can jump between at any time.
+  const hasArtifact = Boolean(jobId || previewFixture.patientArtifact);
+  const hasClinician = Boolean(
+    jobId ? artifact : previewFixture.clinicianArtifact,
+  );
+
+  const navItems: HeaderNavItem[] = [
+    {
+      id: 'upload',
+      label: 'Upload',
+      description: 'Analyze a new report',
+      icon: '⬆',
+      onSelect: handleNavigateBack,
+    },
+    ...(previewModeRequested
+      ? [
+          {
+            id: 'preview_selector',
+            label: 'Preview fixtures',
+            description: 'Typed dev fixtures',
+            icon: '◧',
+            onSelect: () => setState('preview_selector'),
+          },
+        ]
+      : []),
+    {
+      id: 'patient_artifact',
+      label: 'Patient summary',
+      description: 'Your lab results',
+      icon: '❤',
+      onSelect: () => setState('patient_artifact'),
+      disabled: !hasArtifact,
+    },
+    {
+      id: 'clinician_share',
+      label: 'Clinician summary',
+      description: 'Structured handoff',
+      icon: '⚕',
+      onSelect: () => setState('clinician_share'),
+      disabled: !hasClinician,
+    },
+    {
+      id: 'guided_ask',
+      label: 'Guided questions',
+      description: 'Ask follow-ups',
+      icon: '?',
+      onSelect: () => setState('guided_ask'),
+      disabled: !hasArtifact,
+    },
+  ];
+
+  const renderBody = (): React.ReactNode => {
+    if (state === 'preview_selector') {
+      return renderPreviewSelector();
+    }
+
+    if (state === 'processing' && jobId && laneType) {
+      return (
+        <Processing
+          jobId={jobId}
+          laneType={laneType}
+          onCompleted={handleProcessingCompleted}
+          onFailed={handleProcessingFailed}
+        />
+      );
+    }
+
+    if (state === 'patient_artifact') {
+      const currentArtifact = jobId ? artifact : previewFixture.patientArtifact;
+      const clinicianShareAvailable = jobId
+        ? true
+        : Boolean(previewFixture.clinicianArtifact);
+
+      if (artifactError) {
+        return (
+          <PageChrome
+            compact
+            title="Unable to load summary"
+            subtitle="Patient artifact could not be loaded."
+            rightSlot={<PillBadge tone="neutral">Load error</PillBadge>}
+          >
+            <div
+              role="alert"
+              style={{
+                marginTop: '1rem',
+                backgroundColor: STITCH_COLORS.errorBg,
+                color: STITCH_COLORS.errorText,
+                borderRadius: 24,
+                padding: '1rem',
+              }}
+            >
+              {artifactError}
+            </div>
+            <SecondaryButton
+              onClick={handleNavigateBack}
+              style={{ marginTop: '1rem' }}
+            >
+              Try another file
+            </SecondaryButton>
+          </PageChrome>
+        );
+      }
+
+      if (!currentArtifact) {
+        return (
+          <PageChrome
+            compact
+            title="Loading summary"
+            subtitle="Waiting for patient artifact."
+            rightSlot={<PillBadge tone="neutral">Loading</PillBadge>}
+          >
+            <SurfaceCard style={{ marginTop: '1rem', padding: '1rem' }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.92rem',
+                  color: STITCH_COLORS.textSecondary,
+                }}
+              >
+                Loading summary...
+              </p>
+            </SurfaceCard>
+          </PageChrome>
+        );
+      }
+
+      return (
+        <PatientArtifact
+          artifact={currentArtifact}
+          onNavigateBack={handleNavigateBack}
+          onViewClinicianShare={
+            clinicianShareAvailable ? () => setState('clinician_share') : undefined
+          }
+          onViewGuidedAsk={() => setState('guided_ask')}
+        />
+      );
+    }
+
+    if (state === 'clinician_share') {
+      if (jobId) {
+        return (
+          <ClinicianShare
+            jobId={jobId}
+            supportBanner={artifact?.support_banner}
+            patientArtifact={artifact ?? undefined}
+            onNavigateBack={handleReturnToArtifact}
+          />
+        );
+      }
+
+      return (
+        <ClinicianShare
+          previewArtifact={previewFixture.clinicianArtifact}
+          supportBanner={previewFixture.patientArtifact.support_banner}
+          patientArtifact={previewFixture.patientArtifact}
+          onNavigateBack={handleReturnToArtifact}
+        />
+      );
+    }
+
+    if (state === 'guided_ask') {
+      const effectiveLanguage = jobId
+        ? artifact?.language_id === 'vi'
+          ? 'vi'
+          : 'en'
+        : previewFixture.language;
+      const currentArtifact = jobId ? artifact : previewFixture.patientArtifact;
+
+      return (
+        <GuidedAsk
+          language={effectiveLanguage}
+          currentArtifact={currentArtifact ?? null}
+          onNavigateBack={handleReturnToArtifact}
+        />
+      );
+    }
+
+    return <Upload onJobStarted={handleJobStarted} notice={notice} />;
+  };
+
+  const renderPreviewSelector = (): React.ReactNode => {
     const fixtures = listPreviewFixtures();
     const coverageSummary = [
       {
@@ -166,7 +357,7 @@ function App() {
       <PageChrome
         compact
         title="Preview Fixtures"
-        subtitle="Developer-only fixtures for reviewing result surfaces. Use the live upload flow for smoke validation."
+        subtitle="Developer-only fixtures for reviewing result surfaces."
         rightSlot={<PillBadge tone="neutral">Developer fixtures</PillBadge>}
         contentMaxWidth={1040}
       >
@@ -210,8 +401,7 @@ function App() {
                   color: STITCH_COLORS.textSecondary,
                 }}
               >
-                Use these for copy, layout, and state QA. Use the live upload
-                flow for runtime smoke validation.
+                For copy, layout, and state QA. Use live upload for runtime validation.
               </p>
 
               <div className="stitch-grid-fit" style={{ marginTop: '0.9rem' }}>
@@ -272,8 +462,7 @@ function App() {
                 Preview mode
               </p>
               <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.6 }}>
-                These screens use typed local fixtures. The live upload flow is
-                the smoke source of truth, so use it for runtime validation.
+                These screens use typed local fixtures. Live upload is the smoke source of truth.
               </p>
               <SecondaryButton
                 onClick={() => setState('upload')}
@@ -332,8 +521,8 @@ function App() {
                       }}
                     >
                       {fixture.hasComparableHistory
-                        ? 'Comparable history available for review.'
-                        : 'No comparable history in this preview.'}
+                        ? 'Comparable history available.'
+                        : 'No comparable history.'}
                     </p>
                   </div>
                   <PillBadge
@@ -381,128 +570,14 @@ function App() {
         </div>
       </PageChrome>
     );
-  }
+  };
 
-  if (state === 'processing' && jobId && laneType) {
-    return (
-      <Processing
-        jobId={jobId}
-        laneType={laneType}
-        onCompleted={handleProcessingCompleted}
-        onFailed={handleProcessingFailed}
-      />
-    );
-  }
-
-  if (state === 'patient_artifact') {
-    const currentArtifact = jobId ? artifact : previewFixture.patientArtifact;
-    const clinicianShareAvailable = jobId
-      ? true
-      : Boolean(previewFixture.clinicianArtifact);
-
-    if (artifactError) {
-      return (
-        <PageChrome
-          compact
-          title="Unable to load summary"
-          subtitle="The patient artifact could not be loaded."
-          rightSlot={<PillBadge tone="neutral">Load error</PillBadge>}
-        >
-          <div
-            role="alert"
-            style={{
-              marginTop: '1rem',
-              backgroundColor: STITCH_COLORS.errorBg,
-              color: STITCH_COLORS.errorText,
-              borderRadius: 24,
-              padding: '1rem',
-            }}
-          >
-            {artifactError}
-          </div>
-          <SecondaryButton
-            onClick={handleNavigateBack}
-            style={{ marginTop: '1rem' }}
-          >
-            Try another file
-          </SecondaryButton>
-        </PageChrome>
-      );
-    }
-
-    if (!currentArtifact) {
-      return (
-        <PageChrome
-          compact
-          title="Loading summary"
-          subtitle="Waiting for the patient artifact."
-          rightSlot={<PillBadge tone="neutral">Loading</PillBadge>}
-        >
-          <SurfaceCard style={{ marginTop: '1rem', padding: '1rem' }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: '0.92rem',
-                color: STITCH_COLORS.textSecondary,
-              }}
-            >
-              Loading your summary...
-            </p>
-          </SurfaceCard>
-        </PageChrome>
-      );
-    }
-
-    return (
-      <PatientArtifact
-        artifact={currentArtifact}
-        onNavigateBack={handleNavigateBack}
-        onViewClinicianShare={
-          clinicianShareAvailable ? () => setState('clinician_share') : undefined
-        }
-        onViewGuidedAsk={() => setState('guided_ask')}
-      />
-    );
-  }
-
-  if (state === 'clinician_share') {
-    if (jobId) {
-      return (
-        <ClinicianShare
-          jobId={jobId}
-          supportBanner={artifact?.support_banner}
-          patientArtifact={artifact ?? undefined}
-          onNavigateBack={handleReturnToArtifact}
-        />
-      );
-    }
-
-    return (
-      <ClinicianShare
-        previewArtifact={previewFixture.clinicianArtifact}
-        supportBanner={previewFixture.patientArtifact.support_banner}
-        patientArtifact={previewFixture.patientArtifact}
-        onNavigateBack={handleReturnToArtifact}
-      />
-    );
-  }
-
-  if (state === 'guided_ask') {
-    const effectiveLanguage = jobId
-      ? artifact?.language_id === 'vi'
-        ? 'vi'
-        : 'en'
-      : previewFixture.language;
-
-    return (
-      <GuidedAsk
-        language={effectiveLanguage}
-        onNavigateBack={handleReturnToArtifact}
-      />
-    );
-  }
-
-  return <Upload onJobStarted={handleJobStarted} notice={notice} />;
+  return (
+    <>
+      <AppHeader navItems={navItems} activeItemId={state} />
+      {renderBody()}
+    </>
+  );
 }
 
 export default App;

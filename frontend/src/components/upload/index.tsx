@@ -178,44 +178,15 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="stitch-upload-layout stitch-enter" style={{ marginTop: '1rem' }}>
+        <div className="stitch-enter" style={{ marginTop: '1rem', display: 'grid', gap: '0.9rem' }}>
+          {/* ==================== SECTION 1: UPLOAD ACTION ==================== */}
           <SurfaceCard
             style={{
-              padding: '1.5rem 1.25rem 1.35rem',
+              padding: '1.5rem 1.25rem',
               background:
                 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(255,246,248,0.94) 100%)',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.55rem',
-                marginBottom: '1.1rem',
-              }}
-            >
-              {['PDF preferred', 'Images supported', `Max ${MAX_SIZE_MB} MB`].map(
-                (label) => (
-                  <span
-                    key={label}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      padding: '0.42rem 0.78rem',
-                      borderRadius: STITCH_RADIUS.pill,
-                      backgroundColor: STITCH_COLORS.surfaceWhite,
-                      border: `1px solid ${STITCH_COLORS.borderGhost}`,
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      color: STITCH_COLORS.textSecondary,
-                    }}
-                  >
-                    {label}
-                  </span>
-                ),
-              )}
-            </div>
-
             {selectedFile ? (
               <div className="stitch-stack-tight">
                 <div
@@ -234,18 +205,6 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                   <div style={{ minWidth: 0 }}>
                     <p
                       style={{
-                        margin: '0 0 0.22rem',
-                        fontSize: '0.76rem',
-                        fontWeight: 800,
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: STITCH_COLORS.textMuted,
-                      }}
-                    >
-                      Selected file
-                    </p>
-                    <p
-                      style={{
                         margin: 0,
                         fontSize: '1rem',
                         fontWeight: 700,
@@ -257,16 +216,15 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                     </p>
                     <p
                       style={{
-                        margin: '0.35rem 0 0',
-                        fontSize: '0.86rem',
-                        lineHeight: 1.55,
+                        margin: '0.25rem 0 0',
+                        fontSize: '0.84rem',
                         color: STITCH_COLORS.textSecondary,
                       }}
                     >
                       {isPdf
-                        ? `PDF · ${fileSizeLabel(selectedFile.size)} · clearest support coverage`
+                        ? `PDF · ${fileSizeLabel(selectedFile.size)} · clearest coverage`
                         : isImage
-                          ? `Image · ${fileSizeLabel(selectedFile.size)} · support may be partial`
+                          ? `Image · ${fileSizeLabel(selectedFile.size)} · partial support`
                           : fileSizeLabel(selectedFile.size)}
                     </p>
                   </div>
@@ -294,12 +252,12 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                   <div
                     role="alert"
                     style={{
-                      padding: '0.85rem 0.95rem',
+                      padding: '0.8rem 0.9rem',
                       borderRadius: STITCH_RADIUS.md,
                       backgroundColor: STITCH_COLORS.errorBg,
                       color: STITCH_COLORS.errorText,
-                      fontSize: '0.88rem',
-                      lineHeight: 1.55,
+                      fontSize: '0.86rem',
+                      lineHeight: 1.5,
                     }}
                   >
                     {error}
@@ -315,90 +273,41 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
               </div>
             ) : (
               <div className="stitch-stack-tight">
-                <div>
-                  <p
-                    style={{
-                      margin: '0 0 0.2rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: STITCH_COLORS.textMuted,
-                    }}
-                  >
-                    Start with the clearest file
-                  </p>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '1.15rem',
-                      fontWeight: 700,
-                      lineHeight: 1.45,
-                      color: STITCH_COLORS.textHeading,
-                    }}
-                  >
-                    Upload a PDF report first, or use a photo when that is all
-                    you have.
-                  </p>
-                </div>
-
-                <div
+                <p
                   style={{
-                    padding: '1.15rem',
-                    borderRadius: STITCH_RADIUS.lg,
-                    backgroundColor: STITCH_COLORS.surfaceWhite,
-                    border: `1px solid ${STITCH_COLORS.borderGhost}`,
+                    margin: 0,
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    lineHeight: 1.4,
+                    color: STITCH_COLORS.textHeading,
                   }}
                 >
+                  Upload a PDF for the clearest summary.
+                </p>
+                <p
+                  style={{
+                    margin: '0.2rem 0 0.6rem',
+                    fontSize: '0.86rem',
+                    color: STITCH_COLORS.textSecondary,
+                  }}
+                >
+                  Photos work too (beta) · Max {MAX_SIZE_MB} MB
+                </p>
+
+                <div style={{ display: 'grid', gap: '0.5rem' }}>
                   <PrimaryButton
                     type="button"
                     onClick={() => pdfInputRef.current?.click()}
                     disabled={uploading}
                   >
-                    Upload PDF report
+                    Upload PDF
                   </PrimaryButton>
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      margin: '1rem 0',
-                    }}
-                  >
-                    <div
-                      style={{
-                        flex: 1,
-                        height: 1,
-                        backgroundColor: STITCH_COLORS.borderGhost,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.06em',
-                        color: STITCH_COLORS.textMuted,
-                      }}
-                    >
-                      or
-                    </span>
-                    <div
-                      style={{
-                        flex: 1,
-                        height: 1,
-                        backgroundColor: STITCH_COLORS.borderGhost,
-                      }}
-                    />
-                  </div>
-
                   <SecondaryButton
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
                     disabled={uploading}
                   >
-                    Upload a photo instead (beta)
+                    Upload photo (beta)
                   </SecondaryButton>
                 </div>
               </div>
@@ -420,55 +329,28 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
             />
           </SurfaceCard>
 
+          {/* ==================== SECTION 2: GUIDANCE ==================== */}
           <SurfaceCard
             style={{
-              padding: '1.25rem 1.15rem',
+              padding: '1rem 1.15rem',
               backgroundColor: STITCH_COLORS.surfaceLow,
               boxShadow: 'none',
             }}
           >
             <p
               style={{
-                margin: '0 0 0.3rem',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: STITCH_COLORS.textMuted,
-              }}
-            >
-              Before you upload
-            </p>
-            <p
-              style={{
                 margin: 0,
-                fontSize: '0.96rem',
-                fontWeight: 700,
-                lineHeight: 1.5,
-                color: STITCH_COLORS.textHeading,
-              }}
-            >
-              Start with a PDF when possible. Use a photo only when you do not
-              have the original report.
-            </p>
-
-            <div className="stitch-divider" style={{ margin: '1rem 0' }} />
-
-            <ul className="stitch-helper-list">
-              <li>PDFs usually keep the clearest row structure.</li>
-              <li>Image uploads may return a partial preview only.</li>
-              <li>Unsupported rows stay visible instead of being hidden.</li>
-            </ul>
-
-            <p
-              style={{
-                margin: '1rem 0 0',
                 fontSize: '0.86rem',
-                lineHeight: 1.6,
+                lineHeight: 1.55,
                 color: STITCH_COLORS.textSecondary,
               }}
             >
-              Wellness-support only. No diagnosis or treatment advice.
+              <strong style={{ color: STITCH_COLORS.textHeading }}>
+                Before you upload:
+              </strong>{' '}
+              PDFs keep the clearest row structure · Image uploads may return a
+              partial preview · Unsupported rows stay visible ·
+              Wellness-support only, not a diagnosis.
             </p>
           </SurfaceCard>
         </div>
