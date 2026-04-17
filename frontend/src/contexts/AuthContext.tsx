@@ -14,6 +14,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
+    }).catch((err) => {
+      console.warn('Supabase auth error:', err);
+    }).finally(() => {
       setLoading(false);
     });
 

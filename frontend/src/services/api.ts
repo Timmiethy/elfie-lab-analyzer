@@ -15,7 +15,7 @@ import {
 } from '../fixtures/stitchPreviewData';
 import type { JobStatus, UploadResponse } from '../types';
 
-const BASE_URL = '/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const MOCK_DISABLED =
   typeof import.meta !== 'undefined' &&
