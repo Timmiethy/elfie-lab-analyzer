@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.auth import CurrentUserId
 from app.api.deps import get_session_factory
 from app.config import settings
 from app.db import TopLevelLifecycleStore
@@ -22,6 +23,7 @@ _PROCESSING_FAILED_DETAIL = "processing_failed"
 
 @router.post("")
 async def upload_lab_report(
+    user_id: CurrentUserId,
     file: UploadFile = File(...),
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> UploadResponse:
@@ -56,6 +58,7 @@ async def upload_lab_report(
             file_bytes=file_bytes,
             pipeline=pipeline,
             session_factory=session_factory,
+            user_id=user_id,
         )
     except (InterfaceError, OperationalError):
         observability_metrics.record_persistence_fallback()
@@ -72,16 +75,21 @@ async def _persisted_upload_response(
     file_bytes: bytes,
     pipeline: PipelineOrchestrator,
     session_factory: async_sessionmaker[AsyncSession],
+    user_id: UUID | None = None,
 ) -> UploadResponse:
     idempotency_key = f"upload:{classification['checksum']}"
 
     async with session_factory() as session:
         store = TopLevelLifecycleStore(session)
-        existing_job = await store.get_job_by_idempotency_key(idempotency_key)
+        existing_job = await store.get_job_by_idempotency_key(
+            idempotency_key, user_id=user_id
+        )
         if existing_job is None:
             get_by_checksum = getattr(store, "get_job_by_input_checksum", None)
             if get_by_checksum is not None:
-                existing_job = await get_by_checksum(classification["checksum"])
+                existing_job = await get_by_checksum(
+                    classification["checksum"], user_id=user_id
+                )
 
         if existing_job is not None:
             return UploadResponse(
@@ -116,6 +124,7 @@ async def _persisted_upload_response(
             if classification.get("image_density") is not None
             else None,
             storage_path=str(storage_path),
+            user_id=user_id,
         )
         job = await store.create_job(
             document_id=document.id,
@@ -123,6 +132,7 @@ async def _persisted_upload_response(
             input_checksum=classification["checksum"],
             lane_type=classification["lane_type"],
             status="pending",
+            user_id=user_id,
         )
         job_id = job.id
         document_id = document.id

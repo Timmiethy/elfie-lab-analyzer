@@ -5,6 +5,7 @@ from fastapi.responses import Response
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.auth import CurrentUserId
 from app.api.deps import get_session_factory
 from app.db import TopLevelLifecycleStore
 from app.services.clinician_pdf import ensure_clinician_pdf
@@ -17,6 +18,7 @@ router = APIRouter()
 @router.get("/{job_id}/patient")
 async def get_patient_artifact(
     job_id: UUID,
+    user_id: CurrentUserId,
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> dict:
     """Get the patient-facing lab understanding artifact."""
@@ -33,6 +35,7 @@ async def get_patient_artifact(
 @router.get("/{job_id}/clinician")
 async def get_clinician_artifact(
     job_id: UUID,
+    user_id: CurrentUserId,
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> dict:
     """Get the clinician-share artifact."""
@@ -47,7 +50,7 @@ async def get_clinician_artifact(
 
 
 @router.get("/{job_id}/clinician/pdf")
-async def get_clinician_pdf(job_id: UUID) -> Response:
+async def get_clinician_pdf(job_id: UUID, user_id: CurrentUserId) -> Response:
     """Get the rendered clinician-share PDF artifact."""
 
     job = get_job_run(str(job_id))

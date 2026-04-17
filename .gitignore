@@ -1,47 +1,76 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
-.venv/
-venv/
+# OS clutter
+.DS_Store
+Thumbs.db
 
-# Node
-node_modules/
-frontend/dist/
-
-# IDE
+# Editors
 .vscode/
 .idea/
 *.swp
 
-# Environment
+# Local environment and secrets
 .env
-/.venv/*
+.env.*
+!.env.example
+.venv/
+venv/
 
-# Local agent workflow scratch files
+# Python caches and build outputs
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+
+# Frontend and Node build outputs
+node_modules/
+frontend/dist/
+coverage/
+*.tsbuildinfo
+
+# Runtime logs
+*.log
+*.err
+*.out
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local databases and service state
+pgdata/
+*.sqlite
+*.sqlite3
+*.db
+
+# Agent scratch files
+.claude/
+.claw/
+.clawd-todos.json
+docs/orchestration/
+scripts/orchestration/
+pdfs_by_difficulty/
+
+# Workflow scratch files
 tasks/
 
-# Data artifacts (LOINC not committed per license)
+# Local data sources that are not part of the committed corpus
 data/loinc/*.csv
 data/loinc/*.zip
-artifacts/*.json
-artifacts/*.html
-artifacts/*.pdf
 
-# Postgres
-pgdata/
-
-# OS
-.DS_Store
-Thumbs.db
-
-#AI Agents
-.claw/*
+# Generated data and runtime artifacts, while keeping directory placeholders
 artifacts/*
-docs/orchestration/*    
-scripts/orchestration/*
-tasks/*
-.clawd-todos.json
-pdfs_by_difficulty/*
+!artifacts/.gitkeep
+backend/artifacts/
+backend/debug_loinc/
+
+# Common local report/test inputs that should not be pushed
+artifacts/**/*.png
+artifacts/**/*.pdf
+artifacts/**/*.html
+artifacts/uploads/
+artifacts/reports/

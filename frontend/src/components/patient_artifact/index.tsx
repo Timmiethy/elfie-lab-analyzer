@@ -171,24 +171,24 @@ export default function PatientArtifact({
       rightSlot={<PillBadge tone={supportMeta.tone}>{supportMeta.label}</PillBadge>}
       contentMaxWidth={1120}
     >
-      <div className="stitch-grid-two stitch-enter" style={{ marginTop: '0.55rem' }}>
+      <div className="stitch-grid-two stitch-enter" style={{ marginTop: '0.75rem' }}>
         <div className="stitch-flow">
           <SurfaceCard
             style={{
-              padding: '1rem',
+              padding: '1.25rem',
               background:
                 `linear-gradient(180deg, ${severityMeta.bg} 0%, rgba(255,255,255,0.94) 100%)`,
             }}
           >
             <div className="stitch-summary-grid">
               <div style={{ minWidth: 0 }}>
-                <div className="stitch-segment-row" style={{ marginBottom: '0.7rem' }}>
+                <div className="stitch-segment-row" style={{ marginBottom: '0.85rem' }}>
                   <PillBadge tone={supportMeta.tone}>{supportMeta.label}</PillBadge>
                   <span
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      padding: '4px 10px',
+                      padding: '5px 12px',
                       borderRadius: STITCH_RADIUS.pill,
                       backgroundColor:
                         trustMeta.tone === 'trusted'
@@ -198,7 +198,7 @@ export default function PatientArtifact({
                         trustMeta.tone === 'trusted'
                           ? STITCH_COLORS.trustedText
                           : STITCH_COLORS.betaText,
-                      fontSize: '0.72rem',
+                      fontSize: '0.74rem',
                       fontWeight: 700,
                     }}
                   >
@@ -206,7 +206,7 @@ export default function PatientArtifact({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                   <div
                     aria-hidden="true"
                     style={{
@@ -228,7 +228,7 @@ export default function PatientArtifact({
                     <p
                       style={{
                         margin: 0,
-                        fontSize: '0.74rem',
+                        fontSize: '0.78rem',
                         fontWeight: 800,
                         letterSpacing: '0.08em',
                         textTransform: 'uppercase',
@@ -240,8 +240,8 @@ export default function PatientArtifact({
                     </p>
                     <p
                       style={{
-                        margin: '0.16rem 0 0',
-                        fontSize: '1.2rem',
+                        margin: '0.2rem 0 0',
+                        fontSize: '1.25rem',
                         fontWeight: 800,
                         lineHeight: 1.3,
                         color: STITCH_COLORS.textHeading,
@@ -252,8 +252,8 @@ export default function PatientArtifact({
                     {hasNextStep && (
                       <p
                         style={{
-                          margin: '0.32rem 0 0',
-                          fontSize: '0.9rem',
+                          margin: '0.4rem 0 0',
+                          fontSize: '0.94rem',
                           lineHeight: 1.55,
                           color: STITCH_COLORS.textSecondary,
                         }}
@@ -265,8 +265,8 @@ export default function PatientArtifact({
                     {artifact.nextstep_reason && (
                       <p
                         style={{
-                          margin: '0.2rem 0 0',
-                          fontSize: '0.82rem',
+                          margin: '0.25rem 0 0',
+                          fontSize: '0.88rem',
                           lineHeight: 1.55,
                           color: STITCH_COLORS.textSecondary,
                         }}
@@ -283,15 +283,15 @@ export default function PatientArtifact({
                   <div
                     key={item.label}
                     style={{
-                      padding: '0.8rem',
+                      padding: '0.9rem',
                       borderRadius: STITCH_RADIUS.md,
                       backgroundColor: 'rgba(255,255,255,0.74)',
                     }}
                   >
                     <p
                       style={{
-                        margin: '0 0 0.18rem',
-                        fontSize: '0.7rem',
+                        margin: '0 0 0.22rem',
+                        fontSize: '0.74rem',
                         fontWeight: 800,
                         letterSpacing: '0.08em',
                         textTransform: 'uppercase',
@@ -303,7 +303,7 @@ export default function PatientArtifact({
                     <p
                       style={{
                         margin: 0,
-                        fontSize: '0.94rem',
+                        fontSize: '1rem',
                         fontWeight: 700,
                         lineHeight: 1.4,
                         color: STITCH_COLORS.textHeading,
@@ -323,14 +323,14 @@ export default function PatientArtifact({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: '0.6rem',
-                marginBottom: '0.45rem',
+                gap: '0.7rem',
+                marginBottom: '0.6rem',
               }}
             >
               <h3
                 style={{
                   margin: 0,
-                  fontSize: '0.96rem',
+                  fontSize: '1.05rem',
                   fontWeight: 700,
                   color: STITCH_COLORS.textHeading,
                 }}
@@ -345,14 +345,14 @@ export default function PatientArtifact({
             </div>
 
             {hasFlagged ? (
-              <div className="stitch-flow" style={{ gap: '0.55rem' }}>
+              <div className="stitch-flow" style={{ gap: '0.65rem' }}>
                 {artifact.flagged_cards.map((card, index) => {
                   const isExpanded = expandedCard === index;
 
                   return (
                     <SurfaceCard
                       key={`${card.analyte_display}-${index}`}
-                      style={{ padding: '0.9rem' }}
+                      style={{ padding: '1.05rem' }}
                     >
                       <button
                         type="button"
@@ -371,7 +371,7 @@ export default function PatientArtifact({
                           style={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            gap: '0.8rem',
+                            gap: '0.85rem',
                             alignItems: 'flex-start',
                           }}
                         >
@@ -379,7 +379,7 @@ export default function PatientArtifact({
                             <p
                               style={{
                                 margin: 0,
-                                fontSize: '0.72rem',
+                                fontSize: '0.76rem',
                                 fontWeight: 800,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.07em',
@@ -390,16 +390,16 @@ export default function PatientArtifact({
                             </p>
                             <div
                               style={{
-                                marginTop: '0.2rem',
+                                marginTop: '0.25rem',
                                 display: 'flex',
                                 alignItems: 'baseline',
-                                gap: '0.3rem',
+                                gap: '0.35rem',
                                 flexWrap: 'wrap',
                               }}
                             >
                               <span
                                 style={{
-                                  fontSize: '1.55rem',
+                                  fontSize: '1.6rem',
                                   fontWeight: 800,
                                   letterSpacing: '-0.05em',
                                   color: STITCH_COLORS.pink,
@@ -410,7 +410,7 @@ export default function PatientArtifact({
                               </span>
                               <span
                                 style={{
-                                  fontSize: '0.86rem',
+                                  fontSize: '0.9rem',
                                   color: STITCH_COLORS.textSecondary,
                                   fontWeight: 600,
                                 }}
@@ -418,14 +418,14 @@ export default function PatientArtifact({
                                 {card.unit}
                               </span>
                             </div>
-                            <div style={{ marginTop: '0.45rem' }}>
+                            <div style={{ marginTop: '0.5rem' }}>
                               <SeverityChip severity={card.severity_chip} />
                             </div>
                             <p
                               style={{
-                                margin: '0.5rem 0 0',
-                                fontSize: '0.82rem',
-                                lineHeight: 1.5,
+                                margin: '0.55rem 0 0',
+                                fontSize: '0.88rem',
+                                lineHeight: 1.55,
                                 color: STITCH_COLORS.textSecondary,
                               }}
                             >
@@ -437,8 +437,8 @@ export default function PatientArtifact({
                             style={{
                               color: STITCH_COLORS.textMuted,
                               fontSize: '0.88rem',
-                              width: 40,
-                              height: 40,
+                              width: 44,
+                              height: 44,
                               borderRadius: '50%',
                               backgroundColor: STITCH_COLORS.surfaceLow,
                               display: 'inline-flex',
@@ -455,9 +455,9 @@ export default function PatientArtifact({
                       {isExpanded && (
                         <p
                           style={{
-                            margin: '0.65rem 0 0',
-                            fontSize: '0.76rem',
-                            lineHeight: 1.55,
+                            margin: '0.75rem 0 0',
+                            fontSize: '0.82rem',
+                            lineHeight: 1.6,
                             color: STITCH_COLORS.textSecondary,
                           }}
                         >
@@ -470,12 +470,12 @@ export default function PatientArtifact({
                 })}
               </div>
             ) : (
-              <SurfaceCard style={{ padding: '0.85rem' }}>
+              <SurfaceCard style={{ padding: '1rem' }}>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: '0.84rem',
-                    lineHeight: 1.55,
+                    fontSize: '0.9rem',
+                    lineHeight: 1.6,
                     color: STITCH_COLORS.textSecondary,
                   }}
                 >
@@ -489,7 +489,7 @@ export default function PatientArtifact({
             <section>
               <SurfaceCard
                 style={{
-                  padding: '0.9rem',
+                  padding: '1.05rem',
                   backgroundColor: STITCH_COLORS.surfaceLow,
                   boxShadow: 'none',
                 }}
@@ -502,7 +502,7 @@ export default function PatientArtifact({
                     border: 'none',
                     background: 'none',
                     padding: 0,
-                    minHeight: 44,
+                    minHeight: 48,
                     cursor: 'pointer',
                     textAlign: 'left',
                   }}
@@ -513,14 +513,14 @@ export default function PatientArtifact({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      gap: '0.6rem',
+                      gap: '0.7rem',
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
                       <h3
                         style={{
                           margin: 0,
-                          fontSize: '0.96rem',
+                          fontSize: '1.02rem',
                           fontWeight: 700,
                           color: STITCH_COLORS.textHeading,
                         }}
@@ -529,9 +529,9 @@ export default function PatientArtifact({
                       </h3>
                       <p
                         style={{
-                          margin: '0.18rem 0 0',
-                          fontSize: '0.82rem',
-                          lineHeight: 1.5,
+                          margin: '0.22rem 0 0',
+                          fontSize: '0.88rem',
+                          lineHeight: 1.55,
                           color: STITCH_COLORS.textSecondary,
                         }}
                       >
@@ -544,8 +544,8 @@ export default function PatientArtifact({
                       style={{
                         color: STITCH_COLORS.textMuted,
                         fontSize: '0.88rem',
-                        width: 36,
-                        height: 36,
+                        width: 40,
+                        height: 40,
                         borderRadius: '50%',
                         backgroundColor: STITCH_COLORS.surfaceWhite,
                         display: 'inline-flex',
@@ -560,7 +560,7 @@ export default function PatientArtifact({
                 </button>
 
                 {!reviewedCollapsed && (
-                  <div className="stitch-compact-list" style={{ marginTop: '0.85rem' }}>
+                  <div className="stitch-compact-list" style={{ marginTop: '1rem' }}>
                     {artifact.reviewed_not_flagged.map((item, index) => {
                       const parsed = splitReviewedItem(item);
                       return (
@@ -569,9 +569,9 @@ export default function PatientArtifact({
                           style={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            gap: '0.75rem',
+                            gap: '0.85rem',
                             alignItems: 'center',
-                            padding: '0.8rem',
+                            padding: '0.9rem',
                             borderRadius: STITCH_RADIUS.md,
                             backgroundColor: STITCH_COLORS.surfaceWhite,
                           }}
@@ -580,7 +580,7 @@ export default function PatientArtifact({
                             <p
                               style={{
                                 margin: 0,
-                                fontSize: '0.68rem',
+                                fontSize: '0.72rem',
                                 fontWeight: 800,
                                 textTransform: 'uppercase',
                                 color: STITCH_COLORS.textMuted,
@@ -591,11 +591,11 @@ export default function PatientArtifact({
                             </p>
                             <p
                               style={{
-                                margin: '0.22rem 0 0',
-                                fontSize: '0.88rem',
+                                margin: '0.25rem 0 0',
+                                fontSize: '0.92rem',
                                 fontWeight: 700,
                                 color: STITCH_COLORS.textPrimary,
-                                lineHeight: 1.4,
+                                lineHeight: 1.45,
                               }}
                             >
                               {parsed.value}
@@ -604,15 +604,15 @@ export default function PatientArtifact({
                           <span
                             aria-hidden="true"
                             style={{
-                              width: 24,
-                              height: 24,
+                              width: 28,
+                              height: 28,
                               borderRadius: '50%',
                               backgroundColor: '#DCFCE7',
                               color: STITCH_COLORS.trustedText,
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '0.75rem',
+                              fontSize: '0.78rem',
                               fontWeight: 800,
                               flexShrink: 0,
                             }}
@@ -631,7 +631,7 @@ export default function PatientArtifact({
           <section>
             <SurfaceCard
               style={{
-                padding: '0.9rem',
+                padding: '1.05rem',
                 border: `2px dashed rgba(118, 118, 126, 0.22)`,
                 boxShadow: 'none',
               }}
@@ -641,15 +641,15 @@ export default function PatientArtifact({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '0.6rem',
-                  marginBottom: '0.55rem',
+                  gap: '0.7rem',
+                  marginBottom: '0.65rem',
                 }}
               >
                 <div style={{ minWidth: 0 }}>
                   <h3
                     style={{
                       margin: 0,
-                      fontSize: '0.96rem',
+                      fontSize: '1.02rem',
                       fontWeight: 700,
                       color: STITCH_COLORS.textHeading,
                     }}
@@ -658,9 +658,9 @@ export default function PatientArtifact({
                   </h3>
                   <p
                     style={{
-                      margin: '0.18rem 0 0',
-                      fontSize: '0.82rem',
-                      lineHeight: 1.5,
+                      margin: '0.22rem 0 0',
+                      fontSize: '0.88rem',
+                      lineHeight: 1.55,
                       color: STITCH_COLORS.textSecondary,
                     }}
                   >
@@ -679,18 +679,18 @@ export default function PatientArtifact({
                 <ul
                   style={{
                     margin: 0,
-                    paddingLeft: '1rem',
+                    paddingLeft: '1.15rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.45rem',
+                    gap: '0.55rem',
                   }}
                 >
                   {visibleNotAssessed.map((item, index) => (
                     <li
                       key={`${item.raw_label}-${index}`}
                       style={{
-                        fontSize: '0.84rem',
-                        lineHeight: 1.55,
+                        fontSize: '0.9rem',
+                        lineHeight: 1.6,
                         color: STITCH_COLORS.textSecondary,
                       }}
                     >
@@ -705,8 +705,8 @@ export default function PatientArtifact({
                 <p
                   style={{
                     margin: 0,
-                    fontSize: '0.82rem',
-                    lineHeight: 1.55,
+                    fontSize: '0.88rem',
+                    lineHeight: 1.6,
                     color: STITCH_COLORS.textSecondary,
                   }}
                 >
@@ -719,14 +719,15 @@ export default function PatientArtifact({
                   type="button"
                   onClick={() => setShowAllNotAssessed((prev) => !prev)}
                   style={{
-                    marginTop: '0.75rem',
+                    marginTop: '0.85rem',
                     border: 'none',
                     background: 'none',
                     padding: 0,
                     color: STITCH_COLORS.blue,
-                    fontSize: '0.82rem',
+                    fontSize: '0.88rem',
                     fontWeight: 700,
                     cursor: 'pointer',
+                    minHeight: 44,
                   }}
                 >
                   {showAllNotAssessed
@@ -743,15 +744,15 @@ export default function PatientArtifact({
 
           <SurfaceCard
             style={{
-              padding: '0.95rem',
+              padding: '1.15rem',
               backgroundColor: STITCH_COLORS.navy,
               color: STITCH_COLORS.surfaceWhite,
             }}
           >
             <p
               style={{
-                margin: '0 0 0.45rem',
-                fontSize: '0.72rem',
+                margin: '0 0 0.55rem',
+                fontSize: '0.76rem',
                 fontWeight: 800,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
@@ -762,12 +763,12 @@ export default function PatientArtifact({
             </p>
 
             {(onViewClinicianShare || onViewGuidedAsk) && (
-              <div className="stitch-flow" style={{ gap: '0.5rem' }}>
+              <div className="stitch-flow" style={{ gap: '0.6rem' }}>
                 {onViewClinicianShare && (
                   <SecondaryButton
                     onClick={onViewClinicianShare}
                     style={{
-                      minHeight: 46,
+                      minHeight: 48,
                       backgroundColor: 'rgba(255,255,255,0.08)',
                       borderColor: 'rgba(255,255,255,0.12)',
                       color: STITCH_COLORS.surfaceWhite,
@@ -780,7 +781,7 @@ export default function PatientArtifact({
                   <SecondaryButton
                     onClick={onViewGuidedAsk}
                     style={{
-                      minHeight: 46,
+                      minHeight: 48,
                       backgroundColor: 'rgba(255,255,255,0.08)',
                       borderColor: 'rgba(255,255,255,0.12)',
                       color: STITCH_COLORS.surfaceWhite,
@@ -794,20 +795,20 @@ export default function PatientArtifact({
 
             <p
               style={{
-                margin: onViewClinicianShare || onViewGuidedAsk ? '0.8rem 0 0' : 0,
-                fontSize: '0.8rem',
-                lineHeight: 1.55,
+                margin: onViewClinicianShare || onViewGuidedAsk ? '1rem 0 0' : 0,
+                fontSize: '0.86rem',
+                lineHeight: 1.6,
                 color: 'rgba(255,255,255,0.76)',
               }}
             >
               {supportMeta.body} {trustMeta.body} Informational only.
             </p>
 
-            <div style={{ marginTop: '0.95rem' }}>
+            <div style={{ marginTop: '1.1rem' }}>
               <p
                 style={{
-                  margin: '0 0 0.45rem',
-                  fontSize: '0.72rem',
+                  margin: '0 0 0.55rem',
+                  fontSize: '0.76rem',
                   fontWeight: 800,
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
@@ -816,7 +817,7 @@ export default function PatientArtifact({
               >
                 Share results
               </p>
-              <div className="stitch-flow" style={{ gap: '0.5rem' }}>
+              <div className="stitch-flow" style={{ gap: '0.6rem' }}>
                 <PrimaryButton onClick={() => void handleShareSummary()}>
                   Share to care team
                 </PrimaryButton>
@@ -836,9 +837,9 @@ export default function PatientArtifact({
             {onNavigateBack && (
               <p
                 style={{
-                  margin: '0.95rem 0 0',
-                  fontSize: '0.82rem',
-                  lineHeight: 1.55,
+                  margin: '1.1rem 0 0',
+                  fontSize: '0.88rem',
+                  lineHeight: 1.6,
                   color: 'rgba(255,255,255,0.76)',
                 }}
               >
@@ -851,7 +852,7 @@ export default function PatientArtifact({
                     background: 'none',
                     padding: 0,
                     color: STITCH_COLORS.surfaceWhite,
-                    fontSize: '0.82rem',
+                    fontSize: '0.88rem',
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}
@@ -866,10 +867,10 @@ export default function PatientArtifact({
 
       <p
         style={{
-          margin: '0.8rem 0 0',
+          margin: '1rem 0 0',
           textAlign: 'center',
-          fontSize: '0.74rem',
-          lineHeight: 1.45,
+          fontSize: '0.8rem',
+          lineHeight: 1.5,
           color: STITCH_COLORS.textMuted,
         }}
       >

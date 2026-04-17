@@ -131,11 +131,11 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            padding: '6px 10px',
+            padding: '7px 12px',
             borderRadius: STITCH_RADIUS.pill,
             backgroundColor: 'rgba(255,255,255,0.12)',
             border: '1px solid rgba(255,255,255,0.10)',
-            fontSize: '0.72rem',
+            fontSize: '0.74rem',
             fontWeight: 700,
           }}
         >
@@ -158,8 +158,8 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
         <div
           role="status"
           style={{
-            marginTop: '0.8rem',
-            padding: '0.95rem 1rem',
+            marginTop: '1rem',
+            padding: '1rem 1.1rem',
             borderRadius: STITCH_RADIUS.md,
             backgroundColor:
               notice.tone === 'error'
@@ -169,8 +169,8 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
               notice.tone === 'error'
                 ? STITCH_COLORS.errorText
                 : STITCH_COLORS.trustedText,
-            fontSize: '0.88rem',
-            lineHeight: 1.5,
+            fontSize: '0.92rem',
+            lineHeight: 1.55,
           }}
         >
           {notice.text}
@@ -178,10 +178,10 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="stitch-upload-layout stitch-enter" style={{ marginTop: '0.9rem' }}>
+        <div className="stitch-upload-layout stitch-enter" style={{ marginTop: '1rem' }}>
           <SurfaceCard
             style={{
-              padding: '1.25rem 1rem 1.1rem',
+              padding: '1.5rem 1.25rem 1.35rem',
               background:
                 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(255,246,248,0.94) 100%)',
             }}
@@ -190,8 +190,8 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: '0.5rem',
-                marginBottom: '0.9rem',
+                gap: '0.55rem',
+                marginBottom: '1.1rem',
               }}
             >
               {['PDF preferred', 'Images supported', `Max ${MAX_SIZE_MB} MB`].map(
@@ -201,11 +201,11 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      padding: '0.38rem 0.72rem',
+                      padding: '0.42rem 0.78rem',
                       borderRadius: STITCH_RADIUS.pill,
                       backgroundColor: STITCH_COLORS.surfaceWhite,
                       border: `1px solid ${STITCH_COLORS.borderGhost}`,
-                      fontSize: '0.74rem',
+                      fontSize: '0.78rem',
                       fontWeight: 700,
                       color: STITCH_COLORS.textSecondary,
                     }}
@@ -220,22 +220,22 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
               <div className="stitch-stack-tight">
                 <div
                   style={{
-                    padding: '0.9rem 0.95rem',
+                    padding: '1rem 1.05rem',
                     borderRadius: STITCH_RADIUS.lg,
                     backgroundColor: isPdf
                       ? STITCH_COLORS.trustedBg
                       : STITCH_COLORS.surfaceLow,
                     display: 'flex',
                     justifyContent: 'space-between',
-                    gap: '0.75rem',
+                    gap: '0.85rem',
                     alignItems: 'flex-start',
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
                     <p
                       style={{
-                        margin: '0 0 0.18rem',
-                        fontSize: '0.72rem',
+                        margin: '0 0 0.22rem',
+                        fontSize: '0.76rem',
                         fontWeight: 800,
                         letterSpacing: '0.08em',
                         textTransform: 'uppercase',
@@ -247,7 +247,7 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                     <p
                       style={{
                         margin: 0,
-                        fontSize: '0.94rem',
+                        fontSize: '1rem',
                         fontWeight: 700,
                         color: STITCH_COLORS.textHeading,
                         wordBreak: 'break-word',
@@ -257,9 +257,9 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                     </p>
                     <p
                       style={{
-                        margin: '0.28rem 0 0',
-                        fontSize: '0.8rem',
-                        lineHeight: 1.5,
+                        margin: '0.35rem 0 0',
+                        fontSize: '0.86rem',
+                        lineHeight: 1.55,
                         color: STITCH_COLORS.textSecondary,
                       }}
                     >
@@ -277,11 +277,12 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                       border: 'none',
                       background: 'none',
                       color: STITCH_COLORS.textSecondary,
-                      fontSize: '0.82rem',
+                      fontSize: '0.88rem',
                       fontWeight: 700,
                       cursor: 'pointer',
-                      padding: 0,
+                      padding: '0.25rem 0',
                       flexShrink: 0,
+                      minHeight: 44,
                     }}
                     aria-label="Remove selected file"
                   >
@@ -293,12 +294,12 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                   <div
                     role="alert"
                     style={{
-                      padding: '0.75rem 0.85rem',
+                      padding: '0.85rem 0.95rem',
                       borderRadius: STITCH_RADIUS.md,
                       backgroundColor: STITCH_COLORS.errorBg,
                       color: STITCH_COLORS.errorText,
-                      fontSize: '0.84rem',
-                      lineHeight: 1.5,
+                      fontSize: '0.88rem',
+                      lineHeight: 1.55,
                     }}
                   >
                     {error}
@@ -317,8 +318,8 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                 <div>
                   <p
                     style={{
-                      margin: '0 0 0.16rem',
-                      fontSize: '0.76rem',
+                      margin: '0 0 0.2rem',
+                      fontSize: '0.8rem',
                       fontWeight: 800,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
@@ -330,9 +331,9 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                   <p
                     style={{
                       margin: 0,
-                      fontSize: '1.1rem',
+                      fontSize: '1.15rem',
                       fontWeight: 700,
-                      lineHeight: 1.4,
+                      lineHeight: 1.45,
                       color: STITCH_COLORS.textHeading,
                     }}
                   >
@@ -343,7 +344,7 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
 
                 <div
                   style={{
-                    padding: '1rem',
+                    padding: '1.15rem',
                     borderRadius: STITCH_RADIUS.lg,
                     backgroundColor: STITCH_COLORS.surfaceWhite,
                     border: `1px solid ${STITCH_COLORS.borderGhost}`,
@@ -361,8 +362,8 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.5rem',
-                      margin: '0.8rem 0',
+                      gap: '0.6rem',
+                      margin: '1rem 0',
                     }}
                   >
                     <div
@@ -374,7 +375,7 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
                     />
                     <span
                       style={{
-                        fontSize: '0.72rem',
+                        fontSize: '0.76rem',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.06em',
@@ -421,15 +422,15 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
 
           <SurfaceCard
             style={{
-              padding: '1rem',
+              padding: '1.25rem 1.15rem',
               backgroundColor: STITCH_COLORS.surfaceLow,
               boxShadow: 'none',
             }}
           >
             <p
               style={{
-                margin: '0 0 0.22rem',
-                fontSize: '0.74rem',
+                margin: '0 0 0.3rem',
+                fontSize: '0.78rem',
                 fontWeight: 800,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -441,9 +442,9 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
             <p
               style={{
                 margin: 0,
-                fontSize: '0.92rem',
+                fontSize: '0.96rem',
                 fontWeight: 700,
-                lineHeight: 1.45,
+                lineHeight: 1.5,
                 color: STITCH_COLORS.textHeading,
               }}
             >
@@ -451,7 +452,7 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
               have the original report.
             </p>
 
-            <div className="stitch-divider" style={{ margin: '0.85rem 0' }} />
+            <div className="stitch-divider" style={{ margin: '1rem 0' }} />
 
             <ul className="stitch-helper-list">
               <li>PDFs usually keep the clearest row structure.</li>
@@ -461,9 +462,9 @@ export default function Upload({ onJobStarted, notice = null }: Props) {
 
             <p
               style={{
-                margin: '0.85rem 0 0',
-                fontSize: '0.82rem',
-                lineHeight: 1.55,
+                margin: '1rem 0 0',
+                fontSize: '0.86rem',
+                lineHeight: 1.6,
                 color: STITCH_COLORS.textSecondary,
               }}
             >
