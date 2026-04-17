@@ -133,6 +133,7 @@ class TopLevelLifecycleStore:
         image_density: str | None = None,
         language_id: str | None = None,
         region: str | None = None,
+        user_id: UUID | None = None,
     ) -> Document:
         document = Document(
             checksum=checksum,
@@ -150,6 +151,7 @@ class TopLevelLifecycleStore:
             language_id=language_id,
             region=region,
             storage_path=storage_path,
+            user_id=user_id,
         )
         return await _add_and_flush(self.session, document)
 
@@ -165,6 +167,7 @@ class TopLevelLifecycleStore:
         dead_letter: bool = False,
         operator_note: str | None = None,
         region: str | None = None,
+        user_id: UUID | None = None,
     ) -> Job:
         job = Job(
             document_id=_coerce_uuid(document_id),
@@ -176,25 +179,36 @@ class TopLevelLifecycleStore:
             dead_letter=dead_letter,
             operator_note=operator_note,
             region=region,
+            user_id=user_id,
         )
         return await _add_and_flush(self.session, job)
 
-    async def get_job_by_idempotency_key(self, idempotency_key: str) -> Job | None:
-        result = await self.session.execute(
+    async def get_job_by_idempotency_key(
+        self, idempotency_key: str, *, user_id: UUID | None = None
+    ) -> Job | None:
+        stmt = (
             select(Job)
             .where(Job.idempotency_key == idempotency_key)
             .order_by(Job.created_at.desc(), Job.id.desc())
             .limit(1)
         )
+        if user_id is not None:
+            stmt = stmt.where(Job.user_id == user_id)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_job_by_input_checksum(self, input_checksum: str) -> Job | None:
-        result = await self.session.execute(
+    async def get_job_by_input_checksum(
+        self, input_checksum: str, *, user_id: UUID | None = None
+    ) -> Job | None:
+        stmt = (
             select(Job)
             .where(Job.input_checksum == input_checksum)
             .order_by(Job.created_at.desc(), Job.id.desc())
             .limit(1)
         )
+        if user_id is not None:
+            stmt = stmt.where(Job.user_id == user_id)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
     async def update_job_status(
@@ -615,8 +629,13 @@ class TopLevelLifecycleStore:
             benchmark_run=persisted_benchmark,
         )
 
-    async def get_job(self, job_id: UUID | str) -> Job | None:
-        return await self.session.get(Job, _coerce_uuid(job_id))
+    async def get_job(
+        self, job_id: UUID | str, *, user_id: UUID | None = None
+    ) -> Job | None:
+        job = await self.session.get(Job, _coerce_uuid(job_id))
+        if job is not None and user_id is not None and job.user_id != user_id:
+            return None
+        return job
 
     async def get_document(self, document_id: UUID | str) -> Document | None:
         return await self.session.get(Document, _coerce_uuid(document_id))
@@ -638,7 +657,9 @@ class TopLevelLifecycleStore:
         )
         return int(result.scalar_one())
 
-    async def list_recent_jobs(self, limit: int = 20) -> list[dict[str, Any]]:
+    async def list_recent_jobs(
+        self, limit: int = 20, *, user_id: UUID | None = None
+    ) -> list[dict[str, Any]]:
         patient_artifact_exists = (
             select(PatientArtifact.id).where(PatientArtifact.job_id == Job.id).exists()
         )
@@ -646,7 +667,7 @@ class TopLevelLifecycleStore:
             select(ClinicianArtifact.id).where(ClinicianArtifact.job_id == Job.id).exists()
         )
 
-        result = await self.session.execute(
+        stmt = (
             select(
                 Job,
                 patient_artifact_exists.label("has_patient_artifact"),
@@ -655,6 +676,10 @@ class TopLevelLifecycleStore:
             .order_by(Job.updated_at.desc(), Job.created_at.desc(), Job.id.desc())
             .limit(limit)
         )
+        if user_id is not None:
+            stmt = stmt.where(Job.user_id == user_id)
+
+        result = await self.session.execute(stmt)
 
         jobs: list[dict[str, Any]] = []
         for job, has_patient_artifact, has_clinician_artifact in result.all():

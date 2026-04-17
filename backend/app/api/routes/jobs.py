@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.auth import CurrentUserId
 from app.api.deps import get_db, get_session_factory
 from app.config import settings
 from app.db import TopLevelLifecycleStore
@@ -20,6 +21,7 @@ _JOB_DEAD_LETTER_DETAIL = "job_dead_lettered"
 
 @router.get("/ops/recent")
 async def get_recent_jobs(
+    user_id: CurrentUserId,
     limit: int = 20,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -28,7 +30,7 @@ async def get_recent_jobs(
     limit = max(1, min(limit, 100))
     try:
         store = TopLevelLifecycleStore(db)
-        return {"jobs": await store.list_recent_jobs(limit)}
+        return {"jobs": await store.list_recent_jobs(limit, user_id=user_id)}
     except (InterfaceError, OperationalError):
         raise HTTPException(status_code=503, detail="database_unavailable") from None
 
@@ -36,6 +38,7 @@ async def get_recent_jobs(
 @router.get("/{job_id}/audit")
 async def get_job_audit(
     job_id: UUID,
+    user_id: CurrentUserId,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Return operator audit details for a persisted job."""
@@ -57,7 +60,7 @@ async def get_job_audit(
 
 
 @router.get("/{job_id}/proof-pack")
-async def get_proof_pack(job_id: UUID) -> dict:
+async def get_proof_pack(job_id: UUID, user_id: CurrentUserId) -> dict:
     proof_pack = read_proof_pack(job_id)
     if proof_pack is None:
         raise HTTPException(status_code=404, detail="proof_pack_not_found")
@@ -67,6 +70,7 @@ async def get_proof_pack(job_id: UUID) -> dict:
 @router.get("/{job_id}/retry-preview")
 async def get_retry_preview(
     job_id: UUID,
+    user_id: CurrentUserId,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Explain whether a persisted job can be retried right now."""
@@ -87,6 +91,7 @@ async def get_retry_preview(
 @router.get("/{job_id}")
 async def get_job(
     job_id: UUID,
+    user_id: CurrentUserId,
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> dict:
     """Get job details including current processing status."""
@@ -104,6 +109,7 @@ async def get_job(
 @router.post("/{job_id}/retry")
 async def retry_job(
     job_id: UUID,
+    user_id: CurrentUserId,
     db: AsyncSession = Depends(get_db),
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> dict:
@@ -185,6 +191,7 @@ async def retry_job(
 @router.get("/{job_id}/status")
 async def get_job_status(
     job_id: UUID,
+    user_id: CurrentUserId,
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> dict:
     """Get lightweight job status for polling."""

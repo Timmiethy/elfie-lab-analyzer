@@ -87,6 +87,9 @@ class Settings(BaseSettings):
     nextstep_policy_version: str = "0.1.0"
     critical_value_source_signed_off: bool = False
 
+    # Supabase Auth
+    supabase_jwt_secret: str = ""
+
     # Operational runtime
     max_job_retries: int = 2
 

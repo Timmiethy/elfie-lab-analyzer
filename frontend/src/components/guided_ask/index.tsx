@@ -134,16 +134,16 @@ export default function GuidedAsk({
     >
       <SurfaceCard
         style={{
-          marginTop: '0.65rem',
-          padding: '0.9rem',
+          marginTop: '0.75rem',
+          padding: '1.05rem',
           backgroundColor: STITCH_COLORS.surfaceLow,
           boxShadow: 'none',
         }}
       >
         <p
           style={{
-            margin: '0 0 0.16rem',
-            fontSize: '0.74rem',
+            margin: '0 0 0.2rem',
+            fontSize: '0.78rem',
             fontWeight: 800,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
@@ -155,8 +155,8 @@ export default function GuidedAsk({
         <p
           style={{
             margin: 0,
-            fontSize: '0.88rem',
-            lineHeight: 1.55,
+            fontSize: '0.94rem',
+            lineHeight: 1.6,
             color: STITCH_COLORS.textSecondary,
           }}
         >
@@ -164,12 +164,12 @@ export default function GuidedAsk({
         </p>
       </SurfaceCard>
 
-      <div className="stitch-faq-layout stitch-enter" style={{ marginTop: '0.8rem' }}>
-        <SurfaceCard style={{ padding: '0.9rem' }}>
+      <div className="stitch-faq-layout stitch-enter" style={{ marginTop: '1rem' }}>
+        <SurfaceCard style={{ padding: '1.05rem' }}>
           <p
             style={{
-              margin: '0 0 0.45rem',
-              fontSize: '0.72rem',
+              margin: '0 0 0.55rem',
+              fontSize: '0.76rem',
               fontWeight: 800,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
@@ -187,24 +187,25 @@ export default function GuidedAsk({
                   type="button"
                   onClick={() => setSelectedId(item.id)}
                   style={{
-                    border: `1px solid ${
+                    border: `1.5px solid ${
                       isSelected
-                        ? 'rgba(255, 21, 112, 0.18)'
+                        ? 'rgba(255, 21, 112, 0.22)'
                         : STITCH_COLORS.borderGhost
                     }`,
                     borderRadius: STITCH_RADIUS.md,
-                    padding: '0.78rem 0.85rem',
+                    padding: '0.88rem 0.95rem',
                     backgroundColor: isSelected
                       ? 'rgba(255, 21, 112, 0.08)'
                       : STITCH_COLORS.surfaceWhite,
                     color: isSelected
                       ? STITCH_COLORS.pink
                       : STITCH_COLORS.textHeading,
-                    fontSize: '0.84rem',
+                    fontSize: '0.9rem',
                     fontWeight: 700,
-                    lineHeight: 1.4,
+                    lineHeight: 1.45,
                     textAlign: 'left',
                     cursor: 'pointer',
+                    minHeight: 48,
                   }}
                 >
                   {resolveCopy(item.questionKey)}
@@ -214,26 +215,26 @@ export default function GuidedAsk({
           </div>
         </SurfaceCard>
 
-        <SurfaceCard style={{ padding: '1rem' }}>
+        <SurfaceCard style={{ padding: '1.25rem' }}>
           <div
             style={{
               display: 'flex',
-              gap: '0.7rem',
+              gap: '0.8rem',
               alignItems: 'flex-start',
             }}
           >
             <div
               aria-hidden="true"
               style={{
-                width: 34,
-                height: 34,
+                width: 38,
+                height: 38,
                 borderRadius: '50%',
                 backgroundColor: STITCH_COLORS.blueSoft,
                 color: STITCH_COLORS.navy,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '0.92rem',
+                fontSize: '0.96rem',
                 flexShrink: 0,
               }}
             >
@@ -242,8 +243,8 @@ export default function GuidedAsk({
             <div style={{ minWidth: 0 }}>
               <p
                 style={{
-                  margin: '0 0 0.25rem',
-                  fontSize: '0.72rem',
+                  margin: '0 0 0.3rem',
+                  fontSize: '0.76rem',
                   fontWeight: 800,
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
@@ -255,8 +256,8 @@ export default function GuidedAsk({
               <p
                 style={{
                   margin: 0,
-                  fontSize: '0.9rem',
-                  lineHeight: 1.65,
+                  fontSize: '0.96rem',
+                  lineHeight: 1.7,
                   color: STITCH_COLORS.textSecondary,
                 }}
               >
@@ -265,12 +266,12 @@ export default function GuidedAsk({
             </div>
           </div>
 
-          <div className="stitch-divider" style={{ margin: '0.9rem 0' }} />
+          <div className="stitch-divider" style={{ margin: '1rem 0' }} />
 
           <p
             style={{
-              margin: '0 0 0.12rem',
-              fontSize: '0.7rem',
+              margin: '0 0 0.16rem',
+              fontSize: '0.74rem',
               fontWeight: 800,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -282,8 +283,8 @@ export default function GuidedAsk({
           <p
             style={{
               margin: 0,
-              fontSize: '0.8rem',
-              lineHeight: 1.5,
+              fontSize: '0.86rem',
+              lineHeight: 1.55,
               color: STITCH_COLORS.textSecondary,
             }}
           >
@@ -293,7 +294,7 @@ export default function GuidedAsk({
       </div>
 
       {onNavigateBack && (
-        <SecondaryButton onClick={onNavigateBack} style={{ marginTop: '0.85rem' }}>
+        <SecondaryButton onClick={onNavigateBack} style={{ marginTop: '1rem' }}>
           {resolveCopy('guided_ask.back')}
         </SecondaryButton>
       )}

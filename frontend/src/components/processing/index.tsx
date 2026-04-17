@@ -214,10 +214,12 @@ export default function Processing({
           role="alert"
           style={{
             ...pageCardStyle({
-              marginTop: '1rem',
-              padding: '1rem',
+              marginTop: '1.1rem',
+              padding: '1.15rem',
               backgroundColor: STITCH_COLORS.errorBg,
               color: STITCH_COLORS.errorText,
+              fontSize: '0.94rem',
+              lineHeight: 1.55,
             }),
           }}
         >
@@ -239,10 +241,10 @@ export default function Processing({
       }
       contentMaxWidth={980}
     >
-      <div className="stitch-processing-layout stitch-enter" style={{ marginTop: '0.9rem' }}>
+      <div className="stitch-processing-layout stitch-enter" style={{ marginTop: '1rem' }}>
         <SurfaceCard
           style={{
-            padding: '1.35rem 1rem 1.2rem',
+            padding: '1.75rem 1.25rem 1.5rem',
             background:
               'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(255,246,248,0.94) 100%)',
           }}
@@ -252,7 +254,7 @@ export default function Processing({
               position: 'relative',
               width: 220,
               height: 220,
-              margin: '0 auto 1.15rem',
+              margin: '0 auto 1.5rem',
             }}
           >
             <svg
@@ -306,7 +308,7 @@ export default function Processing({
                   justifyContent: 'center',
                   fontSize: '1.15rem',
                   fontWeight: 700,
-                  marginBottom: '0.45rem',
+                  marginBottom: '0.5rem',
                 }}
               >
                 ▣
@@ -329,12 +331,12 @@ export default function Processing({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              padding: '0.45rem 0.8rem',
+              padding: '0.5rem 0.9rem',
               borderRadius: STITCH_RADIUS.pill,
               backgroundColor: STITCH_COLORS.surfaceWhite,
               border: `1px solid ${STITCH_COLORS.borderGhost}`,
-              marginBottom: '1rem',
-              fontSize: '0.8rem',
+              marginBottom: '1.25rem',
+              fontSize: '0.86rem',
               fontWeight: 700,
               color: STITCH_COLORS.textHeading,
             }}
@@ -363,17 +365,18 @@ export default function Processing({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.9rem',
+                    gap: '1rem',
                     color: isActive
                       ? STITCH_COLORS.textHeading
                       : STITCH_COLORS.textSecondary,
                     fontWeight: isActive ? 700 : 600,
+                    fontSize: '0.94rem',
                   }}
                 >
                   <div
                     style={{
-                      width: 34,
-                      height: 34,
+                      width: 38,
+                      height: 38,
                       borderRadius: STITCH_RADIUS.pill,
                       backgroundColor: isDone
                         ? '#6BFE9C'
@@ -419,15 +422,15 @@ export default function Processing({
 
         <SurfaceCard
           style={{
-            padding: '1rem',
+            padding: '1.25rem 1.15rem',
             backgroundColor: STITCH_COLORS.surfaceLow,
             boxShadow: 'none',
           }}
         >
           <p
             style={{
-              margin: '0 0 0.24rem',
-              fontSize: '0.74rem',
+              margin: '0 0 0.3rem',
+              fontSize: '0.78rem',
               fontWeight: 800,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
@@ -439,9 +442,9 @@ export default function Processing({
           <p
             style={{
               margin: 0,
-              fontSize: '0.94rem',
+              fontSize: '1rem',
               fontWeight: 700,
-              lineHeight: 1.45,
+              lineHeight: 1.5,
               color: STITCH_COLORS.textHeading,
             }}
           >
@@ -450,7 +453,7 @@ export default function Processing({
               : 'We are checking the report row by row before summarizing it.'}
           </p>
 
-          <div className="stitch-divider" style={{ margin: '0.85rem 0' }} />
+          <div className="stitch-divider" style={{ margin: '1rem 0' }} />
 
           <ul className="stitch-helper-list">
             <li>Only supported rows move into the patient summary.</li>
