@@ -877,7 +877,8 @@
         "hemoglobin a1c %"
       ],
       "panel_key": "glycemia",
-      "threshold_used": 0.9
+      "threshold_used": 0.9,
+      "expected_ucum_units": ["%", "/1", "ngsp", "dcct"]
     },
     {
       "canonical_label": "hba1c",
@@ -898,7 +899,8 @@
         "hemoglobin a1c ifcc"
       ],
       "panel_key": "glycemia",
-      "threshold_used": 0.9
+      "threshold_used": 0.9,
+      "expected_ucum_units": ["mmol/mol", "mmol.mol-1", "ifcc"]
     },
     {
       "canonical_label": "insulin, fasting",

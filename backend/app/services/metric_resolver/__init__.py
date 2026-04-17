@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from app.schemas.metric import MetricDefinition, ReferenceProfile
 from app.schemas.patient_context import PatientContext
@@ -109,6 +109,24 @@ class MetricResolver:
     def resolve_profile(
         self, metric_id: str, patient_context: PatientContext
     ) -> ReferenceProfile | None:
+        metric_key = (metric_id or "").lower().strip()
+        return self._resolve_profile_cached(
+            metric_key,
+            patient_context.age_years,
+            patient_context.sex,
+            patient_context.pregnancy_status,
+            patient_context.preferred_language,
+        )
+
+    @lru_cache(maxsize=1024)
+    def _resolve_profile_cached(
+        self,
+        metric_key: str,
+        age_years: float | None,
+        sex: str | None,
+        pregnancy_status: bool | None,
+        preferred_language: str,
+    ) -> ReferenceProfile | None:
         """Select demographic-appropriate reference profile with deterministic precedence.
 
         Deterministic precedence rules:
@@ -119,9 +137,16 @@ class MetricResolver:
 
         Returns None if no match is found or if selection is ambiguous.
         """
-        metric = self._lookup.get((metric_id or "").lower().strip())
+        metric = self._lookup.get(metric_key)
         if not metric:
             return None
+
+        patient_context = PatientContext(
+            age_years=age_years,
+            sex=sex,
+            pregnancy_status=pregnancy_status,
+            preferred_language=preferred_language,
+        )
 
         matching_profiles = [
             p for p in metric.default_reference_profiles if self._matches(p, patient_context)

@@ -12,9 +12,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeVar
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, insert, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tables import (
@@ -157,6 +158,44 @@ class TopLevelLifecycleStore:
             region=region,
         )
         return await _add_and_flush(self.session, job)
+
+    async def create_job_on_conflict_do_nothing(
+        self,
+        *,
+        document_id: UUID | str,
+        idempotency_key: str,
+        input_checksum: str,
+        lane_type: str,
+        status: str = "pending",
+        retry_count: int = 0,
+        dead_letter: bool = False,
+        operator_note: str | None = None,
+        region: str | None = None,
+    ) -> Job | None:
+        stmt = (
+            pg_insert(Job)
+            .values(
+                document_id=_coerce_uuid(document_id),
+                idempotency_key=idempotency_key,
+                input_checksum=input_checksum,
+                lane_type=lane_type,
+                status=status,
+                retry_count=retry_count,
+                dead_letter=dead_letter,
+                operator_note=operator_note,
+                region=region,
+            )
+            .on_conflict_do_nothing(index_elements=[Job.idempotency_key])
+            .returning(Job.id)
+        )
+        result = await self.session.execute(stmt)
+        created_job_id = result.scalar_one_or_none()
+        if created_job_id is None:
+            return None
+        job = await self.get_job(created_job_id)
+        if job is None:
+            raise LookupError("job_not_found_after_insert")
+        return job
 
     async def get_job_by_idempotency_key(self, idempotency_key: str) -> Job | None:
         result = await self.session.execute(
@@ -445,6 +484,170 @@ class TopLevelLifecycleStore:
         )
         return await _add_and_flush(self.session, policy_event)
 
+    async def bulk_create_extracted_rows(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> dict[str, UUID]:
+        if not rows:
+            return {}
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            payloads.append(
+                {
+                    "id": _coerce_uuid(row.get("id")) if row.get("id") is not None else uuid4(),
+                    "document_id": _coerce_uuid(row["document_id"]),
+                    "job_id": _coerce_uuid(row["job_id"]),
+                    "source_page": int(row["source_page"]),
+                    "row_hash": str(row["row_hash"]),
+                    "raw_text": str(row["raw_text"]),
+                    "raw_analyte_label": row.get("raw_analyte_label"),
+                    "raw_value_string": _clip(row.get("raw_value_string"), 64),
+                    "raw_unit_string": _clip(row.get("raw_unit_string"), 64),
+                    "raw_reference_range": _clip(row.get("raw_reference_range"), 128),
+                    "extraction_confidence": row.get("extraction_confidence"),
+                }
+            )
+
+        stmt = insert(ExtractedRow).returning(ExtractedRow.id, ExtractedRow.row_hash)
+        result = await self.session.execute(stmt, payloads)
+        return {str(row_hash): row_id for row_id, row_hash in result.all()}
+
+    async def bulk_create_observations(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> dict[UUID, UUID]:
+        if not rows:
+            return {}
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            observation_uuid = _coerce_uuid(row.get("observation_uuid") or row.get("id") or uuid4())
+            payloads.append(
+                {
+                    "id": observation_uuid,
+                    "document_id": _coerce_uuid(row["document_id"]),
+                    "job_id": _coerce_uuid(row["job_id"]),
+                    "extracted_row_id": _coerce_uuid(row["extracted_row_id"]),
+                    "source_page": int(row["source_page"]),
+                    "row_hash": str(row["row_hash"]),
+                    "raw_analyte_label": str(row["raw_analyte_label"]),
+                    "raw_value_string": _clip(row.get("raw_value_string"), 64),
+                    "raw_unit_string": _clip(row.get("raw_unit_string"), 64),
+                    "parsed_numeric_value": row.get("parsed_numeric_value"),
+                    "accepted_analyte_code": row.get("accepted_analyte_code"),
+                    "accepted_analyte_display": row.get("accepted_analyte_display"),
+                    "specimen_context": row.get("specimen_context"),
+                    "method_context": row.get("method_context"),
+                    "raw_reference_range": _clip(row.get("raw_reference_range"), 128),
+                    "canonical_unit": row.get("canonical_unit"),
+                    "canonical_value": row.get("canonical_value"),
+                    "language_id": row.get("language_id"),
+                    "support_state": str(row["support_state"]),
+                    "suppression_reasons": list(row["suppression_reasons"])
+                    if row.get("suppression_reasons") is not None
+                    else None,
+                    "lineage_id": _coerce_uuid(row["lineage_id"])
+                    if row.get("lineage_id") is not None
+                    else None,
+                }
+            )
+
+        stmt = insert(Observation).returning(Observation.id)
+        result = await self.session.execute(stmt, payloads)
+        persisted_ids = [row_id for (row_id,) in result.all()]
+        return {observation_id: observation_id for observation_id in persisted_ids}
+
+    async def bulk_create_mapping_candidates(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> None:
+        if not rows:
+            return
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            payloads.append(
+                {
+                    "id": _coerce_uuid(row.get("id")) if row.get("id") is not None else uuid4(),
+                    "observation_id": _coerce_uuid(row["observation_id"]),
+                    "candidate_code": str(row["candidate_code"]),
+                    "candidate_display": str(row["candidate_display"]),
+                    "score": float(row.get("score", 0.0)),
+                    "threshold_used": float(row.get("threshold_used", 0.9)),
+                    "accepted": bool(row.get("accepted", False)),
+                    "rejection_reason": row.get("rejection_reason"),
+                }
+            )
+
+        await self.session.execute(insert(MappingCandidate), payloads)
+
+    async def bulk_create_rule_events(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> dict[UUID, UUID]:
+        if not rows:
+            return {}
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            rule_event_id = _coerce_uuid(row.get("id") or uuid4())
+            payloads.append(
+                {
+                    "id": rule_event_id,
+                    "job_id": _coerce_uuid(row["job_id"]),
+                    "observation_id": _coerce_uuid(row["observation_id"]),
+                    "rule_id": str(row["rule_id"]),
+                    "finding_id": str(row["finding_id"]),
+                    "threshold_source": str(row["threshold_source"]),
+                    "supporting_observation_ids": [
+                        _coerce_uuid(value)
+                        for value in row.get("supporting_observation_ids", [])
+                    ]
+                    or None,
+                    "suppression_conditions": dict(row["suppression_conditions"])
+                    if row.get("suppression_conditions") is not None
+                    else None,
+                    "severity_class_candidate": row.get("severity_class_candidate"),
+                    "nextstep_class_candidate": row.get("nextstep_class_candidate"),
+                }
+            )
+
+        stmt = insert(RuleEvent).returning(RuleEvent.id)
+        result = await self.session.execute(stmt, payloads)
+        persisted_ids = [row_id for (row_id,) in result.all()]
+        return {rule_event_id: rule_event_id for rule_event_id in persisted_ids}
+
+    async def bulk_create_policy_events(
+        self,
+        *,
+        rows: list[Mapping[str, Any]],
+    ) -> None:
+        if not rows:
+            return
+
+        payloads: list[dict[str, Any]] = []
+        for row in rows:
+            payloads.append(
+                {
+                    "id": _coerce_uuid(row.get("id")) if row.get("id") is not None else uuid4(),
+                    "job_id": _coerce_uuid(row["job_id"]),
+                    "rule_event_id": _coerce_uuid(row["rule_event_id"]),
+                    "severity_class": str(row["severity_class"]),
+                    "nextstep_class": str(row["nextstep_class"]),
+                    "severity_policy_version": str(row["severity_policy_version"]),
+                    "nextstep_policy_version": str(row["nextstep_policy_version"]),
+                    "suppression_active": bool(row.get("suppression_active", False)),
+                    "suppression_reason": row.get("suppression_reason"),
+                }
+            )
+
+        await self.session.execute(insert(PolicyEvent), payloads)
+
     async def create_share_event(
         self,
         *,
@@ -520,6 +723,38 @@ class TopLevelLifecycleStore:
 
     async def get_job(self, job_id: UUID | str) -> Job | None:
         return await self.session.get(Job, _coerce_uuid(job_id))
+
+    async def get_job_for_update(self, job_id: UUID | str) -> Job | None:
+        """Fetch a job row with a row-level lock to prevent concurrent retry races."""
+        result = await self.session.execute(
+            select(Job).where(Job.id == _coerce_uuid(job_id)).with_for_update()
+        )
+        return result.scalar_one_or_none()
+
+    async def increment_retry_count_if_below(
+        self,
+        job_id: UUID | str,
+        *,
+        max_retry_count: int,
+    ) -> int | None:
+        stmt = (
+            update(Job)
+            .where(
+                Job.id == _coerce_uuid(job_id),
+                Job.dead_letter.is_(False),
+                Job.retry_count < max_retry_count,
+            )
+            .values(
+                retry_count=Job.retry_count + 1,
+                updated_at=utc_now(),
+            )
+            .returning(Job.retry_count)
+        )
+        result = await self.session.execute(stmt)
+        retry_count = result.scalar_one_or_none()
+        if retry_count is None:
+            return None
+        return int(retry_count)
 
     async def get_document(self, document_id: UUID | str) -> Document | None:
         return await self.session.get(Document, _coerce_uuid(document_id))

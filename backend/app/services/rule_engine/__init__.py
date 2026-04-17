@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import defaultdict
 from functools import lru_cache
 from uuid import UUID
 
@@ -66,6 +67,32 @@ _SEVERITY_RANK = {
     "SX": 5,
 }
 
+
+def _severity_from_ratio(ratio: float) -> str:
+    """Map distance-from-threshold ratio to S1..S4 gradient.
+
+    Used only when the profile override fires (value crosses `profile.ref_high`
+    or `profile.ref_low`) and the rule table has no matching threshold bucket
+    (e.g. profile tightened bounds relative to the rule). Prevents the old
+    behavior of flattening every crossing to S1.
+
+    ratio >= 1.0 is required by the callers (value already confirmed to cross
+    the profile bound). Buckets chosen to mirror typical clinical ladders:
+
+      1.00  ≤ r < 1.20 → S1 (mild)
+      1.20  ≤ r < 1.50 → S2
+      1.50  ≤ r < 2.00 → S3
+                r ≥ 2.00 → S4 (critical)
+    """
+
+    if ratio < 1.20:
+        return "S1"
+    if ratio < 1.50:
+        return "S2"
+    if ratio < 2.00:
+        return "S3"
+    return "S4"
+
 _NEXTSTEP_BY_SEVERITY = {
     "S0": "A0",
     "S1": "A1",
@@ -74,6 +101,46 @@ _NEXTSTEP_BY_SEVERITY = {
     "S4": "A4",
     "SX": "AX",
 }
+
+_ALLOWED_SEX_THRESHOLD_KEYS = {"female", "male", "default"}
+
+
+def _normalize_sex_thresholds(
+    raw_sex_thresholds: object,
+    *,
+    rule_id: str,
+) -> dict[str, list[dict[str, float | str]]]:
+    if raw_sex_thresholds is None:
+        return {}
+    if not isinstance(raw_sex_thresholds, dict):
+        raise ValueError(f"Rule '{rule_id}' has invalid sex_thresholds payload")
+
+    normalized: dict[str, list[dict[str, float | str]]] = {}
+    for raw_key, thresholds in raw_sex_thresholds.items():
+        key = _normalize_text(raw_key)
+        if key not in _ALLOWED_SEX_THRESHOLD_KEYS:
+            raise ValueError(
+                f"Rule '{rule_id}' has unsupported sex_thresholds key: '{raw_key}'"
+            )
+        if key in normalized:
+            raise ValueError(
+                "Rule "
+                f"'{rule_id}' has duplicate sex_thresholds key after normalization: "
+                f"'{raw_key}'"
+            )
+        if not isinstance(thresholds, list):
+            raise ValueError(
+                f"Rule '{rule_id}' has non-list thresholds for sex key '{raw_key}'"
+            )
+        normalized[key] = [
+            {
+                "value": float(threshold["value"]),
+                "severity_class": str(threshold["severity_class"]),
+            }
+            for threshold in thresholds
+        ]
+
+    return normalized
 
 
 class RuleEngine:
@@ -88,6 +155,11 @@ class RuleEngine:
         patient_context: dict | PatientContext,
     ) -> list[dict]:
         findings: list[dict] = []
+        launch_scope_rules = _load_launch_scope_rules()
+        launch_scope_analyte_keys = launch_scope_rules["metadata"].get(
+            "launch_scope_analyte_keys", set()
+        )
+        rules_by_analyte = launch_scope_rules["metadata"].get("rules_by_analyte", {})
         if isinstance(patient_context, dict):
             p_ctx = PatientContext(**patient_context)
             p_dict = patient_context
@@ -106,6 +178,12 @@ class RuleEngine:
                 or _coerce_float(observation.get("parsed_numeric_value"))
                 or _coerce_float(observation.get("raw_value_string"))
             )
+
+            import math
+            if observed_value is not None and math.isnan(observed_value):
+                findings.append(self._build_unsupported_finding(observation, observed_value))
+                continue
+
             if observed_value is None:
                 # Qualitative / textual result rows (e.g. urinalysis dipstick
                 # "Absent"/"Present (+)", morphology "Normochromic Normocytic",
@@ -125,9 +203,9 @@ class RuleEngine:
             # Supported rows can be outside the launch-scope policy table.
             # Fall back to a generic printed-range check so every supported analyte
             # with a printed reference range gets a deterministic S0/S? finding.
-            launch_scope_analyte = analyte_key in {
-                k for rule in _load_launch_scope_rules()["rules"] for k in rule["analyte_keys"]
-            } if analyte_key else False
+            launch_scope_analyte = (
+                analyte_key in launch_scope_analyte_keys if analyte_key else False
+            )
             if not analyte_key or not launch_scope_analyte:
                 generic_finding = _build_generic_range_finding(observation, observed_value)
                 if generic_finding is not None:
@@ -136,12 +214,8 @@ class RuleEngine:
 
             profile = self.metric_resolver.resolve_profile(analyte_key, p_ctx)
 
-            rule_matched = False
             rule_returned_finding = False
-            for rule in _load_launch_scope_rules()["rules"]:
-                if analyte_key not in rule["analyte_keys"]:
-                    continue
-                rule_matched = True
+            for rule in rules_by_analyte.get(analyte_key, []):
                 finding = _build_finding(
                     rule=rule,
                     observation=observation,
@@ -167,7 +241,11 @@ class RuleEngine:
         row_hash = observation.get("row_hash") or str(observation.get("id"))
         observed_unit = observation.get("canonical_unit") or observation.get("raw_unit_string")
         suppression_reasons = observation.get("suppression_reasons") or []
-        suppression_reason = str(suppression_reasons[0]) if suppression_reasons else "unsupported_analyte"
+        suppression_reason = (
+            str(suppression_reasons[0])
+            if suppression_reasons
+            else "unsupported_analyte"
+        )
         return {
             "finding_id": f"unsupported_analyte::{row_hash}",
             "rule_id": "unsupported_analyte",
@@ -437,7 +515,10 @@ def _build_finding(
             "suppression_reason": None,
             "explanatory_scaffold_id": rule["explanatory_scaffold_id"],
             "observed_value": observed_value,
-            "observed_unit": observation.get("canonical_unit") or observation.get("raw_unit_string"),
+            "observed_unit": (
+                observation.get("canonical_unit")
+                or observation.get("raw_unit_string")
+            ),
             "reference_range": raw_reference_range,
             "specimen_context": observation.get("specimen_context"),
             "method_context": observation.get("method_context"),
@@ -467,7 +548,10 @@ def _build_finding(
                 "suppression_reason": None,
                 "explanatory_scaffold_id": rule["explanatory_scaffold_id"],
                 "observed_value": observed_value,
-                "observed_unit": observation.get("canonical_unit") or observation.get("raw_unit_string"),
+                "observed_unit": (
+                    observation.get("canonical_unit")
+                    or observation.get("raw_unit_string")
+                ),
                 "reference_range": raw_reference_range,
                 "specimen_context": observation.get("specimen_context"),
                 "method_context": observation.get("method_context"),
@@ -607,14 +691,51 @@ def _severity_for_rule(
     patient_context: dict,
     profile: ReferenceProfile | None = None,
 ) -> str | None:
+    import math
+
+    # Guard against NaN — NaN comparisons are always False, masking abnormal values.
+    if math.isnan(observed_value):
+        return None
+
     if profile:
         if rule["comparison"] == "gte":
             if profile.ref_high is not None:
-                return "S1" if observed_value >= profile.ref_high else None
+                if (
+                    math.isclose(observed_value, profile.ref_high, rel_tol=1e-9)
+                    or observed_value > profile.ref_high
+                ):
+                    # Walk rule thresholds for correct severity gradient.
+                    matched = [
+                        t["severity_class"]
+                        for t in rule["thresholds"]
+                        if observed_value >= float(t["value"])
+                    ]
+                    if matched:
+                        return max(matched, key=lambda v: _SEVERITY_RANK[v])
+                    # No rule threshold crossed — derive gradient from profile ref_high
+                    # delta ratio instead of hardcoded S1.
+                    return _severity_from_ratio(observed_value / profile.ref_high)
+                return None
             # Fallback to rule thresholds if no profile ref_high
         elif rule["comparison"] == "lte":
             if profile.ref_low is not None:
-                return "S1" if observed_value <= profile.ref_low else None
+                if observed_value <= profile.ref_low:
+                    # Walk rule thresholds for correct severity gradient.
+                    matched = [
+                        t["severity_class"]
+                        for t in rule["thresholds"]
+                        if observed_value <= float(t["value"])
+                    ]
+                    if matched:
+                        return max(matched, key=lambda v: _SEVERITY_RANK[v])
+                    # No rule threshold crossed — derive gradient from profile ref_low
+                    # delta ratio (how far below the lower bound) instead of hardcoded S1.
+                    if profile.ref_low == 0:
+                        return "S1"
+                    return _severity_from_ratio(
+                        profile.ref_low / observed_value if observed_value else 99.0
+                    )
+                return None
             # Fallback to rule thresholds if no profile ref_low
 
     if rule["comparison"] == "gte":
@@ -706,13 +827,26 @@ def _value_within_printed_range(
     string (e.g. "Normal", "Within normal limits"), since the report itself is
     asserting normality without giving a numeric interval.
     """
+    import math
+
+    if isinstance(observed_value, float) and math.isnan(observed_value):
+        return None
     if raw_reference_range is None:
         return None
     text = str(raw_reference_range).strip().lower()
     if not text:
         return None
     # Recognized normal-verdict strings the report uses in lieu of a numeric range.
-    if text in {"normal", "wnl", "within normal limits", "within normal range", "negative", "non-reactive", "nonreactive", "absent"}:
+    if text in {
+        "normal",
+        "wnl",
+        "within normal limits",
+        "within normal range",
+        "negative",
+        "non-reactive",
+        "nonreactive",
+        "absent",
+    }:
         return True
     parsed = _parse_reference_range(text)
     if parsed is None:
@@ -824,7 +958,18 @@ def _classify_category_band(observed_value: float, raw_text: str) -> str | None:
     label_lower = matched_band_label.lower()
     # "non reactive"/"non-reactive" must NOT be classified as abnormal even
     # though it contains the substring "reactive". Same for "non diabetic".
-    if any(tok in label_lower for tok in ("non reactive", "non-reactive", "nonreactive", "non diabetes", "non-diabetes", "non diabetic", "non-diabetic")):
+    if any(
+        tok in label_lower
+        for tok in (
+            "non reactive",
+            "non-reactive",
+            "nonreactive",
+            "non diabetes",
+            "non-diabetes",
+            "non diabetic",
+            "non-diabetic",
+        )
+    ):
         return "normal"
     if any(keyword in label_lower for keyword in _ABNORMAL_BAND_KEYWORDS):
         return "abnormal"
@@ -865,9 +1010,11 @@ def _load_launch_scope_rules() -> dict:
 
     normalized_rules = []
     for rule in payload.get("rules", []):
+        rule_id = str(rule["rule_id"])
         normalized_rules.append(
             {
-                "rule_id": str(rule["rule_id"]),
+                "rule_id": rule_id,
+                "priority": int(rule.get("priority", 999)),
                 "finding_prefix": str(rule["finding_prefix"]),
                 "analyte_keys": [_normalize_text(key) for key in rule.get("analyte_keys", [])],
                 "comparison": str(rule["comparison"]),
@@ -878,16 +1025,10 @@ def _load_launch_scope_rules() -> dict:
                     }
                     for threshold in rule.get("thresholds", [])
                 ],
-                "sex_thresholds": {
-                    _normalize_text(sex): [
-                        {
-                            "value": float(threshold["value"]),
-                            "severity_class": str(threshold["severity_class"]),
-                        }
-                        for threshold in thresholds
-                    ]
-                    for sex, thresholds in rule.get("sex_thresholds", {}).items()
-                },
+                "sex_thresholds": _normalize_sex_thresholds(
+                    rule.get("sex_thresholds"),
+                    rule_id=rule_id,
+                ),
                 "threshold_source": str(rule["threshold_source"]),
                 "requires_overlay": list(rule.get("requires_overlay", [])),
                 "expected_units": list(rule.get("expected_units", [])),
@@ -895,6 +1036,17 @@ def _load_launch_scope_rules() -> dict:
             }
         )
 
-    payload["metadata"] = {"aliases_by_analyte": aliases_by_analyte}
+    normalized_rules.sort(key=lambda rule: (rule.get("priority", 999), rule.get("rule_id", "")))
+
+    rules_by_analyte: dict[str, list[dict]] = defaultdict(list)
+    for rule in normalized_rules:
+        for analyte_key in rule.get("analyte_keys", []):
+            rules_by_analyte[analyte_key].append(rule)
+
+    payload["metadata"] = {
+        "aliases_by_analyte": aliases_by_analyte,
+        "launch_scope_analyte_keys": set(rules_by_analyte.keys()),
+        "rules_by_analyte": dict(rules_by_analyte),
+    }
     payload["rules"] = normalized_rules
     return payload

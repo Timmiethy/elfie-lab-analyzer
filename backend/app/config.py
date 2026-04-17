@@ -22,10 +22,15 @@ class Settings(_BaseSettings):
 
     # CORS
     cors_origins: list[str] = ["http://localhost:5173"]
+    cors_allow_credentials: bool = False
 
     # File upload limits
     max_upload_size_mb: int = 20
     max_pdf_pages: int = 30
+    pdf_render_dpi: int = 96
+    pdf_render_concurrency: int = 2
+    max_pdf_render_bytes: int = 256 * 1024 * 1024
+    pdf_render_timeout_s: float = 30.0
     allowed_extensions: list[str] = ["pdf", "png", "jpg", "jpeg", "webp"]
 
     # Qwen / explanation adapter
@@ -56,6 +61,16 @@ class Settings(_BaseSettings):
 
     # Image beta lane toggle
     image_beta_enabled: bool = False
+
+    # Debug mode — enables PHI debug dumps; never enable in production
+    debug: bool = False
+    # Second-gate PHI artifact dump (debug extraction JSON + embedded raw rows).
+    # Both `debug` and this flag must be true to write debug artifacts. Default
+    # off so setting ELFIE_DEBUG=true for general logging never leaks PHI.
+    allow_debug_artifacts: bool = False
+
+    # VLM quality gate — rows with confidence below this are discarded
+    min_vlm_confidence: int = 20
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="ELFIE_")
 

@@ -192,3 +192,16 @@ def test_real_catalog_load():
     resolver = MetricResolver()
     assert len(resolver.metrics) > 0
     assert "METRIC-0001" in resolver.metrics
+
+
+def test_resolve_profile_uses_cached_path(resolver):
+    resolver._resolve_profile_cached.cache_clear()
+    patient = PatientContext(sex="M")
+
+    first = resolver.resolve_profile("test_metric_1", patient)
+    second = resolver.resolve_profile("test_metric_1", patient)
+
+    assert first is not None
+    assert second is not None
+    cache_info = resolver._resolve_profile_cached.cache_info()
+    assert cache_info.hits >= 1

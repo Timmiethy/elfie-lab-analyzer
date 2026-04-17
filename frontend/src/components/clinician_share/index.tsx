@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getClinicianArtifact, getClinicianPdf } from '../../services/api';
 import type {
   ClinicianArtifact,
@@ -235,6 +235,17 @@ export default function ClinicianShare({
     'idle' | 'downloading' | 'downloaded' | 'failed'
   >('idle');
   const [showAllNotAssessed, setShowAllNotAssessed] = useState(false);
+  const pdfUrlCleanupTimeoutsRef = useRef<number[]>([]);
+  const activePdfUrlsRef = useRef<Set<string>>(new Set());
+
+  const cleanupPdfDownloadResources = useCallback(() => {
+    pdfUrlCleanupTimeoutsRef.current.forEach((timeoutId) =>
+      window.clearTimeout(timeoutId),
+    );
+    pdfUrlCleanupTimeoutsRef.current = [];
+    activePdfUrlsRef.current.forEach((url) => window.URL.revokeObjectURL(url));
+    activePdfUrlsRef.current.clear();
+  }, []);
 
   useEffect(() => {
     if (previewArtifact) {
@@ -288,6 +299,12 @@ export default function ClinicianShare({
       cancelled = true;
     };
   }, [jobId, previewArtifact]);
+
+  useEffect(() => {
+    return () => {
+      cleanupPdfDownloadResources();
+    };
+  }, [cleanupPdfDownloadResources]);
 
   const effectiveSupportCoverage =
     asSupportBanner(artifact?.support_coverage) ??
@@ -355,13 +372,23 @@ export default function ClinicianShare({
 
       const blob = await response.blob();
       const pdfUrl = window.URL.createObjectURL(blob);
+      activePdfUrlsRef.current.add(pdfUrl);
       const anchor = document.createElement('a');
       anchor.href = pdfUrl;
       anchor.download = `clinician-summary-${jobId}.pdf`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      window.setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 1000);
+
+      const revokeTimeoutId = window.setTimeout(() => {
+        window.URL.revokeObjectURL(pdfUrl);
+        activePdfUrlsRef.current.delete(pdfUrl);
+        pdfUrlCleanupTimeoutsRef.current = pdfUrlCleanupTimeoutsRef.current.filter(
+          (timeoutId) => timeoutId !== revokeTimeoutId,
+        );
+      }, 1000);
+      pdfUrlCleanupTimeoutsRef.current.push(revokeTimeoutId);
+
       setPdfStatus('downloaded');
       window.setTimeout(() => setPdfStatus('idle'), 2200);
     } catch {
@@ -369,6 +396,11 @@ export default function ClinicianShare({
       window.setTimeout(() => setPdfStatus('idle'), 2200);
     }
   }, [artifact, jobId]);
+
+  const handleNavigateBack = useCallback(() => {
+    cleanupPdfDownloadResources();
+    onNavigateBack?.();
+  }, [cleanupPdfDownloadResources, onNavigateBack]);
 
   const handleExportSummary = useCallback(() => {
     window.print();
@@ -850,7 +882,7 @@ export default function ClinicianShare({
                   Export summary
                 </SecondaryButton>
                 {onNavigateBack && (
-                  <SecondaryButton onClick={onNavigateBack}>
+                  <SecondaryButton onClick={handleNavigateBack}>
                     Back to patient summary
                   </SecondaryButton>
                 )}

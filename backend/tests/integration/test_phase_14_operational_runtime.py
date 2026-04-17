@@ -176,9 +176,11 @@ async def test_phase_14_retry_reprocesses_persisted_document_and_records_history
 
 
 async def test_phase_14_retry_dead_letters_job_after_max_attempts(
+    monkeypatch,
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    monkeypatch.setattr(settings, "image_beta_enabled", True)
     settings.max_job_retries = 1
 
     failed_upload = await api_client.post(

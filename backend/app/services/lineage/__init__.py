@@ -18,7 +18,8 @@ class LineageLogger:
     def record(self, job_id: str, components: dict) -> dict:
         job_uuid = _coerce_uuid(job_id)
         payload = dict(components)
-        lineage_id = uuid5(NAMESPACE_URL, f"lineage:{job_uuid}:{_stable_payload(payload)}")
+        payload_hash = _stable_payload(payload)
+        lineage_id = uuid5(NAMESPACE_URL, f"lineage:{job_uuid}:{payload_hash}")
 
         return {
             "id": lineage_id,

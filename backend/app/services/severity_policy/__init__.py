@@ -6,6 +6,10 @@ from copy import deepcopy
 
 from app.config import settings
 
+# Adult launch-scope policy currently uses pediatric abstention for ages below
+# 18 years so findings are not over-interpreted without dedicated child ranges.
+PEDIATRIC_AGE_THRESHOLD_YEARS = 18
+
 
 def _coerce_text(value: object) -> str | None:
     if value is None:
@@ -23,7 +27,10 @@ class SeverityPolicyEngine:
         # even though the rule thresholds are adult defaults that are still the best
         # available signal. Findings that *require* demographics set
         # suppression_active=True upstream (rule_engine.missing_overlay path).
-        is_child = isinstance(age_years, (int, float)) and age_years < 18
+        is_child = (
+            isinstance(age_years, (int, float))
+            and age_years < PEDIATRIC_AGE_THRESHOLD_YEARS
+        )
 
         assigned_findings: list[dict] = []
         for finding in findings:

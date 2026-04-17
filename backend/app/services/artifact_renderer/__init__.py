@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import markupsafe
 from uuid import UUID
 
 from app.schemas.artifact import SupportBanner, TrustStatus, UnsupportedReason
 from app.schemas.finding import FindingSchema, NextStepClass, SeverityClass
+
+
+def _safe_text(value: object) -> str:
+    """HTML-escape a string derived from OCR output to prevent XSS in downstream renderers."""
+    return markupsafe.escape(str(value or ""))
 
 _SEVERITY_ORDER = {
     SeverityClass.S0: 0,
@@ -144,12 +150,12 @@ def _make_flagged_cards(
 
         cards.append(
             {
-                "analyte_display": analyte_display,
-                "value": str(value if value is not None else "n/a"),
-                "unit": str(unit or ""),
+                "analyte_display": _safe_text(analyte_display),
+                "value": _safe_text(value if value is not None else "n/a"),
+                "unit": _safe_text(unit or ""),
                 "finding_sentence": context.get(
                     "finding_sentence",
-                    f"{analyte_display} requires clinical review.",
+                    f"{_safe_text(analyte_display)} requires clinical review.",
                 ),
                 "threshold_provenance": finding["threshold_source"],
                 "severity_chip": severity,

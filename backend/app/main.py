@@ -25,6 +25,10 @@ def create_app() -> FastAPI:
     _verify_terminology_snapshot()
     TerminologyLoader().load_loinc(str(settings.loinc_path))
     observability_metrics.reset()
+    allow_credentials = settings.cors_allow_credentials
+    if "*" in settings.cors_origins and allow_credentials:
+        raise RuntimeError("cors_misconfiguration:wildcard_origin_with_credentials")
+
     app = FastAPI(
         title="Elfie Labs Analyzer",
         version="0.1.0",
@@ -34,9 +38,9 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_credentials=allow_credentials,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", CORRELATION_ID_HEADER],
         expose_headers=[CORRELATION_ID_HEADER],
     )
 

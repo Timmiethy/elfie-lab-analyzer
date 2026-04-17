@@ -1,4 +1,4 @@
-from app.services.severity_policy import SeverityPolicyEngine
+from app.services.severity_policy import PEDIATRIC_AGE_THRESHOLD_YEARS, SeverityPolicyEngine
 
 
 def test_severity_policy_abstains_on_minor():
@@ -42,3 +42,23 @@ def test_severity_policy_applies_urgent_gate():
     # Default settings.critical_value_source_signed_off is False
     result = engine.assign(findings, {"age_years": 30})
     assert result[0]["severity_class"] == "S3"
+
+
+def test_severity_policy_abstains_just_below_pediatric_cutoff() -> None:
+    engine = SeverityPolicyEngine()
+    findings = [
+        {"severity_class": "S1", "severity_class_candidate": "S1", "suppression_active": False}
+    ]
+
+    result = engine.assign(findings, {"age_years": PEDIATRIC_AGE_THRESHOLD_YEARS - 0.01})
+    assert result[0]["severity_class"] == "SX"
+
+
+def test_severity_policy_keeps_adult_logic_at_pediatric_cutoff() -> None:
+    engine = SeverityPolicyEngine()
+    findings = [
+        {"severity_class": "S1", "severity_class_candidate": "S1", "suppression_active": False}
+    ]
+
+    result = engine.assign(findings, {"age_years": float(PEDIATRIC_AGE_THRESHOLD_YEARS)})
+    assert result[0]["severity_class"] == "S1"

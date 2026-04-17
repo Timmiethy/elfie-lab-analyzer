@@ -124,12 +124,23 @@ async def retry_job(
         if document is None:
             raise HTTPException(status_code=404, detail="document_not_found")
 
+        retry_count = await store.increment_retry_count_if_below(
+            job_id,
+            max_retry_count=settings.max_job_retries,
+        )
+        if retry_count is None:
+            raise HTTPException(status_code=409, detail=_JOB_DEAD_LETTER_DETAIL)
+        await db.commit()
+
+        job = await store.get_job(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="job_not_found")
+
         job_uuid = str(job.id)
         document_uuid = document.id
         document_checksum = document.checksum
         document_storage_path = document.storage_path
         lane_type = job.lane_type
-        retry_count = int(job.retry_count or 0) + 1
 
         try:
             file_bytes = _normalize_storage_path(document_storage_path).read_bytes()

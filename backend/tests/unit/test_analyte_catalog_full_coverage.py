@@ -53,18 +53,24 @@ def _load_metric_labels() -> list[str]:
 def _assert_supported(labels: list[str]) -> None:
     resolver = AnalyteResolver()
 
+    # Analytes that intentionally abstain without a UCUM unit because multiple
+    # candidate codes share their canonical label (e.g. HbA1c NGSP % vs IFCC
+    # mmol/mol). The caller is expected to supply `context["raw_unit"]`.
+    UNIT_REQUIRED_CANONICAL = {"hba1c", "hemoglobin a1c", "a1c", "hb a1c"}
+
     unresolved: list[tuple[str, str | None, list[str]]] = []
     for label in sorted(set(labels)):
         resolved = resolver.resolve(label)
         accepted = resolved.get("accepted_candidate") or {}
         if resolved.get("support_state") != "supported" or not accepted.get("candidate_code"):
-            unresolved.append(
-                (
-                    label,
-                    resolved.get("support_state"),
-                    list(resolved.get("abstention_reasons") or []),
-                )
-            )
+            reasons = list(resolved.get("abstention_reasons") or [])
+            # Skip when abstention is the deliberate "unit_required" path.
+            if (
+                reasons == ["unit_required"]
+                and any(kw in label.lower() for kw in UNIT_REQUIRED_CANONICAL)
+            ):
+                continue
+            unresolved.append((label, resolved.get("support_state"), reasons))
 
     assert unresolved == []
 

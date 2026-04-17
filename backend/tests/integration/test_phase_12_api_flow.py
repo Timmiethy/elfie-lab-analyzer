@@ -306,31 +306,35 @@ async def test_phase_12_unsupported_mime_is_rejected_before_persistence(
     assert await _table_count(db_session_factory, Job) == 0
 
 
-async def test_phase_12_image_beta_failure_is_safe_and_persisted(
+async def test_phase_12_image_beta_is_rejected_before_persistence(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    # Valid 1x1 PNG so lane selection can reach image_beta feature gate.
+    png_bytes = (
+        b"\x89PNG\r\n\x1a\n"
+        b"\x00\x00\x00\rIHDR"
+        b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00"
+        b"\x90wS\xde"
+        b"\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\xc9\xfe\x92\xef"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
     upload_response = await api_client.post(
         "/api/upload",
         data={"age_years": 42.0, "sex": "female"},
-        files={"file": ("beta-input.png", b"not-a-real-image", "image/png")},
+        files={"file": ("beta-input.png", png_bytes, "image/png")},
     )
 
-    assert upload_response.status_code == 422
-    assert upload_response.json()["detail"] == "processing_failed"
-
-    latest_job = await _latest_job(db_session_factory)
-    assert latest_job.lane_type == "image_beta"
-    assert latest_job.status == "failed"
-    assert latest_job.operator_note is not None
-    assert "image_beta_disabled" in latest_job.operator_note
-    assert await _table_count(db_session_factory, Document) == 1
-    assert await _table_count(db_session_factory, Job) == 1
+    assert upload_response.status_code == 400
+    assert upload_response.json()["detail"] == "image_beta_disabled"
+    assert await _table_count(db_session_factory, Document) == 0
+    assert await _table_count(db_session_factory, Job) == 0
     assert await _table_count(db_session_factory, PatientArtifact) == 0
     assert await _table_count(db_session_factory, ClinicianArtifact) == 0
 
 
-async def test_phase_12_no_text_pdf_fails_safely_and_keeps_auditable_job(
+async def test_phase_12_no_text_pdf_is_rejected_before_persistence(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
@@ -342,14 +346,10 @@ async def test_phase_12_no_text_pdf_fails_safely_and_keeps_auditable_job(
         files={"file": ("no-text.pdf", empty_pdf_bytes, "application/pdf")},
     )
 
-    assert upload_response.status_code == 422
-    assert upload_response.json()["detail"] == "processing_failed"
-
-    latest_job = await _latest_job(db_session_factory)
-    assert latest_job.lane_type == "image_beta"
-    assert latest_job.status == "failed"
-    assert latest_job.operator_note is not None
-    assert "image_beta_disabled" in latest_job.operator_note
+    assert upload_response.status_code == 400
+    assert upload_response.json()["detail"] == "image_beta_disabled"
+    assert await _table_count(db_session_factory, Document) == 0
+    assert await _table_count(db_session_factory, Job) == 0
 
 
 async def test_phase_12_persistence_unavailable_falls_back_to_in_memory_runtime(
@@ -391,7 +391,7 @@ async def test_phase_12_persistence_unavailable_falls_back_to_in_memory_runtime(
     assert await _table_count(db_session_factory, Job) == 0
 
 
-async def test_phase_12_persistence_unavailable_unparsable_pdf_returns_processing_failed(
+async def test_phase_12_persistence_unavailable_empty_pdf_still_rejects_image_beta_early(
     api_client: AsyncClient,
     db_session_factory: async_sessionmaker[AsyncSession],
     monkeypatch: pytest.MonkeyPatch,
@@ -409,7 +409,7 @@ async def test_phase_12_persistence_unavailable_unparsable_pdf_returns_processin
         files={"file": ("fallback-no-text.pdf", empty_pdf_bytes, "application/pdf")},
     )
 
-    assert upload_response.status_code == 422
-    assert upload_response.json()["detail"] == "processing_failed"
+    assert upload_response.status_code == 400
+    assert upload_response.json()["detail"] == "image_beta_disabled"
     assert await _table_count(db_session_factory, Document) == 0
     assert await _table_count(db_session_factory, Job) == 0

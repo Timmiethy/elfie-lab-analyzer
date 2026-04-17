@@ -1,6 +1,10 @@
 """UCUM validation and canonical unit conversion."""
 
+import re
 from typing import Any
+
+_UCUM_173_M2_RE = re.compile(r"\{1\.73[_ ]?m2\}", re.IGNORECASE)
+_UCUM_WHITESPACE_RE = re.compile(r"\s+")
 
 
 class UcumEngine:
@@ -94,7 +98,10 @@ class UcumEngine:
 
     @staticmethod
     def _normalize_unit(unit: str) -> str:
-        return " ".join(str(unit or "").strip().lower().replace("²", "2").replace("{1.73_m2}", "1.73 m2").split())
+        normalized = str(unit or "").strip().lower().replace("²", "2")
+        normalized = _UCUM_173_M2_RE.sub("1.73 m2", normalized)
+        normalized = _UCUM_WHITESPACE_RE.sub(" ", normalized)
+        return normalized.strip()
 
     @staticmethod
     def _supported_units() -> dict[str, str]:

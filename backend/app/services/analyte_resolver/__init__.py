@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import unicodedata
 from collections import defaultdict
@@ -10,6 +11,8 @@ from functools import lru_cache
 from typing import Any
 
 from app.services.data_paths import resolve_data_file
+
+_LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_THRESHOLD = 0.9
 _CONTEXT_TOKENS = {
@@ -30,9 +33,6 @@ _CONTEXT_TOKENS = {
 }
 
 _TRAILING_QUALIFIER_TOKENS = {
-    "s",  # serum shorthand in several lab exports, e.g. "Creatinine S"
-    "p",
-    "u",
     "ul",
     "cmm",
     "wb",
@@ -59,12 +59,34 @@ _TRAILING_QUALIFIER_TOKENS = {
     "nmol",
     "mol",
     "iu",
+    # Small numeric tokens that appear as part of compound units (e.g. "10^3/ul", "x10^6").
+    # These are stripped as unit residuals; they do NOT affect analyte names that happen
+    # to contain numbers like "T3", "T4" because those have letter+digit combos.
     "3",
     "10",
+    # NOTE: three-or-more-digit numbers like "100", "150" are intentionally excluded
+    # so reference-range tokens in labels like "Glucose 100-150" are not silently stripped.
 }
 
+_NON_ALNUM_PERCENT_RE = re.compile(r"[^a-z0-9%]+")
+_PAREN_CONTENT_RE = re.compile(r"\([^)]*\)")
 
-_LABEL_UNIT_STRIP_RE = None
+_ANALYTE_SHORTCUT_REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bhaemoglobin\s*a\s*1\s*c\b"), "hba1c"),
+    (re.compile(r"\bhemoglobin\s*a\s*1\s*c\b"), "hba1c"),
+    (re.compile(r"\bhb\s*a\s*1\s*c\b"), "hba1c"),
+    (re.compile(r"\ba\s*1\s*c\b"), "hba1c"),
+    (re.compile(r"\bestimated\s+glomerular\s+filtration\s+rate\b"), "egfr"),
+    (re.compile(r"\be\s*gfr\b"), "egfr"),
+    (re.compile(r"\blow\s+density\s+lipoprotein\s+cholesterol\b"), "ldl c"),
+    (re.compile(r"\bhigh\s+density\s+lipoprotein\s+cholesterol\b"), "hdl c"),
+    (re.compile(r"\bldl\s+cholesterol\b"), "ldl c"),
+    (re.compile(r"\bhdl\s+cholesterol\b"), "hdl c"),
+    (re.compile(r"\begfr\s+ckd\s+epi\b"), "egfr"),
+    (re.compile(r"\begfr\s+epi\b"), "egfr"),
+    (re.compile(r"\bhba1c\s+ifcc\b"), "hba1c"),
+    (re.compile(r"\bhba1c\s+dcct\b"), "hba1c"),
+)
 
 
 class AnalyteResolver:
@@ -76,17 +98,28 @@ class AnalyteResolver:
 
     def resolve(self, raw_label: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
         context = context or {}
-        normalized_label = self._normalize(raw_label)
         specimen_context = self._normalize(context.get("specimen_context", ""))
         language_id = self._normalize(context.get("language_id", ""))
+        raw_unit = str(context.get("raw_unit") or "").strip()
+        resolved = self._resolve_cached(raw_label, specimen_context, language_id, raw_unit)
+        return self._clone_resolve_result(resolved)
 
-        candidates = self._score_candidates(normalized_label, specimen_context, language_id)
+    @lru_cache(maxsize=4096)
+    def _resolve_cached(
+        self,
+        raw_label: str,
+        specimen_context: str,
+        language_id: str,
+        raw_unit: str,
+    ) -> dict[str, Any]:
+        normalized_label = self._normalize(raw_label)
+        normalized_unit = _normalize_unit_token(raw_unit)
+
+        candidates = self._score_candidates(
+            normalized_label, specimen_context, language_id, normalized_unit
+        )
         accepted_candidate = next((c for c in candidates if c["accepted"]), None)
-
-        if accepted_candidate is None:
-            support_state = "unsupported"
-        else:
-            support_state = "supported"
+        support_state = "supported" if accepted_candidate is not None else "unsupported"
 
         return {
             "raw_label": raw_label,
@@ -94,6 +127,7 @@ class AnalyteResolver:
             "context": {
                 "specimen_context": specimen_context or None,
                 "language_id": language_id or None,
+                "raw_unit": raw_unit or None,
             },
             "candidates": candidates,
             "accepted_candidate": accepted_candidate,
@@ -102,11 +136,28 @@ class AnalyteResolver:
         }
 
     @staticmethod
+    def _clone_resolve_result(resolved: dict[str, Any]) -> dict[str, Any]:
+        accepted = resolved.get("accepted_candidate")
+        return {
+            "raw_label": resolved.get("raw_label"),
+            "normalized_label": resolved.get("normalized_label"),
+            "context": dict(resolved.get("context") or {}),
+            "candidates": [dict(candidate) for candidate in (resolved.get("candidates") or [])],
+            "accepted_candidate": dict(accepted) if isinstance(accepted, dict) else None,
+            "support_state": resolved.get("support_state"),
+            "abstention_reasons": list(resolved.get("abstention_reasons") or []),
+        }
+
+    @staticmethod
     def _normalize(value: object) -> str:
         return _normalize_text(value)
 
     def _score_candidates(
-        self, normalized_label: str, specimen_context: str, language_id: str
+        self,
+        normalized_label: str,
+        specimen_context: str,
+        language_id: str,
+        normalized_unit: str = "",
     ) -> list[dict[str, Any]]:
         if not normalized_label:
             return []
@@ -123,6 +174,29 @@ class AnalyteResolver:
                     "rejection_reason": "unsupported_alias",
                 }
             ]
+
+        if all(bool(candidate.get("_ambiguous_token_match")) for candidate in candidates):
+            return [
+                {
+                    "candidate_code": candidate["candidate_code"],
+                    "candidate_display": candidate["candidate_display"],
+                    "score": 0.0,
+                    "threshold_used": candidate["threshold_used"],
+                    "accepted": False,
+                    "rejection_reason": "ambiguous_tokens",
+                }
+                for candidate in candidates
+            ]
+
+        # Unit-based disambiguation only when candidates share canonical label
+        # AND at least one candidate declares expected_ucum_units. Otherwise we
+        # fall through to legacy first-match behavior (e.g. "Glucose" alias that
+        # maps to multiple codes across distinct canonical labels).
+        distinct_codes = {c.get("candidate_code") for c in candidates}
+        distinct_canonical = {c.get("canonical_label") for c in candidates}
+        any_unit_declared = any(c.get("expected_ucum_units") for c in candidates)
+        if len(distinct_codes) > 1 and len(distinct_canonical) == 1 and any_unit_declared:
+            return _disambiguate_by_unit(candidates, normalized_unit)
 
         candidate = candidates[0]
         return [
@@ -159,6 +233,18 @@ class AnalyteResolver:
             # Deterministic but conservative: only accept token-order fallback if unique.
             if len(token_matches) == 1:
                 return token_matches
+            if len(token_matches) > 1:
+                codes = [c.get("candidate_code") for c in token_matches]
+                _LOGGER.warning(
+                    "Ambiguous token signature '%s' matched %d candidates %s — abstaining",
+                    token_signature,
+                    len(token_matches),
+                    codes,
+                )
+                return [
+                    {**candidate, "_ambiguous_token_match": True}
+                    for candidate in token_matches
+                ]
 
         return []
 
@@ -207,6 +293,7 @@ def _load_launch_scope_metadata() -> dict[str, Any]:
         candidate_display: str,
         panel_key: str,
         threshold_used: float,
+        expected_ucum_units: set[str] | None = None,
     ) -> dict[str, Any]:
         analyte = analytes_by_code.get(candidate_code)
         if analyte is None:
@@ -217,6 +304,7 @@ def _load_launch_scope_metadata() -> dict[str, Any]:
                 "panel_key": panel_key,
                 "aliases": set(),
                 "threshold_used": threshold_used,
+                "expected_ucum_units": set(expected_ucum_units or ()),
             }
             analytes_by_code[candidate_code] = analyte
             ordered_codes.append(candidate_code)
@@ -228,6 +316,8 @@ def _load_launch_scope_metadata() -> dict[str, Any]:
             analyte["candidate_display"] = candidate_display
         if panel_key and not analyte.get("panel_key"):
             analyte["panel_key"] = panel_key
+        if expected_ucum_units:
+            analyte.setdefault("expected_ucum_units", set()).update(expected_ucum_units)
         return analyte
 
     for entry in raw_analytes:
@@ -248,6 +338,16 @@ def _load_launch_scope_metadata() -> dict[str, Any]:
         if not candidate_code:
             continue
 
+        raw_expected_units = entry.get("expected_ucum_units", [])
+        if not isinstance(raw_expected_units, list):
+            raw_expected_units = []
+        expected_ucum_units = {
+            _normalize_unit_token(str(u))
+            for u in raw_expected_units
+            if str(u or "").strip()
+        }
+        expected_ucum_units.discard("")
+
         analyte = upsert_analyte(
             candidate_code=candidate_code,
             canonical_label=canonical_label,
@@ -257,6 +357,7 @@ def _load_launch_scope_metadata() -> dict[str, Any]:
                 entry.get("threshold_used"),
                 default=_DEFAULT_THRESHOLD,
             ),
+            expected_ucum_units=expected_ucum_units,
         )
 
         analyte_aliases = analyte["aliases"]
@@ -323,6 +424,7 @@ def _load_launch_scope_metadata() -> dict[str, Any]:
             "candidate_display": analyte["candidate_display"],
             "canonical_label": analyte["canonical_label"],
             "threshold_used": analyte["threshold_used"],
+            "expected_ucum_units": sorted(analyte.get("expected_ucum_units") or set()),
         }
 
         analytes.append(
@@ -380,7 +482,7 @@ def _generate_alias_variants(value: object) -> set[str]:
         if len(parts) == 2:
             add_variant(f"{parts[1]} {parts[0]}")
 
-    without_parentheses = re.sub(r"\([^)]*\)", " ", raw_text)
+    without_parentheses = _PAREN_CONTENT_RE.sub(" ", raw_text)
     if without_parentheses != raw_text:
         add_variant(without_parentheses)
 
@@ -412,7 +514,7 @@ def _normalize_text(value: object) -> str:
         return ""
 
     folded = _ascii_fold(raw_text)
-    normalized = re.sub(r"[^a-z0-9%]+", " ", folded)
+    normalized = _NON_ALNUM_PERCENT_RE.sub(" ", folded)
     normalized = _normalize_analyte_shortcuts(normalized)
 
     tokens = [token for token in normalized.split() if token and token not in _CONTEXT_TOKENS]
@@ -431,20 +533,9 @@ def _ascii_fold(value: str) -> str:
 
 
 def _normalize_analyte_shortcuts(value: str) -> str:
-    normalized = re.sub(r"\bhaemoglobin\s*a\s*1\s*c\b", "hba1c", value)
-    normalized = re.sub(r"\bhemoglobin\s*a\s*1\s*c\b", "hba1c", normalized)
-    normalized = re.sub(r"\bhb\s*a\s*1\s*c\b", "hba1c", normalized)
-    normalized = re.sub(r"\ba\s*1\s*c\b", "hba1c", normalized)
-    normalized = re.sub(r"\bestimated\s+glomerular\s+filtration\s+rate\b", "egfr", normalized)
-    normalized = re.sub(r"\be\s*gfr\b", "egfr", normalized)
-    normalized = re.sub(r"\blow\s+density\s+lipoprotein\s+cholesterol\b", "ldl c", normalized)
-    normalized = re.sub(r"\bhigh\s+density\s+lipoprotein\s+cholesterol\b", "hdl c", normalized)
-    normalized = re.sub(r"\bldl\s+cholesterol\b", "ldl c", normalized)
-    normalized = re.sub(r"\bhdl\s+cholesterol\b", "hdl c", normalized)
-    normalized = re.sub(r"\begfr\s+ckd\s+epi\b", "egfr", normalized)
-    normalized = re.sub(r"\begfr\s+epi\b", "egfr", normalized)
-    normalized = re.sub(r"\bhba1c\s+ifcc\b", "hba1c", normalized)
-    normalized = re.sub(r"\bhba1c\s+dcct\b", "hba1c", normalized)
+    normalized = value
+    for pattern, replacement in _ANALYTE_SHORTCUT_REPLACEMENTS:
+        normalized = pattern.sub(replacement, normalized)
     return normalized
 
 
@@ -453,3 +544,80 @@ def _coerce_threshold(value: object, *, default: float) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+_UNIT_SYNONYMS = {
+    "percent": "%",
+    "pct": "%",
+    "mmol mol": "mmol/mol",
+    "mmolmol": "mmol/mol",
+    "mmol.mol-1": "mmol/mol",
+    "mmolperlmol": "mmol/mol",
+    "ngsp %": "%",
+    "ifcc": "mmol/mol",
+}
+
+
+def _normalize_unit_token(value: object) -> str:
+    """Collapse a raw UCUM-ish unit string to a canonical comparison token.
+
+    Lowercased, whitespace-collapsed, common synonym-folded. Not a full UCUM
+    parser — sufficient for disambiguating candidates with distinct expected
+    units (e.g. "%" vs "mmol/mol").
+    """
+
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+    raw = " ".join(raw.split())
+    if raw in _UNIT_SYNONYMS:
+        return _UNIT_SYNONYMS[raw]
+    return raw
+
+
+def _disambiguate_by_unit(
+    candidates: list[dict[str, Any]], normalized_unit: str
+) -> list[dict[str, Any]]:
+    """Route to a single candidate when multiple share a canonical label.
+
+    If the supplied unit matches exactly one candidate's expected UCUM set,
+    return just that candidate (accepted). Otherwise return all candidates
+    with `accepted=False` and `rejection_reason="unit_required"`.
+    """
+
+    if normalized_unit:
+        matching = [
+            c
+            for c in candidates
+            if normalized_unit
+            in {
+                _normalize_unit_token(u)
+                for u in (c.get("expected_ucum_units") or [])
+            }
+        ]
+        if len(matching) == 1:
+            candidate = matching[0]
+            return [
+                {
+                    "candidate_code": candidate["candidate_code"],
+                    "candidate_display": candidate["candidate_display"],
+                    "score": 1.0,
+                    "threshold_used": candidate["threshold_used"],
+                    "accepted": True,
+                    "rejection_reason": None,
+                }
+            ]
+
+    # Ambiguous: no unit or unit matches zero/multiple candidates.
+    reason = "unit_required" if not normalized_unit else "unit_mismatch"
+    return [
+        {
+            "candidate_code": candidate["candidate_code"],
+            "candidate_display": candidate["candidate_display"],
+            "score": 0.0,
+            "threshold_used": candidate["threshold_used"],
+            "accepted": False,
+            "rejection_reason": reason,
+        }
+        for candidate in candidates
+    ]

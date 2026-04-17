@@ -77,6 +77,9 @@ class _DummySession:
     async def rollback(self) -> None:
         return None
 
+    async def flush(self) -> None:
+        return None
+
 
 class _DummySessionContext:
     def __init__(self, session: _DummySession) -> None:

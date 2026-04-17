@@ -24,12 +24,14 @@ Steps:
 
 
 import logging
+import re
 from datetime import UTC, datetime
 from enum import StrEnum
 from hashlib import sha256
 from time import perf_counter
-from uuid import NAMESPACE_URL, UUID, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -45,6 +47,7 @@ from app.services.lineage import LineageLogger
 from app.services.metric_resolver import MetricResolver
 from app.services.nextstep_policy import NextStepPolicyEngine
 from app.services.observation_builder import ObservationBuilder
+from app.services.observability import get_current_correlation_id, span
 from app.services.panel_reconstructor import PanelReconstructor
 from app.services.proof_pack import proof_pack_route, write_proof_pack
 from app.services.rule_engine import RuleEngine
@@ -62,10 +65,48 @@ _SEVERITY_POLICY_VERSION = "severity-v1"
 _NEXTSTEP_POLICY_VERSION = "nextstep-v1"
 _TEMPLATE_VERSION = "templates-v1"
 _BUILD_COMMIT_DEFAULT = "local-dev"
+_SUPPORT_BANNER_FULLY_SUPPORTED = "fully_supported"
 _REPORT_TYPE = "truth_engine_seeded_pipeline"
 _PROOF_CORPUS_ID = "seeded-launch-corpus-v1"
 _DEFAULT_LANGUAGE_ID = "en"
 _DEFAULT_REPORT_DATE = "2026-04-10"
+
+_TEXT_LAYER_HEADER_KEYWORDS = (
+    "laboratory report", "patient details", "doctor details", "name :", "ur :",
+    "ref :", "dob :", "ic no", "collected :", "referred :", "report printed",
+    "ward :", "yr ref", "courier run", "analytes", "results", "units", "ref. ranges",
+    "general screening", "biochemistry", "serum/plasma", "special chemistry",
+    "specimen:", "specimen type", "specimen collected", "random urine",
+    "albumin and creatinine", "kdigo", "interpretation:", "source:", "recommend",
+    "cc drs", "page ", "tests requested", "report completed", "note:",
+    "due to the variability", "kfre risk", "result should be", "ifg ", "igt ",
+    "ifg:", "igt:", "t2dm", "a:", "b:", "c:", "ifg =", "dm ",
+)
+
+_TEXT_LAYER_CATEGORY_LINE_PATTERNS = [
+    re.compile(r"^\s*(normal|prediabetes|dm|a1|a2|a3)\b", re.IGNORECASE),
+    re.compile(r"^\s*(<=|>=|<|>)\s*\d"),
+    re.compile(r"^\s*glucose\s+levels\b", re.IGNORECASE),
+    re.compile(r"\bfor\s+hba1c\s+levels\b", re.IGNORECASE),
+]
+
+_TEXT_LAYER_ROW_RE = re.compile(
+    r"^(?P<label>[A-Za-z][A-Za-z0-9 /\-().,]+?)"
+    r"(?:\s+[^\x00-\x7F]+)?"
+    r"\s+(?P<value>[<>]?=?\s*-?\d+(?:\.\d+)?)\s*%?"
+    r"\s*(?P<unit>%|mmol/L|umol/L|mg/L|mg/dL|mmol/mol|U/L|mL/min/1\.73m2?|mg Alb/mmol)"
+    r"\s*(?P<ref>.*)$",
+    re.IGNORECASE,
+)
+
+_TEXT_LAYER_HBA1C_DUAL_RE = re.compile(
+    r"^hba1c\b.*?(?P<pct_val>\d+(?:\.\d+)?)\s*%\s+(?P<mmol_val>\d+(?:\.\d+)?)\s*mmol/mol",
+    re.IGNORECASE,
+)
+
+_TEXT_LAYER_REF_PAREN_RE = re.compile(r"\(([^)]*)\)")
+_TEXT_LAYER_REF_BARE_RE = re.compile(r"^([<>]=?\s*\d+(?:\.\d+)?)\s*$")
+_NUMERIC_VALUE_CLEAN_RE = re.compile(r"[^\d\.-]+")
 
 
 class PipelineStep(StrEnum):
@@ -136,6 +177,8 @@ def _build_lineage_payload(
         "template_version": _TEMPLATE_VERSION,
         "model_version": None,
         "build_commit": _BUILD_COMMIT_DEFAULT,
+        # Include run timestamp so each retry produces a distinct lineage UUID.
+        "run_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -196,7 +239,7 @@ def _assemble_result(
         "job_id": job_id,
         "status": (
             "completed"
-            if qa_result["passed"] and patient_artifact["support_banner"] == "fully_supported"
+            if qa_result["passed"] and patient_artifact["support_banner"] == _SUPPORT_BANNER_FULLY_SUPPORTED
             else "partial"
         ),
         "lane_type": lane_type,
@@ -262,9 +305,10 @@ class PipelineOrchestrator:
         )
         selected_lane = lane_type or "vlm"
         _LOGGER.info(
-            "pipeline_start job_id=%s lane=%s",
+            "pipeline_start job_id=%s lane=%s correlation_id=%s",
             job_id,
             selected_lane,
+            get_current_correlation_id(),
         )
         patient_context = _build_patient_context(job_id, age_years=age_years, sex=sex)
 
@@ -292,38 +336,51 @@ class PipelineOrchestrator:
             ):
                 raise ValueError(f"unsupported_lane:{selected_lane}")
 
-            if selected_lane == "image_beta" and not settings.image_beta_enabled:
-                raise ValueError("image_beta_disabled")
-
             if selected_lane == "unsupported_pdf":
                 raise ValueError("unsupported_pdf")
 
-            extraction_start = perf_counter()
-            extracted_rows = await _extract_rows(
-                job_uuid,
-                file_bytes=file_bytes,
-                lane_type=selected_lane,
-            )
+            with span("stage.extract") as extract_span:
+                extracted_rows = await _extract_rows(
+                    job_uuid,
+                    file_bytes=file_bytes,
+                    lane_type=selected_lane,
+                )
 
-            from app.services.semantic_cleaner import SemanticCleaner
+                from app.services.semantic_cleaner import SemanticCleaner
 
-            extracted_rows = await SemanticCleaner().clean(extracted_rows)
+                extracted_rows = await SemanticCleaner().clean(extracted_rows)
 
-            _apply_detected_language(extracted_rows, patient_context)
-            extraction_ms = int((perf_counter() - extraction_start) * 1000)
+                if not extracted_rows:
+                    _LOGGER.warning(
+                        "empty_extraction job_id=%s lane=%s — proceeding with empty artifact",
+                        job_id,
+                        selected_lane,
+                    )
+
+                _apply_detected_language(extracted_rows, patient_context)
+
+            extraction_ms = int(extract_span.get("elapsed_ms", 0))
+
             qa_result = {"passed": True, "clean_rows": extracted_rows}
-            observations = observation_builder.build(extracted_rows)
-            normalized_observations = _normalize_observations(
-                observations,
-                analyte_resolver=analyte_resolver,
-                ucum_engine=ucum_engine,
-                metric_resolver=metric_resolver,
-                patient_context=patient_context,
-            )
-            panels = panel_reconstructor.reconstruct(normalized_observations)
-            findings = rule_engine.evaluate(normalized_observations, patient_context)
-            findings = severity_policy.assign(findings, patient_context)
-            findings = nextstep_policy.assign(findings, patient_context)
+            with span("stage.normalize") as normalize_span:
+                observations = observation_builder.build(extracted_rows)
+                normalized_observations = _normalize_observations(
+                    observations,
+                    analyte_resolver=analyte_resolver,
+                    ucum_engine=ucum_engine,
+                    metric_resolver=metric_resolver,
+                    patient_context=patient_context,
+                )
+                panels = panel_reconstructor.reconstruct(normalized_observations)
+
+            normalize_ms = int(normalize_span.get("elapsed_ms", 0))
+
+            with span("stage.rules") as rules_span:
+                findings = rule_engine.evaluate(normalized_observations, patient_context)
+                findings = severity_policy.assign(findings, patient_context)
+                findings = nextstep_policy.assign(findings, patient_context)
+
+            rules_ms = int(rules_span.get("elapsed_ms", 0))
             comparable_history = await comparable_history_service.build_for_artifact(
                 job_id=job_uuid,
                 observations=normalized_observations,
@@ -341,9 +398,6 @@ class PipelineOrchestrator:
             if selected_lane == "image_beta":
                 render_context["trust_status"] = TrustStatus.NON_TRUSTED_BETA
 
-            if selected_lane == "image_beta":
-                render_context["trust_status"] = TrustStatus.NON_TRUSTED_BETA
-
             patient_artifact = artifact_renderer.render_patient(
                 findings,
                 render_context,
@@ -355,22 +409,22 @@ class PipelineOrchestrator:
             )
             patient_artifact["explanation"] = explanation_payload
 
-            # Debug feature to print raw VLM JSON extraction to artifact
-            _debug_raw = [
-                {k: str(v) if isinstance(v, UUID) else v for k, v in row.items()}
-                for row in extracted_rows
-            ]
-            patient_artifact["_debug_raw_extraction"] = _debug_raw
-
-            # Also dump it to a local debug file for easy viewing
-            import json
-            from pathlib import Path
-
-            debug_dir = settings.artifact_store_path / "debug"
-            debug_dir.mkdir(parents=True, exist_ok=True)
-            (debug_dir / f"{job_uuid}_vlm_extraction.json").write_text(
-                json.dumps(_debug_raw, indent=2), encoding="utf-8"
-            )
+            # Debug-only: embed raw extraction and dump to disk.
+            # Never enable in production — extracted_rows may contain PHI.
+            # Dual gate: settings.debug (general) AND settings.allow_debug_artifacts
+            # (explicit opt-in for PHI-bearing artifacts).
+            if settings.debug and settings.allow_debug_artifacts:
+                import json as _json
+                _debug_raw = [
+                    {k: str(v) if isinstance(v, UUID) else v for k, v in row.items()}
+                    for row in extracted_rows
+                ]
+                patient_artifact["_debug_raw_extraction"] = _debug_raw
+                debug_dir = settings.artifact_store_path / "debug"
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                (debug_dir / f"{job_uuid}_vlm_extraction.json").write_text(
+                    _json.dumps(_debug_raw, indent=2), encoding="utf-8"
+                )
 
             clinician_artifact = artifact_renderer.render_clinician(
                 findings,
@@ -389,6 +443,23 @@ class PipelineOrchestrator:
                 terminology_release=terminology_release,
             )
             lineage = lineage_logger.record(str(job_uuid), lineage_payload)
+
+            persisted_rows: dict[str, int] | None = None
+            store: TopLevelLifecycleStore | None = None
+            persist_ms = 0
+            if db_session is not None:
+                store = TopLevelLifecycleStore(db_session)
+                with span("stage.persist") as persist_span:
+                    persisted_rows = await _persist_row_level_entities(
+                        store,
+                        job_uuid=job_uuid,
+                        document_id=document_uuid,
+                        clean_rows=qa_result["clean_rows"],
+                        observations=normalized_observations,
+                        findings=findings,
+                    )
+                persist_ms = int(persist_span.get("elapsed_ms", 0))
+
             processing_ms = int((perf_counter() - processing_start) * 1000)
             benchmark = benchmark_recorder.record(
                 lineage_id=str(lineage["id"]),
@@ -399,6 +470,9 @@ class PipelineOrchestrator:
                     "findings": len(findings),
                     "panels": len(panels),
                     "extraction_ms": extraction_ms,
+                    "normalize_ms": normalize_ms,
+                    "rules_ms": rules_ms,
+                    "persist_ms": persist_ms,
                     "processing_ms": processing_ms,
                 },
             )
@@ -427,8 +501,7 @@ class PipelineOrchestrator:
             result["proof_pack_ref"] = proof_pack_route(job_uuid)
             result["proof_pack"] = proof_pack
 
-            if db_session is not None:
-                store = TopLevelLifecycleStore(db_session)
+            if db_session is not None and store is not None:
                 persistence = _build_persistence_payloads(
                     patient_artifact,
                     clinician_artifact,
@@ -436,14 +509,6 @@ class PipelineOrchestrator:
                     benchmark,
                     result["status"],
                     selected_lane,
-                )
-                persisted_rows = await _persist_row_level_entities(
-                    store,
-                    job_uuid=job_uuid,
-                    document_id=document_uuid,
-                    clean_rows=qa_result["clean_rows"],
-                    observations=normalized_observations,
-                    findings=findings,
                 )
                 await store.persist_top_level_bundle(
                     job_id=job_uuid,
@@ -453,7 +518,13 @@ class PipelineOrchestrator:
                     lineage_run=persistence["lineage_run"],
                     benchmark_run=persistence["benchmark_run"],
                 )
-                result["row_level_persistence"] = persisted_rows
+                result["row_level_persistence"] = persisted_rows or {
+                    "extracted_rows": 0,
+                    "observations": 0,
+                    "mapping_candidates": 0,
+                    "rule_events": 0,
+                    "policy_events": 0,
+                }
 
             _JOB_RUNS[str(job_uuid)] = result
             _JOB_RUNS[job_id] = result
@@ -470,6 +541,7 @@ class PipelineOrchestrator:
                 job_id,
                 selected_lane,
                 exc,
+                exc_info=True,
             )
             raise
 
@@ -576,46 +648,7 @@ def _extract_rows_from_text_layer(
     Ignores interpretation tables, footers, and patient-header blocks.
     """
     import io
-    import re
     import pdfplumber
-
-    # Lines that start with any of these are report boilerplate / not analyte rows.
-    header_keywords = (
-        "laboratory report", "patient details", "doctor details", "name :", "ur :",
-        "ref :", "dob :", "ic no", "collected :", "referred :", "report printed",
-        "ward :", "yr ref", "courier run", "analytes", "results", "units", "ref. ranges",
-        "general screening", "biochemistry", "serum/plasma", "special chemistry",
-        "specimen:", "specimen type", "specimen collected", "random urine",
-        "albumin and creatinine", "kdigo", "interpretation:", "source:", "recommend",
-        "cc drs", "page ", "tests requested", "report completed", "note:",
-        "due to the variability", "kfre risk", "result should be", "ifg ", "igt ",
-        "ifg:", "igt:", "t2dm", "a:", "b:", "c:", "ifg =", "dm ",
-    )
-
-    # Category table rows look like "Normal 3.9 - 6.0" or "<= 6.5 <=48 A: ..."; skip them.
-    category_line_patterns = [
-        re.compile(r"^\s*(normal|prediabetes|dm|a1|a2|a3)\b", re.IGNORECASE),
-        re.compile(r"^\s*(<=|>=|<|>)\s*\d"),
-        # Interpretation-text runs like "glucose levels 6.1 - 6.9 mmol/L"
-        re.compile(r"^\s*glucose\s+levels\b", re.IGNORECASE),
-        re.compile(r"\bfor\s+hba1c\s+levels\b", re.IGNORECASE),
-    ]
-
-    # Core row regex: analyte label (letters/digits/spaces, possibly with i18n chars),
-    # optional i18n block, then value, unit, optional parenthesised reference.
-    row_re = re.compile(
-        r"^(?P<label>[A-Za-z][A-Za-z0-9 /\-().,]+?)"          # English label (greedy-safe)
-        r"(?:\s+[^\x00-\x7F]+)?"                                # optional non-ASCII (Chinese) block
-        r"\s+(?P<value>[<>]?=?\s*-?\d+(?:\.\d+)?)\s*%?"       # value (may start <, >, <=, >=)
-        r"\s*(?P<unit>%|mmol/L|umol/L|mg/L|mg/dL|mmol/mol|U/L|mL/min/1\.73m2?|mg Alb/mmol)"
-        r"\s*(?P<ref>.*)$",
-        re.IGNORECASE,
-    )
-    # Also catch "HbA1c ... 5.2% 33 mmol/mol" where value is glued to %
-    hba1c_dual_re = re.compile(
-        r"^hba1c\b.*?(?P<pct_val>\d+(?:\.\d+)?)\s*%\s+(?P<mmol_val>\d+(?:\.\d+)?)\s*mmol/mol",
-        re.IGNORECASE,
-    )
 
     rows: list[dict] = []
     row_index = 0
@@ -630,13 +663,13 @@ def _extract_rows_from_text_layer(
                         continue
 
                     lowered = line.lower()
-                    if any(lowered.startswith(prefix) for prefix in header_keywords):
+                    if any(lowered.startswith(prefix) for prefix in _TEXT_LAYER_HEADER_KEYWORDS):
                         continue
-                    if any(pat.match(line) for pat in category_line_patterns):
+                    if any(pat.match(line) for pat in _TEXT_LAYER_CATEGORY_LINE_PATTERNS):
                         continue
 
                     # Dual-channel HbA1c row → emit two rows.
-                    hba_match = hba1c_dual_re.search(line)
+                    hba_match = _TEXT_LAYER_HBA1C_DUAL_RE.search(line)
                     if hba_match:
                         rows.append({
                             "document_id": document_id,
@@ -666,7 +699,7 @@ def _extract_rows_from_text_layer(
                         row_index += 1
                         continue
 
-                    match = row_re.match(line)
+                    match = _TEXT_LAYER_ROW_RE.match(line)
                     if not match:
                         continue
 
@@ -679,12 +712,12 @@ def _extract_rows_from_text_layer(
                     unit = match.group("unit").strip()
                     ref = match.group("ref").strip()
                     # Reference range is typically parenthesised; drop surrounding text.
-                    ref_paren = re.search(r"\(([^)]*)\)", ref)
+                    ref_paren = _TEXT_LAYER_REF_PAREN_RE.search(ref)
                     if ref_paren:
                         ref = f"({ref_paren.group(1).strip()})"
                     else:
                         # Allow "< 20.1" style bare comparators
-                        ref_bare = re.match(r"^([<>]=?\s*\d+(?:\.\d+)?)\s*$", ref)
+                        ref_bare = _TEXT_LAYER_REF_BARE_RE.match(ref)
                         ref = ref_bare.group(1).strip() if ref_bare else ""
 
                     rows.append({
@@ -708,6 +741,226 @@ def _extract_rows_from_text_layer(
 
 
 async def _persist_row_level_entities(
+    store: TopLevelLifecycleStore,
+    *,
+    job_uuid: UUID,
+    document_id: UUID,
+    clean_rows: list[dict],
+    observations: list[dict],
+    findings: list[dict],
+) -> dict[str, int]:
+    if not _store_supports_bulk_row_persistence(store):
+        return await _persist_row_level_entities_row_by_row(
+            store,
+            job_uuid=job_uuid,
+            document_id=document_id,
+            clean_rows=clean_rows,
+            observations=observations,
+            findings=findings,
+        )
+
+    try:
+        return await _persist_row_level_entities_bulk(
+            store,
+            job_uuid=job_uuid,
+            document_id=document_id,
+            clean_rows=clean_rows,
+            observations=observations,
+            findings=findings,
+        )
+    except IntegrityError as exc:
+        _LOGGER.warning(
+            "bulk_row_persistence_failed_fallback job_id=%s error=%s",
+            job_uuid,
+            type(exc).__name__,
+        )
+        return await _persist_row_level_entities_row_by_row(
+            store,
+            job_uuid=job_uuid,
+            document_id=document_id,
+            clean_rows=clean_rows,
+            observations=observations,
+            findings=findings,
+        )
+
+
+def _store_supports_bulk_row_persistence(store: TopLevelLifecycleStore) -> bool:
+    required_methods = (
+        "bulk_create_extracted_rows",
+        "bulk_create_observations",
+        "bulk_create_mapping_candidates",
+        "bulk_create_rule_events",
+        "bulk_create_policy_events",
+    )
+    return all(callable(getattr(store, method_name, None)) for method_name in required_methods)
+
+
+async def _persist_row_level_entities_bulk(
+    store: TopLevelLifecycleStore,
+    *,
+    job_uuid: UUID,
+    document_id: UUID,
+    clean_rows: list[dict],
+    observations: list[dict],
+    findings: list[dict],
+) -> dict[str, int]:
+    row_level_counts = {
+        "extracted_rows": 0,
+        "observations": 0,
+        "mapping_candidates": 0,
+        "rule_events": 0,
+        "policy_events": 0,
+    }
+
+    extracted_rows_payload = [
+        {
+            "document_id": document_id,
+            "job_id": job_uuid,
+            "source_page": int(row["source_page"]),
+            "row_hash": str(row["row_hash"]),
+            "raw_text": str(row["raw_text"]),
+            "raw_analyte_label": row.get("raw_analyte_label"),
+            "raw_value_string": row.get("raw_value_string"),
+            "raw_unit_string": row.get("raw_unit_string"),
+            "raw_reference_range": row.get("raw_reference_range"),
+            "extraction_confidence": row.get("extraction_confidence"),
+        }
+        for row in clean_rows
+    ]
+    extracted_row_ids_by_row_hash = await store.bulk_create_extracted_rows(
+        rows=extracted_rows_payload
+    )
+    row_level_counts["extracted_rows"] = len(extracted_rows_payload)
+
+    observations_payload: list[dict] = []
+    for observation in observations:
+        observation_uuid = observation.get("id")
+        if observation_uuid is None:
+            raise ValueError("observation_missing_id")
+        if not isinstance(observation_uuid, UUID):
+            observation_uuid = UUID(str(observation_uuid))
+
+        extracted_row_id = extracted_row_ids_by_row_hash.get(str(observation["row_hash"]))
+        if extracted_row_id is None:
+            raise LookupError(f"missing_extracted_row_for_observation:{observation['row_hash']}")
+
+        observations_payload.append(
+            {
+                "observation_uuid": observation_uuid,
+                "document_id": document_id,
+                "job_id": job_uuid,
+                "extracted_row_id": extracted_row_id,
+                "source_page": int(observation["source_page"]),
+                "row_hash": str(observation["row_hash"]),
+                "raw_analyte_label": str(observation["raw_analyte_label"]),
+                "raw_value_string": observation.get("raw_value_string"),
+                "raw_unit_string": observation.get("raw_unit_string"),
+                "parsed_numeric_value": observation.get("parsed_numeric_value"),
+                "accepted_analyte_code": observation.get("accepted_analyte_code"),
+                "accepted_analyte_display": observation.get("accepted_analyte_display"),
+                "specimen_context": observation.get("specimen_context"),
+                "method_context": observation.get("method_context"),
+                "raw_reference_range": observation.get("raw_reference_range"),
+                "canonical_unit": observation.get("canonical_unit"),
+                "canonical_value": observation.get("canonical_value"),
+                "language_id": observation.get("language_id"),
+                "support_state": _enum_value(observation.get("support_state")),
+                "suppression_reasons": observation.get("suppression_reasons") or None,
+            }
+        )
+
+    observation_ids_by_observation_uuid = await store.bulk_create_observations(
+        rows=observations_payload
+    )
+    row_level_counts["observations"] = len(observations_payload)
+
+    mapping_candidates_payload: list[dict] = []
+    for observation in observations:
+        observation_uuid = observation.get("id")
+        if observation_uuid is None:
+            continue
+        if not isinstance(observation_uuid, UUID):
+            observation_uuid = UUID(str(observation_uuid))
+        persisted_observation_id = observation_ids_by_observation_uuid.get(observation_uuid)
+        if persisted_observation_id is None:
+            continue
+
+        for candidate in observation.get("candidates", []):
+            mapping_candidates_payload.append(
+                {
+                    "observation_id": persisted_observation_id,
+                    "candidate_code": str(candidate["candidate_code"]),
+                    "candidate_display": str(candidate["candidate_display"]),
+                    "score": float(candidate.get("score", 0.0)),
+                    "threshold_used": float(candidate.get("threshold_used", 0.9)),
+                    "accepted": bool(candidate["accepted"]),
+                    "rejection_reason": candidate.get("rejection_reason"),
+                }
+            )
+
+    await store.bulk_create_mapping_candidates(rows=mapping_candidates_payload)
+    row_level_counts["mapping_candidates"] = len(mapping_candidates_payload)
+
+    rule_events_payload: list[dict] = []
+    policy_events_payload: list[dict] = []
+    for finding in findings:
+        persisted_observation_ids: list[UUID] = []
+        for observation_uuid in finding.get("observation_ids", []):
+            try:
+                normalized_observation_uuid = (
+                    observation_uuid
+                    if isinstance(observation_uuid, UUID)
+                    else UUID(str(observation_uuid))
+                )
+            except (TypeError, ValueError):
+                continue
+
+            persisted_observation_id = observation_ids_by_observation_uuid.get(
+                normalized_observation_uuid
+            )
+            if persisted_observation_id is not None:
+                persisted_observation_ids.append(persisted_observation_id)
+
+        if not persisted_observation_ids:
+            continue
+
+        rule_event_id = uuid4()
+        rule_events_payload.append(
+            {
+                "id": rule_event_id,
+                "job_id": job_uuid,
+                "observation_id": persisted_observation_ids[0],
+                "rule_id": str(finding["rule_id"]),
+                "finding_id": _stable_identifier(str(finding["finding_id"])),
+                "threshold_source": str(finding["threshold_source"]),
+                "supporting_observation_ids": persisted_observation_ids,
+                "suppression_conditions": finding.get("suppression_conditions"),
+                "severity_class_candidate": _enum_value(finding.get("severity_class_candidate")),
+                "nextstep_class_candidate": _enum_value(finding.get("nextstep_class_candidate")),
+            }
+        )
+        policy_events_payload.append(
+            {
+                "job_id": job_uuid,
+                "rule_event_id": rule_event_id,
+                "severity_class": _enum_value(finding.get("severity_class")),
+                "nextstep_class": _enum_value(finding.get("nextstep_class")),
+                "severity_policy_version": _SEVERITY_POLICY_VERSION,
+                "nextstep_policy_version": _NEXTSTEP_POLICY_VERSION,
+                "suppression_active": bool(finding.get("suppression_active", False)),
+                "suppression_reason": finding.get("suppression_reason"),
+            }
+        )
+
+    await store.bulk_create_rule_events(rows=rule_events_payload)
+    row_level_counts["rule_events"] = len(rule_events_payload)
+    await store.bulk_create_policy_events(rows=policy_events_payload)
+    row_level_counts["policy_events"] = len(policy_events_payload)
+
+    return row_level_counts
+
+
+async def _persist_row_level_entities_row_by_row(
     store: TopLevelLifecycleStore,
     *,
     job_uuid: UUID,
@@ -887,6 +1140,7 @@ def _normalize_observations(
             context={
                 "specimen_context": updated.get("specimen_context"),
                 "language_id": updated.get("language_id"),
+                "raw_unit": updated.get("raw_unit_string"),
             },
         )
         updated["candidates"] = resolver_result["candidates"]
@@ -906,10 +1160,8 @@ def _normalize_observations(
         raw_value_string = updated.get("raw_value_string")
         numeric_value = parsed_numeric_value
         if numeric_value is None and raw_value_string not in (None, ""):
-            import re
-
             # Strip non-numeric garbage (e.g. '< 180 mg/dL' -> '180')
-            clean_str = re.sub(r"[^\d\.-]+", "", str(raw_value_string))
+            clean_str = _NUMERIC_VALUE_CLEAN_RE.sub("", str(raw_value_string))
             try:
                 if clean_str.count(".") > 1:
                     clean_str = clean_str[: clean_str.index(".") + 1] + clean_str[

@@ -34,6 +34,7 @@ async def test_process_image_with_qwen_success(mock_post, image_bytes):
                                     "value": "200",
                                     "unit": "mg/dL",
                                     "reference_range_raw": "< 200",
+                                    "confidence_score": 90,
                                 }
                             ]
                         }

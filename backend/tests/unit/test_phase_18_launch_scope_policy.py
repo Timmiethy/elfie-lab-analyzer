@@ -47,7 +47,7 @@ def test_phase_18_analyte_resolver_supports_required_launch_scope_analytes() -> 
 
     launch_scope_cases = [
         ("Fasting glucose", {"specimen_context": "serum", "language_id": "en"}),
-        ("HbA1c", {"specimen_context": "blood", "language_id": "en"}),
+        ("HbA1c", {"specimen_context": "blood", "language_id": "en", "raw_unit": "%"}),
         ("Creatinine", {"specimen_context": "serum", "language_id": "en"}),
         ("eGFR", {"specimen_context": "serum", "language_id": "en"}),
         ("Total cholesterol", {"specimen_context": "serum", "language_id": "en"}),

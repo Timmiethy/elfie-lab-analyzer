@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections import Counter
+from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from threading import Lock
+from time import perf_counter
 from uuid import uuid4
 
 CORRELATION_ID_HEADER = "x-correlation-id"
@@ -28,10 +29,23 @@ def get_current_correlation_id() -> str | None:
     return _current_correlation_id.get()
 
 
+@contextmanager
+def span(name: str):
+    """Measure elapsed wall-clock time for a named pipeline stage."""
+
+    start = perf_counter()
+    timing: dict[str, int | str] = {"name": name, "elapsed_ms": 0}
+    try:
+        yield timing
+    finally:
+        timing["elapsed_ms"] = int((perf_counter() - start) * 1000)
+
+
 @dataclass(slots=True)
 class ObservabilityMetrics:
+    # Counter operations in CPython are GIL-protected; no explicit lock needed.
+    # Using threading.Lock here would block the asyncio event loop when contended.
     _counters: Counter[str] = field(default_factory=Counter)
-    _lock: Lock = field(default_factory=Lock)
 
     _KNOWN_COUNTERS = (
         "upload_requests",
@@ -43,8 +57,7 @@ class ObservabilityMetrics:
     )
 
     def reset(self) -> None:
-        with self._lock:
-            self._counters.clear()
+        self._counters.clear()
 
     def record_upload_request(self) -> None:
         self._increment("upload_requests")
@@ -64,15 +77,13 @@ class ObservabilityMetrics:
         self._increment("persistence_fallbacks")
 
     def snapshot(self) -> dict[str, int]:
-        with self._lock:
-            return {
-                counter_name: int(self._counters.get(counter_name, 0))
-                for counter_name in self._KNOWN_COUNTERS
-            }
+        return {
+            counter_name: int(self._counters.get(counter_name, 0))
+            for counter_name in self._KNOWN_COUNTERS
+        }
 
     def _increment(self, counter_name: str) -> None:
-        with self._lock:
-            self._counters[counter_name] += 1
+        self._counters[counter_name] += 1
 
 
 observability_metrics = ObservabilityMetrics()

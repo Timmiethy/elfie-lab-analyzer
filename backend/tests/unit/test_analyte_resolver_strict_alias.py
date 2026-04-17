@@ -77,7 +77,8 @@ def test_analyte_resolver_supports_common_qualifier_suffixes() -> None:
 
     creatinine = resolver.resolve("Creatinine S")
     egfr = resolver.resolve("eGFR CKD EPI")
-    hba1c = resolver.resolve("HbA1c IFCC")
+    hba1c_ngsp = resolver.resolve("HbA1c IFCC", context={"raw_unit": "%"})
+    hba1c_ifcc = resolver.resolve("HbA1c IFCC", context={"raw_unit": "mmol/mol"})
 
     assert creatinine["support_state"] == "supported"
     assert creatinine["accepted_candidate"] is not None
@@ -87,9 +88,25 @@ def test_analyte_resolver_supports_common_qualifier_suffixes() -> None:
     assert egfr["accepted_candidate"] is not None
     assert egfr["accepted_candidate"]["candidate_code"] == "METRIC-0030"
 
-    assert hba1c["support_state"] == "supported"
-    assert hba1c["accepted_candidate"] is not None
-    assert hba1c["accepted_candidate"]["candidate_code"] in {"METRIC-0063", "METRIC-0064"}
+    # With explicit units the HbA1c candidates disambiguate deterministically.
+    assert hba1c_ngsp["support_state"] == "supported"
+    assert hba1c_ngsp["accepted_candidate"]["candidate_code"] == "METRIC-0063"
+    assert hba1c_ifcc["support_state"] == "supported"
+    assert hba1c_ifcc["accepted_candidate"]["candidate_code"] == "METRIC-0064"
+
+
+def test_analyte_resolver_hba1c_requires_unit_disambiguation() -> None:
+    """Without a unit, HbA1c is clinically ambiguous and must abstain."""
+
+    resolver = AnalyteResolver()
+
+    ambiguous = resolver.resolve("HbA1c")
+
+    assert ambiguous["support_state"] == "unsupported"
+    assert ambiguous["accepted_candidate"] is None
+    codes = {c["candidate_code"] for c in ambiguous["candidates"]}
+    assert codes == {"METRIC-0063", "METRIC-0064"}
+    assert all(c["rejection_reason"] == "unit_required" for c in ambiguous["candidates"])
 
 
 def test_analyte_resolver_prefers_exact_canonical_in_alias_collision() -> None:
@@ -108,3 +125,54 @@ def test_analyte_resolver_empty_string() -> None:
     resolved = resolver.resolve("")
     assert resolved["support_state"] == "unsupported"
     assert resolved["accepted_candidate"] is None
+
+
+def test_analyte_resolver_keeps_single_letter_suffix_for_collision_safety() -> None:
+    resolver = AnalyteResolver()
+
+    resolved = resolver.resolve("Protein S")
+
+    assert resolved["normalized_label"] == "protein s"
+    assert resolved["support_state"] == "unsupported"
+
+
+def test_analyte_resolver_returns_ambiguous_token_candidates(monkeypatch) -> None:
+    resolver = AnalyteResolver()
+
+    monkeypatch.setattr(
+        "app.services.analyte_resolver._load_launch_scope_metadata",
+        lambda: {
+            "alias_index": {},
+            "token_signature_index": {
+                "alpha beta": [
+                    {
+                        "candidate_code": "METRIC-A",
+                        "candidate_display": "Metric A",
+                        "canonical_label": "metric a",
+                        "threshold_used": 0.9,
+                    },
+                    {
+                        "candidate_code": "METRIC-B",
+                        "candidate_display": "Metric B",
+                        "canonical_label": "metric b",
+                        "threshold_used": 0.9,
+                    },
+                ]
+            },
+        },
+    )
+
+    resolved = resolver.resolve("Beta Alpha")
+
+    assert resolved["support_state"] == "unsupported"
+    assert resolved["accepted_candidate"] is None
+    assert resolved["abstention_reasons"] == ["ambiguous_tokens"]
+    assert {candidate["candidate_code"] for candidate in resolved["candidates"]} == {
+        "METRIC-A",
+        "METRIC-B",
+    }
+    assert all(
+        candidate["rejection_reason"] == "ambiguous_tokens"
+        for candidate in resolved["candidates"]
+    )
+

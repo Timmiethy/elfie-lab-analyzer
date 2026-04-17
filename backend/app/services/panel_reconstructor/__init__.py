@@ -93,6 +93,9 @@ def _load_panel_metadata() -> dict:
         panel_aliases[panel_key].update(analyte.get("aliases", set()))
         if analyte.get("candidate_code"):
             panel_codes[panel_key].add(analyte["candidate_code"])
+        # Tolerate schema field drift: observations use accepted_analyte_code.
+        if analyte.get("accepted_analyte_code"):
+            panel_codes[panel_key].add(analyte["accepted_analyte_code"])
 
     return {
         "aliases_by_panel": panel_aliases,

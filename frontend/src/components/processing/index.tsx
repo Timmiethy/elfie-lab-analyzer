@@ -98,35 +98,28 @@ export default function Processing({
   useEffect(() => {
     let attemptsSoFar = 0;
     let finished = false;
-    let intervalId: number | null = null;
+    let timeoutId: number | null = null;
+    const abortController = new AbortController();
 
     const finishWithFailure = (message: string) => {
-      if (finished) {
-        return;
-      }
+      if (finished) return;
       finished = true;
       setError(message);
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
-      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      abortController.abort();
       onFailed(message);
     };
 
     const finishWithSuccess = () => {
-      if (finished) {
-        return;
-      }
+      if (finished) return;
       finished = true;
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
-      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      abortController.abort();
       onCompleted();
     };
 
     const poll = async () => {
-      if (finished) {
-        return;
-      }
+      if (finished) return;
 
       attemptsSoFar += 1;
       if (attemptsSoFar > MAX_POLL_ATTEMPTS) {
@@ -138,53 +131,51 @@ export default function Processing({
 
       try {
         const response = await getJobStatus(jobId);
+        if (finished || abortController.signal.aborted) return;
+
         if (!response.ok) {
           throw new Error(`Status check failed with ${response.status}`);
         }
 
         const data: JobStatus = await response.json();
+        if (finished || abortController.signal.aborted) return;
+
         setStatus(data);
 
         const normalizedStatus = data.status.toLowerCase();
         if (
-          normalizedStatus === 'completed' ||
-          normalizedStatus === 'done' ||
-          normalizedStatus === 'success' ||
-          normalizedStatus === 'partial'
+          ['completed', 'done', 'success', 'partial'].includes(normalizedStatus)
         ) {
           finishWithSuccess();
           return;
         }
 
         if (
-          normalizedStatus === 'failed' ||
-          normalizedStatus === 'error' ||
-          normalizedStatus === 'dead_letter' ||
-          normalizedStatus === 'dead_lettered'
+          ['failed', 'error', 'dead_letter', 'dead_lettered'].includes(normalizedStatus)
         ) {
           finishWithFailure(
             'Processing failed. Please try uploading a different file or contact support.',
           );
+          return;
         }
-      } catch (statusError) {
-        finishWithFailure(
-          statusError instanceof Error
-            ? statusError.message
-            : 'Failed to check job status.',
-        );
+
+        const delay = Math.min(1000 * Math.pow(1.5, attemptsSoFar - 1), 10000);
+        timeoutId = window.setTimeout(() => { void poll(); }, delay);
+      } catch (statusError: any) {
+        if (!abortController.signal.aborted) {
+          finishWithFailure(
+            statusError instanceof Error ? statusError.message : 'Failed to check job status.',
+          );
+        }
       }
     };
 
     void poll();
-    intervalId = window.setInterval(() => {
-      void poll();
-    }, POLL_INTERVAL_MS);
 
     return () => {
       finished = true;
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
-      }
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      abortController.abort();
     };
   }, [jobId, onCompleted, onFailed]);
 

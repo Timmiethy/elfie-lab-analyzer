@@ -75,12 +75,16 @@ class _DummySession:
     def __init__(self) -> None:
         self.commit_calls = 0
         self.rollback_calls = 0
+        self.flush_calls = 0
 
     async def commit(self) -> None:
         self.commit_calls += 1
 
     async def rollback(self) -> None:
         self.rollback_calls += 1
+
+    async def flush(self) -> None:
+        self.flush_calls += 1
 
 
 class _DummySessionContext:
@@ -157,7 +161,11 @@ def test_upload_route_uses_persisted_job_path_when_db_session_is_available(
     assert calls["job"]["document_id"] == document_id
     assert calls["pipeline"]["job_id"] == str(job_id)
     assert calls["pipeline"]["db_session"] is session
-    assert session.commit_calls >= 2
+    # Single-session transaction boundary: one commit at the end of the combined
+    # (doc-create → job-create → pipeline-run) block. Flush(es) are used between
+    # writes so the pipeline sees FK rows without an early commit.
+    assert session.commit_calls == 1
+    assert session.flush_calls >= 2
     assert session.rollback_calls == 0
 
 

@@ -1,7 +1,9 @@
+import asyncio
 import base64
 import io
 import json
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 import httpx
@@ -11,6 +13,19 @@ from pydantic import BaseModel, Field, ValidationError
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+_SENSITIVE_HEADER_KEYS = frozenset({"authorization", "x-api-key"})
+
+
+def _redact(headers: Mapping[str, Any] | None) -> dict[str, str]:
+    if headers is None:
+        return {}
+
+    redacted: dict[str, str] = {}
+    for key, value in headers.items():
+        if str(key).lower() in _SENSITIVE_HEADER_KEYS:
+            continue
+        redacted[str(key)] = str(value)
+    return redacted
 
 
 class VLMRow(BaseModel):
@@ -25,7 +40,7 @@ class VLMRow(BaseModel):
         description="Bounding box for the entire visual row: [ymin, xmin, ymax, xmax]",
     )
     confidence_score: int = Field(
-        default=100,
+        default=0,
         ge=0,
         le=100,
         description="Confidence score for this extraction, from 0 to 100",
@@ -90,18 +105,55 @@ async def process_image_with_qwen(file_bytes: bytes) -> list[VLMRow]:
 
     # Check magic bytes for PDF
     if file_bytes.startswith(b"%PDF"):
+        loop = asyncio.get_event_loop()
         try:
-            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            pdf = await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: pdfplumber.open(io.BytesIO(file_bytes))),
+                timeout=settings.pdf_render_timeout_s,
+            )
+            rendered_bytes = 0
+            with pdf:
                 if len(pdf.pages) > settings.max_pdf_pages:
-                    raise ValueError("page_count_limit_exceeded")
-                for page in pdf.pages:
-                    im = page.to_image(resolution=150)
-                    b = io.BytesIO()
-                    im.original.convert("RGB").save(b, format="JPEG")
-                    base64_image = base64.b64encode(b.getvalue()).decode("utf-8")
-                    images_formats.append(f"data:image/jpeg;base64,{base64_image}")
+                    raise VLMParsingError("page_count_limit_exceeded")
+                semaphore = asyncio.Semaphore(max(1, settings.pdf_render_concurrency))
+                bytes_lock = asyncio.Lock()
+
+                async def _render_page(_page: Any) -> str:
+                    nonlocal rendered_bytes
+
+                    async with semaphore:
+                        rendered = await asyncio.wait_for(
+                            loop.run_in_executor(
+                                None,
+                                lambda p=_page: p.to_image(resolution=settings.pdf_render_dpi),
+                            ),
+                            timeout=settings.pdf_render_timeout_s,
+                        )
+
+                    with io.BytesIO() as buffer:
+                        rendered.original.convert("RGB").save(buffer, format="JPEG")
+                        jpeg_bytes = buffer.getvalue()
+
+                    async with bytes_lock:
+                        rendered_bytes += len(jpeg_bytes)
+                        if rendered_bytes > settings.max_pdf_render_bytes:
+                            raise VLMParsingError("pdf_render_bytes_limit_exceeded")
+
+                    base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
+                    return f"data:image/jpeg;base64,{base64_image}"
+
+                page_tasks = [_render_page(page) for page in pdf.pages]
+                images_formats.extend(await asyncio.gather(*page_tasks))
+        except TimeoutError as e:
+            logger.error(
+                "Failed to parse PDF bytes: error_type=TimeoutError timeout_s=%s",
+                settings.pdf_render_timeout_s,
+            )
+            raise VLMParsingError("pdf_render_timeout") from e
+        except VLMParsingError:
+            raise
         except Exception as e:
-            logger.error("Failed to parse PDF bytes: %s", e)
+            logger.error("Failed to parse PDF bytes: error_type=%s", type(e).__name__)
             raise VLMParsingError("Invalid PDF bytes") from e
     else:
         # Assume it's a valid image (JPEG/PNG/etc)
@@ -189,7 +241,22 @@ async def process_image_with_qwen(file_bytes: bytes) -> list[VLMRow]:
                 )
                 response.raise_for_status()
         except httpx.HTTPError as e:
-            logger.error("VLM API request failed: %s", e)
+            try:
+                response_obj = e.response
+            except Exception:
+                response_obj = None
+            try:
+                request_obj = e.request
+            except Exception:
+                request_obj = None
+            status_code = response_obj.status_code if response_obj is not None else None
+            request_headers = _redact(request_obj.headers if request_obj is not None else None)
+            logger.error(
+                "VLM API request failed: error_type=%s status_code=%s request_headers=%s",
+                type(e).__name__,
+                status_code,
+                request_headers,
+            )
             raise VLMAPIError("Failed to communicate with Qwen VLM API") from e
 
         try:
@@ -211,7 +278,16 @@ async def process_image_with_qwen(file_bytes: bytes) -> list[VLMRow]:
             logger.error("Failed to parse VLM response: %s", e)
             raise VLMParsingError("Invalid structured output from VLM") from e
 
-    return all_rows
+    # Filter out low-confidence extractions to reduce garbage downstream.
+    min_conf = settings.min_vlm_confidence
+    filtered = [row for row in all_rows if row.confidence_score >= min_conf]
+    if len(filtered) < len(all_rows):
+        logger.warning(
+            "Dropped %d low-confidence rows (threshold=%d)",
+            len(all_rows) - len(filtered),
+            min_conf,
+        )
+    return filtered
 
 
 async def generate_text_with_qwen(
@@ -239,7 +315,22 @@ async def generate_text_with_qwen(
             )
             response.raise_for_status()
     except httpx.HTTPError as e:
-        logger.error("Text API request failed: %s", e)
+        try:
+            response_obj = e.response
+        except Exception:
+            response_obj = None
+        try:
+            request_obj = e.request
+        except Exception:
+            request_obj = None
+        status_code = response_obj.status_code if response_obj is not None else None
+        request_headers = _redact(request_obj.headers if request_obj is not None else None)
+        logger.error(
+            "Text API request failed: error_type=%s status_code=%s request_headers=%s",
+            type(e).__name__,
+            status_code,
+            request_headers,
+        )
         raise VLMAPIError("Failed to communicate with Qwen Text API") from e
 
     try:

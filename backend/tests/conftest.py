@@ -15,9 +15,17 @@ from app.config import settings
 from app.main import create_app
 
 
-@pytest.fixture(autouse=True)
-def mock_vlm_for_pipeline(request):
-    if "test_vlm_gateway" in request.node.name or "test_vlm_gateway" in str(request.node.fspath):
+@pytest.fixture
+def mock_vlm(request):
+    # Skip VLM mock for: (1) VLM gateway tests that test the real gateway,
+    # (2) integration tests that explicitly opt out via marker or path filter.
+    node_path = str(request.node.fspath)
+    if "test_vlm_gateway" in request.node.name or "test_vlm_gateway" in node_path:
+        yield
+        return
+    # Integration tests that want real OCR should use pytestmark to opt out:
+    #   pytestmark = pytest.mark.no_vlm_mock
+    if request.node.get_closest_marker("no_vlm_mock"):
         yield
         return
 
@@ -41,16 +49,19 @@ def mock_vlm_for_pipeline(request):
             value = "180" if "180" in raw else "110" if "110" in raw else "96"
             rows.append(
                 VLMRow(
-                    analyte_name="Glucose", value=value, unit="mg/dL", reference_range_raw="70-100"
+                    analyte_name="Glucose", value=value, unit="mg/dL", reference_range_raw="70-100",
+                    confidence_score=100,
                 )
             )
         if "HbA1c" in raw:
             rows.append(
-                VLMRow(analyte_name="HbA1c", value="6.8", unit="%", reference_range_raw="4.0-6.0")
+                VLMRow(analyte_name="HbA1c", value="6.8", unit="%", reference_range_raw="4.0-6.0",
+                       confidence_score=100)
             )
         if "MysteryMarker" in raw:
             rows.append(
-                VLMRow(analyte_name="MysteryMarker", value="7.2", unit="zz", reference_range_raw="")
+                VLMRow(analyte_name="MysteryMarker", value="7.2", unit="zz", reference_range_raw="",
+                       confidence_score=100)
             )
 
         if not rows:

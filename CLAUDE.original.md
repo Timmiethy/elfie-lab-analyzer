@@ -1,17 +1,17 @@
 # CLAUDE.md
 
-Guidance for Claude Code (claude.ai/code) in this repo.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Elfie Labs Analyzer: full-stack lab report understanding system. Processes PDF/image lab reports, extracts structured observations, maps analytes to LOINC, evaluates clinical rules, generates patient + clinician artifacts.
+Elfie Labs Analyzer is a full-stack lab report understanding system that processes PDF/image lab reports, extracts structured observations, maps analytes to LOINC concepts, evaluates clinical rules, and generates both patient-friendly and clinician-shareable artifacts.
 
 ## What This Project Does
 
-End-to-end pipeline:
-1. Ingestion - Accept PDF/image uploads
-2. Extraction - Parse + extract observations via OCR (Mineru + optional VLM)
-3. Normalization - Normalize analytes, resolve to LOINC
+Elfie Labs Analyzer is an end-to-end pipeline for:
+1. Ingestion - Accept PDF/image uploads of lab reports
+2. Extraction - Parse documents and extract observations using OCR (Mineru + optional VLM)
+3. Normalization - Normalize analytes and resolve to LOINC terminology
 4. Enrichment - Validate units (UCUM), reconstruct panels, evaluate rules
-5. Output - Patient + clinician artifacts with lineage/provenance
+5. Output - Generate patient-friendly and clinician artifacts with lineage/provenance
 
 Stack:
 - Backend: Python FastAPI + async SQLAlchemy + PostgreSQL
@@ -37,7 +37,7 @@ See backend/app/workers/pipeline.py:
 10. CLINICIAN_ARTIFACT (ArtifactRenderer)
 11. LINEAGE_PERSIST (LineageLogger)
 
-Key Pattern: No skip/flatten stages. Each output feeds next, independently testable.
+Key Pattern: Do not skip/flatten stages. Each output feeds the next and is independently testable.
 
 ### Directory Structure
 
@@ -48,7 +48,7 @@ backend/
     workers/pipeline.py - PipelineOrchestrator
     models/tables.py - SQLAlchemy ORM
     schemas/ - Pydantic validation
-  tests/ - unit/ and integration/ suites
+  tests/ - unit/ and integration/ test suites
 
 frontend/
   src/ - React components, API client, types
@@ -118,22 +118,22 @@ Flags: -x (stop first fail), -v (verbose), -s (show prints), -k "pattern"
 
 cp .env.example .env
 
-Key vars (prefix ELFIE_):
+Key variables (all prefixed ELFIE_):
 - DATABASE_URL - PostgreSQL async URL
 - QWEN_API_KEY - VLM API key (optional)
 - IMAGE_BETA_ENABLED - Enable VLM lane (default: false)
 - CORS_ORIGINS - Allowed origins (default: localhost:5173)
 - MAX_UPLOAD_SIZE_MB - Upload limit (default: 20)
 
-See backend/app/config.py for full list.
+See backend/app/config.py for full settings list.
 
 ---
 
 ## Testing
 
 Unit tests (tests/unit/):
-- Mock external deps (DB, VLM, Qwen)
-- Fast, isolated
+- Mock all external deps (DB, VLM, Qwen)
+- Fast and isolated
 - Examples: test_analyte_resolver_strict_alias.py, test_contract_examples*.py
 
 Integration tests (tests/integration/):
@@ -141,7 +141,7 @@ Integration tests (tests/integration/):
 - Examples: test_phase_12_api_flow.py, test_phase_14_operational_runtime.py
 
 Fixtures (tests/conftest.py):
-- mock_vlm_for_pipeline - Auto-mock VLM for all tests
+- mock_vlm_for_pipeline - Auto-mocks VLM for all tests
 - async_session_factory - DB session
 - async_client - FastAPI test client
 
@@ -149,7 +149,7 @@ Fixtures (tests/conftest.py):
 
 ## API
 
-All routes JSON. See backend/app/api/routes/:
+All routes return JSON. See backend/app/api/routes/:
 
 POST /api/upload
   Form: file (PDF/PNG/JPG), age_years?, sex?
@@ -159,7 +159,7 @@ GET /api/jobs/{job_id}
   Response: { id, status, message }
 
 GET /api/artifacts/{job_id}/patient
-  Response: PatientArtifact with findings + explanations
+  Response: PatientArtifact with findings and explanations
 
 GET /api/artifacts/{job_id}/clinician
   Response: ClinicianArtifact with full clinical data
@@ -176,7 +176,7 @@ GET /api/health
 - LOINC - Standard terminology codes for lab tests
 - Panel - Group of related analytes (CMP, CBC, etc.)
 - Artifact - Generated patient or clinician report
-- Lineage - Provenance: how each finding derived
+- Lineage - Provenance: how each finding was derived
 - Severity - Clinical assessment (normal, low, moderate, high, critical)
 
 ---
@@ -186,7 +186,7 @@ GET /api/health
 ### Adding a Service
 
 1. Create backend/app/services/<name>/__init__.py
-2. Implement with Pydantic schemas for I/O
+2. Implement with Pydantic schemas for I/O types
 3. Add unit tests in backend/tests/unit/
 4. Integrate into PipelineOrchestrator in pipeline.py
 5. Update API schemas in backend/app/schemas/
@@ -201,7 +201,7 @@ GET /api/health
 ### Adding a Rule
 
 1. Define logic in backend/app/services/rule_engine.py
-2. Add YAML/JSON to backend/policy_tables/ if needed
+2. Add YAML/JSON definition to backend/policy_tables/ if needed
 3. Test with pytest tests/unit/test_rule_engine.py
 4. Integrate into pipeline
 
@@ -221,7 +221,7 @@ alembic current           # Show current version
 
 ## Observability
 
-- Correlation IDs: X-Correlation-ID header (auto-gen or passed)
+- Correlation IDs: X-Correlation-ID header (auto-generated or passed)
 - Logging: backend/app/services/observability.py
 - Metrics: backend/app/services/benchmark.py
 
@@ -230,29 +230,29 @@ alembic current           # Show current version
 ## Guidelines
 
 Do:
-- Keep pipeline stages isolated + independently testable
-- Type hints everywhere (mypy --strict)
-- Tests near behavior validated
-- Preserve stage boundaries
-- Sync backend + frontend API changes
+- Keep pipeline stages isolated and independently testable
+- Use type hints everywhere (mypy --strict)
+- Write tests near the behavior they validate
+- Preserve stage boundaries in orchestration
+- Sync backend and frontend API changes
 
 Don't:
-- Skip/flatten pipeline stages
-- Commit secrets, real patient data, generated artifacts
-- Non-async code in hot paths
+- Skip or flatten pipeline stages
+- Commit secrets, real patient data, or generated artifacts
+- Use non-async code in hot paths
 - Bypass Pydantic validation
-- Hard-code paths (use config.py settings)
+- Hard-code paths (use settings from config.py)
 
 ---
 
 ## Troubleshooting
 
-Postgres connection:
+Postgres connection issues:
   docker ps | grep postgres
   echo $ELFIE_DATABASE_URL
   psql "postgresql://elfie:elfie@localhost:5432/elfie_labs"
 
-VLM / Image Beta:
+VLM / Image Beta issues:
   Set ELFIE_IMAGE_BETA_ENABLED=true
   Provide ELFIE_QWEN_API_KEY
   Check mock in tests/conftest.py
@@ -260,13 +260,13 @@ VLM / Image Beta:
 Frontend API errors:
   Frontend API client: frontend/src/services/api.ts
   Check backend /api/health
-  Verify CORS in .env
+  Verify CORS settings in .env
 
 Test failures:
-  Run with -xvs
+  Run with -xvs for details
   Check conftest mocks
   Verify alembic current
-  Check correlation ID in logs
+  Look for correlation ID in logs
 
 ---
 
@@ -274,7 +274,7 @@ Test failures:
 
 - Design docs: docs/, labs_analyzer_v10_*.md
 - Contracts: contracts/examples/, contracts/README.md
-- Architecture: AGENTS.md, GEMINI.md, PLAN.md
+- Architecture decisions: AGENTS.md, GEMINI.md, PLAN.md
 - Config: backend/pyproject.toml, frontend/package.json
 
 ---

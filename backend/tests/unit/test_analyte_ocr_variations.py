@@ -53,26 +53,36 @@ class TestAnalyteResolverOCRVariations:
         # Should be METRIC-0003, not HbA1c
         assert result["accepted_candidate"]["candidate_code"] == "METRIC-0003"
 
-    @pytest.mark.parametrize("raw_label", [
-        "HbA1c",
-        "HBA1C",
-        "hba1c",
-        "Hemoglobin A1c",
-        "Hemoglobin A1C",
-        "HB A1C",
-        "Hb A1c",
-        "A1C",  # OCR: sometimes just the A1C part
-        "HbA1C (NGSP)",  # With calibration
-        "HbA1c NGSP %",  # With unit
-        "HbA1C DCCT",
-        "HbA1c IFCC",
-        "HbA1C mmol/mol",  # IFCC unit
+    @pytest.mark.parametrize("raw_label,raw_unit,expected_code", [
+        ("HbA1c", "%", "METRIC-0063"),
+        ("HBA1C", "%", "METRIC-0063"),
+        ("hba1c", "%", "METRIC-0063"),
+        ("Hemoglobin A1c", "%", "METRIC-0063"),
+        ("Hemoglobin A1C", "%", "METRIC-0063"),
+        ("HB A1C", "%", "METRIC-0063"),
+        ("Hb A1c", "%", "METRIC-0063"),
+        ("A1C", "%", "METRIC-0063"),
+        ("HbA1C (NGSP)", "%", "METRIC-0063"),
+        ("HbA1c NGSP %", "%", "METRIC-0063"),
+        ("HbA1C DCCT", "%", "METRIC-0063"),
+        ("HbA1c IFCC", "mmol/mol", "METRIC-0064"),
+        ("HbA1C mmol/mol", "mmol/mol", "METRIC-0064"),
     ])
-    def test_hba1c_variations(self, resolver, raw_label):
-        """HbA1c variants all resolve to METRIC-0063/0064."""
-        result = resolver.resolve(raw_label)
-        assert result["support_state"] == "supported", f"Failed: {raw_label}"
-        assert result["accepted_candidate"]["candidate_code"] in ("METRIC-0063", "METRIC-0064")
+    def test_hba1c_variations(self, resolver, raw_label, raw_unit, expected_code):
+        """HbA1c variants disambiguate to METRIC-0063/0064 by UCUM unit."""
+        result = resolver.resolve(raw_label, context={"raw_unit": raw_unit})
+        assert result["support_state"] == "supported", f"Failed: {raw_label} ({raw_unit})"
+        assert result["accepted_candidate"]["candidate_code"] == expected_code
+
+    def test_hba1c_without_unit_is_ambiguous(self, resolver):
+        """No unit → abstain; caller must resolve the ambiguity upstream."""
+        result = resolver.resolve("HbA1c")
+        assert result["support_state"] == "unsupported"
+        assert result["accepted_candidate"] is None
+        assert {c["candidate_code"] for c in result["candidates"]} == {
+            "METRIC-0063",
+            "METRIC-0064",
+        }
 
     # Electrolytes (Sodium, Potassium, Chloride)
     @pytest.mark.parametrize("raw_label", [

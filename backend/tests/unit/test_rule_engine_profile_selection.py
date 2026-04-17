@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from app.services.metric_resolver import MetricResolver
-from app.services.rule_engine import RuleEngine
+from app.services.rule_engine import RuleEngine, _normalize_sex_thresholds
 
 
 @pytest.fixture
@@ -138,3 +138,36 @@ def test_rule_engine_preserves_non_supported_reason_for_known_analytes() -> None
     assert len(findings) == 1
     assert findings[0]["rule_id"] == "unsupported_analyte"
     assert findings[0]["suppression_reason"] == "low_extraction_confidence"
+
+
+def test_normalize_sex_thresholds_accepts_and_normalizes_case() -> None:
+    normalized = _normalize_sex_thresholds(
+        {
+            "Female": [{"value": 50, "severity_class": "S2"}],
+            "MALE": [{"value": 40, "severity_class": "S2"}],
+            "Default": [{"value": 45, "severity_class": "S2"}],
+        },
+        rule_id="hdl_low_threshold",
+    )
+
+    assert set(normalized) == {"female", "male", "default"}
+    assert normalized["female"][0]["value"] == 50.0
+
+
+def test_normalize_sex_thresholds_rejects_unknown_key() -> None:
+    with pytest.raises(ValueError, match="unsupported sex_thresholds key"):
+        _normalize_sex_thresholds(
+            {"unknown": [{"value": 40, "severity_class": "S2"}]},
+            rule_id="hdl_low_threshold",
+        )
+
+
+def test_normalize_sex_thresholds_rejects_collision_after_normalization() -> None:
+    with pytest.raises(ValueError, match="duplicate sex_thresholds key"):
+        _normalize_sex_thresholds(
+            {
+                "Male": [{"value": 40, "severity_class": "S2"}],
+                "male": [{"value": 41, "severity_class": "S2"}],
+            },
+            rule_id="hdl_low_threshold",
+        )
