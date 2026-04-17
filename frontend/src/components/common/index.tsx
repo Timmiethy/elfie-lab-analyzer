@@ -41,7 +41,7 @@ export function PageChrome({
           position: 'relative',
           backgroundColor: STITCH_COLORS.navy,
           color: STITCH_COLORS.surfaceWhite,
-          padding: compact ? '1rem 1rem 2rem' : '1rem 1rem 2.5rem',
+          padding: compact ? '1.5rem 1.25rem 2.5rem' : '1.75rem 1.25rem 3rem',
           boxShadow: STITCH_SHADOWS.lift,
           overflow: 'hidden',
         }}
@@ -73,11 +73,11 @@ export function PageChrome({
           <div style={{ minWidth: 0 }}>
             <p
               style={{
-                fontSize: '1.02rem',
+                fontSize: '1.2rem',
                 fontWeight: 700,
                 letterSpacing: '-0.02em',
                 margin: 0,
-                lineHeight: 1.15,
+                lineHeight: 1.2,
               }}
             >
               {title}
@@ -85,11 +85,11 @@ export function PageChrome({
             {subtitle && (
               <p
                 style={{
-                  fontSize: '0.78rem',
-                  lineHeight: 1.45,
-                  color: 'rgba(255,255,255,0.76)',
-                  margin: '0.3rem 0 0',
-                  maxWidth: 360,
+                  fontSize: '0.88rem',
+                  lineHeight: 1.5,
+                  color: 'rgba(255,255,255,0.72)',
+                  margin: '0.4rem 0 0',
+                  maxWidth: 380,
                 }}
               >
                 {subtitle}
@@ -116,7 +116,7 @@ export function PageChrome({
         style={{
           ...CONTENT_COLUMN_STYLE,
           maxWidth: contentMaxWidth,
-          marginTop: compact ? '-0.25rem' : '0.4rem',
+          marginTop: compact ? '0.1rem' : '0.6rem',
         }}
       >
         {children}
@@ -195,16 +195,16 @@ export function BoundaryCard({
       role="note"
       style={{
         ...subtleCardStyle({
-          padding: '1rem 1.05rem',
+          padding: '1.1rem 1.15rem',
           backgroundColor: palette.backgroundColor,
-          marginTop: '0.9rem',
+          marginTop: '1rem',
         }),
       }}
     >
       <p
         style={{
-          margin: '0 0 0.3rem',
-          fontSize: '0.74rem',
+          margin: '0 0 0.35rem',
+          fontSize: '0.76rem',
           fontWeight: 800,
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
@@ -216,7 +216,7 @@ export function BoundaryCard({
       <p
         style={{
           margin: 0,
-          fontSize: '0.9rem',
+          fontSize: '0.94rem',
           lineHeight: 1.6,
           color: palette.color,
         }}
@@ -253,11 +253,13 @@ export function PrimaryButton({
       onClick={onClick}
       disabled={disabled}
       style={{
+        position: 'relative',
+        overflow: 'hidden',
         width: '100%',
-        minHeight: 54,
+        minHeight: 56,
         borderRadius: STITCH_RADIUS.pill,
         border: 'none',
-        fontSize: '0.96rem',
+        fontSize: '1rem',
         fontWeight: 700,
         color: STITCH_COLORS.surfaceWhite,
         background: disabled
@@ -266,7 +268,8 @@ export function PrimaryButton({
         boxShadow: disabled ? 'none' : STITCH_SHADOWS.hero,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.85 : 1,
-        transition: 'transform 120ms ease, opacity 120ms ease',
+        transition:
+          'transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 260ms ease, opacity 220ms ease, filter 220ms ease',
         ...style,
       }}
     >
@@ -292,15 +295,19 @@ export function SecondaryButton({
       onClick={onClick}
       disabled={disabled}
       style={{
+        position: 'relative',
+        overflow: 'hidden',
         width: '100%',
-        minHeight: 50,
+        minHeight: 52,
         borderRadius: STITCH_RADIUS.pill,
         border: `1px solid ${STITCH_COLORS.borderGhost}`,
-        fontSize: '0.92rem',
+        fontSize: '0.95rem',
         fontWeight: 700,
         color: STITCH_COLORS.navy,
         backgroundColor: STITCH_COLORS.surfaceWhite,
         cursor: disabled ? 'not-allowed' : 'pointer',
+        transition:
+          'transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 260ms ease, border-color 220ms ease, background-color 220ms ease, color 220ms ease',
         ...style,
       }}
     >
@@ -359,11 +366,11 @@ export function SeverityChip({ severity }: { severity: SeverityClass }) {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 6,
-        padding: '5px 10px',
+        padding: '6px 12px',
         borderRadius: STITCH_RADIUS.pill,
         backgroundColor: meta.bg,
         color: meta.color,
-        fontSize: '0.76rem',
+        fontSize: '0.8rem',
         fontWeight: 700,
       }}
     >

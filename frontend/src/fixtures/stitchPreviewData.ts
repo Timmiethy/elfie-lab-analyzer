@@ -86,6 +86,7 @@ const EN_FULLY_NOT_ASSESSED: UnsupportedItem[] = [];
 const EN_FULLY_ARTIFACT: PatientArtifact = {
   job_id: 'preview-en-fully-supported',
   support_banner: 'fully_supported',
+  trust_status: 'trusted',
   overall_severity: 'S2',
   flagged_cards: EN_FULLY_FLAGGED,
   reviewed_not_flagged: EN_FULLY_NOT_FLAGGED,
@@ -99,7 +100,7 @@ const EN_FULLY_ARTIFACT: PatientArtifact = {
     makeFinding('hba1c-high', 'S2', 'A2'),
   ],
   language_id: 'en',
-  comparable_history: [],
+  comparable_history: null,
 };
 
 const EN_FULLY_CLINICIAN: ClinicianArtifact = {
@@ -108,8 +109,8 @@ const EN_FULLY_CLINICIAN: ClinicianArtifact = {
   top_findings: EN_FULLY_ARTIFACT.findings,
   severity_classes: ['S2'],
   nextstep_classes: ['A2'],
-  support_coverage:
-    'All supported rows were reviewed from a trusted PDF upload. Unsupported rows: none.',
+  support_coverage: 'fully_supported',
+  trust_status: 'trusted',
   not_assessed: EN_FULLY_NOT_ASSESSED,
   provenance_link:
     'data:text/plain,Preview provenance for fasting glucose and HbA1c derived from supported PDF rows.',
@@ -151,6 +152,7 @@ const EN_PARTIAL_NOT_ASSESSED: UnsupportedItem[] = [
 const EN_PARTIAL_ARTIFACT: PatientArtifact = {
   job_id: 'preview-en-partially-supported',
   support_banner: 'partially_supported',
+  trust_status: 'trusted',
   overall_severity: 'S2',
   flagged_cards: EN_PARTIAL_FLAGGED,
   reviewed_not_flagged: EN_PARTIAL_NOT_FLAGGED,
@@ -161,19 +163,17 @@ const EN_PARTIAL_ARTIFACT: PatientArtifact = {
   not_assessed: EN_PARTIAL_NOT_ASSESSED,
   findings: [makeFinding('creatinine-high', 'S2', 'A2')],
   language_id: 'en',
-  comparable_history: [
-    {
-      analyte_display: 'Creatinine',
-      current_value: '1.4',
-      current_unit: 'mg/dL',
-      previous_value: '1.1',
-      previous_unit: 'mg/dL',
-      previous_date: '2025-01-15',
-      direction: 'increased',
-      comparability_status: 'comparable',
-      comparability_reason: null,
-    },
-  ],
+  comparable_history: {
+    analyte_display: 'Creatinine',
+    current_value: '1.4',
+    current_unit: 'mg/dL',
+    current_date: '2026-04-11',
+    previous_value: '1.1',
+    previous_unit: 'mg/dL',
+    previous_date: '2025-01-15',
+    direction: 'increased',
+    comparability_status: 'available',
+  },
 };
 
 const EN_PARTIAL_CLINICIAN: ClinicianArtifact = {
@@ -182,8 +182,8 @@ const EN_PARTIAL_CLINICIAN: ClinicianArtifact = {
   top_findings: EN_PARTIAL_ARTIFACT.findings,
   severity_classes: ['S2'],
   nextstep_classes: ['A2'],
-  support_coverage:
-    'Supported rows were reviewed, but one or more source rows could not be mapped or fell outside the supported analyte set.',
+  support_coverage: 'partially_supported',
+  trust_status: 'trusted',
   not_assessed: EN_PARTIAL_NOT_ASSESSED,
   provenance_link:
     'data:text/plain,Preview provenance for creatinine derived from supported rows with unsupported items retained.',
@@ -197,6 +197,7 @@ const EN_PARTIAL_CLINICIAN: ClinicianArtifact = {
 const EN_CNA_ARTIFACT: PatientArtifact = {
   job_id: 'preview-en-could-not-assess',
   support_banner: 'could_not_assess',
+  trust_status: 'trusted',
   overall_severity: 'SX',
   flagged_cards: [],
   reviewed_not_flagged: [],
@@ -212,7 +213,18 @@ const EN_CNA_ARTIFACT: PatientArtifact = {
   ],
   findings: EMPTY_FINDINGS,
   language_id: 'en',
-  comparable_history: [],
+  comparable_history: {
+    analyte_display: 'Glucose',
+    current_value: '180',
+    current_unit: 'mg/dL',
+    current_date: '2026-04-11',
+    previous_value: null,
+    previous_unit: null,
+    previous_date: null,
+    direction: 'trend_unavailable',
+    comparability_status: 'unavailable',
+    comparability_reason: 'No prior comparable history is available.',
+  },
 };
 
 const EN_CNA_CLINICIAN: ClinicianArtifact = {
@@ -221,8 +233,8 @@ const EN_CNA_CLINICIAN: ClinicianArtifact = {
   top_findings: [],
   severity_classes: ['SX'],
   nextstep_classes: ['AX'],
-  support_coverage:
-    'The source document could not be parsed into supported structured rows, so this summary remains limited.',
+  support_coverage: 'could_not_assess',
+  trust_status: 'trusted',
   not_assessed: EN_CNA_ARTIFACT.not_assessed,
   provenance_link:
     'data:text/plain,Preview provenance unavailable because the source report could not be fully structured.',
@@ -255,6 +267,7 @@ const VI_FULLY_NOT_ASSESSED: UnsupportedItem[] = [];
 const VI_FULLY_ARTIFACT: PatientArtifact = {
   job_id: 'preview-vi-fully-supported',
   support_banner: 'fully_supported',
+  trust_status: 'trusted',
   overall_severity: 'S2',
   flagged_cards: VI_FULLY_FLAGGED,
   reviewed_not_flagged: VI_FULLY_NOT_FLAGGED,
@@ -265,7 +278,7 @@ const VI_FULLY_ARTIFACT: PatientArtifact = {
   not_assessed: VI_FULLY_NOT_ASSESSED,
   findings: [makeFinding('glucose-high-vi', 'S2', 'A2')],
   language_id: 'vi',
-  comparable_history: [],
+  comparable_history: null,
 };
 
 const VI_FULLY_CLINICIAN: ClinicianArtifact = {
@@ -274,8 +287,8 @@ const VI_FULLY_CLINICIAN: ClinicianArtifact = {
   top_findings: VI_FULLY_ARTIFACT.findings,
   severity_classes: ['S2'],
   nextstep_classes: ['A2'],
-  support_coverage:
-    'Tất cả các dòng được hỗ trợ đã được xem xét từ tệp PDF tin cậy. Không có mục nào bị bỏ sót.',
+  support_coverage: 'fully_supported',
+  trust_status: 'trusted',
   not_assessed: VI_FULLY_NOT_ASSESSED,
   provenance_link:
     'data:text/plain,Ban xem truoc provenance cho glucose doi duoc trich tu PDF ho tro.',
@@ -312,6 +325,7 @@ const VI_PARTIAL_NOT_ASSESSED: UnsupportedItem[] = [
 const VI_PARTIAL_ARTIFACT: PatientArtifact = {
   job_id: 'preview-vi-partially-supported',
   support_banner: 'partially_supported',
+  trust_status: 'trusted',
   overall_severity: 'S2',
   flagged_cards: VI_PARTIAL_FLAGGED,
   reviewed_not_flagged: VI_PARTIAL_NOT_FLAGGED,
@@ -322,19 +336,17 @@ const VI_PARTIAL_ARTIFACT: PatientArtifact = {
   not_assessed: VI_PARTIAL_NOT_ASSESSED,
   findings: [makeFinding('creatinine-high-vi', 'S2', 'A2')],
   language_id: 'vi',
-  comparable_history: [
-    {
-      analyte_display: 'Creatinine',
-      current_value: '1.5',
-      current_unit: 'mg/dL',
-      previous_value: '1.0',
-      previous_unit: 'mg/dL',
-      previous_date: '2025-02-10',
-      direction: 'increased',
-      comparability_status: 'comparable',
-      comparability_reason: null,
-    },
-  ],
+  comparable_history: {
+    analyte_display: 'Creatinine',
+    current_value: '1.5',
+    current_unit: 'mg/dL',
+    current_date: '2026-04-11',
+    previous_value: '1.0',
+    previous_unit: 'mg/dL',
+    previous_date: '2025-02-10',
+    direction: 'increased',
+    comparability_status: 'available',
+  },
 };
 
 const VI_PARTIAL_CLINICIAN: ClinicianArtifact = {
@@ -343,8 +355,8 @@ const VI_PARTIAL_CLINICIAN: ClinicianArtifact = {
   top_findings: VI_PARTIAL_ARTIFACT.findings,
   severity_classes: ['S2'],
   nextstep_classes: ['A2'],
-  support_coverage:
-    'Các dòng được hỗ trợ đã được xem xét, nhưng một số dòng nguồn không thể ánh xạ hoặc nằm ngoài phạm vi hỗ trợ hiện tại.',
+  support_coverage: 'partially_supported',
+  trust_status: 'trusted',
   not_assessed: VI_PARTIAL_NOT_ASSESSED,
   provenance_link:
     'data:text/plain,Ban xem truoc provenance cho creatinine tu cac dong duoc ho tro.',
@@ -358,6 +370,7 @@ const VI_PARTIAL_CLINICIAN: ClinicianArtifact = {
 const VI_CNA_ARTIFACT: PatientArtifact = {
   job_id: 'preview-vi-could-not-assess',
   support_banner: 'could_not_assess',
+  trust_status: 'trusted',
   overall_severity: 'SX',
   flagged_cards: [],
   reviewed_not_flagged: [],
@@ -373,7 +386,7 @@ const VI_CNA_ARTIFACT: PatientArtifact = {
   ],
   findings: EMPTY_FINDINGS,
   language_id: 'vi',
-  comparable_history: [],
+  comparable_history: null,
 };
 
 const VI_CNA_CLINICIAN: ClinicianArtifact = {
@@ -382,8 +395,8 @@ const VI_CNA_CLINICIAN: ClinicianArtifact = {
   top_findings: [],
   severity_classes: ['SX'],
   nextstep_classes: ['AX'],
-  support_coverage:
-    'Không thể phân tích tài liệu nguồn thành các dòng có cấu trúc được hỗ trợ nên bản tóm tắt này còn hạn chế.',
+  support_coverage: 'could_not_assess',
+  trust_status: 'trusted',
   not_assessed: VI_CNA_ARTIFACT.not_assessed,
   provenance_link:
     'data:text/plain,Ban xem truoc provenance khong kha dung vi tai lieu khong the duoc cau truc day du.',
@@ -432,7 +445,7 @@ const FIXTURES: Record<
     clinicianArtifact: EN_CNA_CLINICIAN,
     variant: 'could_not_assess',
     language: 'en',
-    hasComparableHistory: false,
+    hasComparableHistory: true,
   },
   vi_fully_supported: {
     patientArtifact: VI_FULLY_ARTIFACT,

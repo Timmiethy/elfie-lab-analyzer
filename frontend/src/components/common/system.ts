@@ -34,7 +34,7 @@ export const STITCH_COLORS = {
 };
 
 export const STITCH_RADIUS = {
-  sm: 12,
+  sm: 14,
   md: 18,
   lg: 24,
   xl: 30,
@@ -59,7 +59,7 @@ export const CONTENT_COLUMN_STYLE: CSSProperties = {
   width: '100%',
   maxWidth: 560,
   margin: '0 auto',
-  padding: '0 1rem 2.75rem',
+  padding: '0 1.25rem 3rem',
   boxSizing: 'border-box',
 };
 
@@ -109,9 +109,9 @@ export function badgeStyle(
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    padding: '4px 10px',
+    padding: '5px 12px',
     borderRadius: STITCH_RADIUS.pill,
-    fontSize: '0.7rem',
+    fontSize: '0.72rem',
     fontWeight: 700,
     letterSpacing: '0.02em',
     textTransform: 'uppercase',

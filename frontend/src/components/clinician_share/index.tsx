@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getClinicianArtifact, getClinicianPdf } from '../../services/api';
 import type {
   ClinicianArtifact,
@@ -107,32 +107,12 @@ function formatRuleId(ruleId: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function asSupportBanner(value: unknown): SupportBanner | null {
-  if (
-    value === 'fully_supported' ||
-    value === 'partially_supported' ||
-    value === 'could_not_assess'
-  ) {
-    return value;
-  }
-  return null;
+function formatSupportCoverage(supportCoverage: SupportBanner): string {
+  return SUPPORT_COVERAGE_META[supportCoverage].label;
 }
 
-function asTrustStatus(value: unknown): TrustStatus | null {
-  if (value === 'trusted' || value === 'non_trusted_beta') {
-    return value;
-  }
-  return null;
-}
-
-function formatSupportCoverage(supportCoverage: unknown): string {
-  const normalized = asSupportBanner(supportCoverage) ?? 'could_not_assess';
-  return SUPPORT_COVERAGE_META[normalized].label;
-}
-
-function formatTrustStatus(trustStatus: unknown): string {
-  const normalized = asTrustStatus(trustStatus) ?? 'non_trusted_beta';
-  return TRUST_STATUS_META[normalized].label;
+function formatTrustStatus(trustStatus: TrustStatus): string {
+  return TRUST_STATUS_META[trustStatus].label;
 }
 
 function canShare(): boolean {
@@ -143,16 +123,9 @@ function buildDisplayFindings(
   artifact: ClinicianArtifact,
   patientArtifact?: PatientArtifact,
 ): DisplayFinding[] {
-  const flaggedCards = Array.isArray(patientArtifact?.flagged_cards)
-    ? patientArtifact.flagged_cards
-    : [];
-  const patientFindings = Array.isArray(patientArtifact?.findings)
-    ? patientArtifact.findings
-    : [];
-
-  if (flaggedCards.length > 0) {
-    return flaggedCards.map((card, index) => {
-      const finding = patientFindings?.[index] ?? artifact.top_findings?.[index];
+  if (patientArtifact?.flagged_cards.length) {
+    return patientArtifact.flagged_cards.map((card, index) => {
+      const finding = patientArtifact.findings[index] ?? artifact.top_findings?.[index];
       return {
         id: finding?.finding_id ?? `${card.analyte_display}-${index}`,
         analyteLabel: card.analyte_display,
@@ -235,17 +208,6 @@ export default function ClinicianShare({
     'idle' | 'downloading' | 'downloaded' | 'failed'
   >('idle');
   const [showAllNotAssessed, setShowAllNotAssessed] = useState(false);
-  const pdfUrlCleanupTimeoutsRef = useRef<number[]>([]);
-  const activePdfUrlsRef = useRef<Set<string>>(new Set());
-
-  const cleanupPdfDownloadResources = useCallback(() => {
-    pdfUrlCleanupTimeoutsRef.current.forEach((timeoutId) =>
-      window.clearTimeout(timeoutId),
-    );
-    pdfUrlCleanupTimeoutsRef.current = [];
-    activePdfUrlsRef.current.forEach((url) => window.URL.revokeObjectURL(url));
-    activePdfUrlsRef.current.clear();
-  }, []);
 
   useEffect(() => {
     if (previewArtifact) {
@@ -300,29 +262,22 @@ export default function ClinicianShare({
     };
   }, [jobId, previewArtifact]);
 
-  useEffect(() => {
-    return () => {
-      cleanupPdfDownloadResources();
-    };
-  }, [cleanupPdfDownloadResources]);
-
   const effectiveSupportCoverage =
-    asSupportBanner(artifact?.support_coverage) ??
-    asSupportBanner(supportBanner) ??
-    asSupportBanner(artifact?.support_banner) ??
-    'could_not_assess';
-  const supportMeta = SUPPORT_COVERAGE_META[effectiveSupportCoverage];
-  const effectiveTrustStatus = asTrustStatus(artifact?.trust_status) ?? 'non_trusted_beta';
-  const trustMeta = TRUST_STATUS_META[effectiveTrustStatus];
+    artifact?.support_coverage ?? supportBanner ?? artifact?.support_banner;
+  const supportMeta = effectiveSupportCoverage
+    ? SUPPORT_COVERAGE_META[effectiveSupportCoverage]
+    : null;
+  const trustMeta = artifact ? TRUST_STATUS_META[artifact.trust_status] : null;
 
   const displayFindings = useMemo(
     () => (artifact ? buildDisplayFindings(artifact, patientArtifact) : []),
     [artifact, patientArtifact],
   );
-  const notAssessed = Array.isArray(artifact?.not_assessed) ? artifact.not_assessed : [];
-  const visibleNotAssessed = showAllNotAssessed
-    ? notAssessed
-    : notAssessed.slice(0, 2);
+  const visibleNotAssessed = artifact
+    ? showAllNotAssessed
+      ? artifact.not_assessed
+      : artifact.not_assessed.slice(0, 2)
+    : [];
 
   const handleCopySummary = useCallback(async () => {
     if (!artifact || typeof navigator === 'undefined' || !navigator.clipboard) {
@@ -372,23 +327,13 @@ export default function ClinicianShare({
 
       const blob = await response.blob();
       const pdfUrl = window.URL.createObjectURL(blob);
-      activePdfUrlsRef.current.add(pdfUrl);
       const anchor = document.createElement('a');
       anchor.href = pdfUrl;
       anchor.download = `clinician-summary-${jobId}.pdf`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-
-      const revokeTimeoutId = window.setTimeout(() => {
-        window.URL.revokeObjectURL(pdfUrl);
-        activePdfUrlsRef.current.delete(pdfUrl);
-        pdfUrlCleanupTimeoutsRef.current = pdfUrlCleanupTimeoutsRef.current.filter(
-          (timeoutId) => timeoutId !== revokeTimeoutId,
-        );
-      }, 1000);
-      pdfUrlCleanupTimeoutsRef.current.push(revokeTimeoutId);
-
+      window.setTimeout(() => window.URL.revokeObjectURL(pdfUrl), 1000);
       setPdfStatus('downloaded');
       window.setTimeout(() => setPdfStatus('idle'), 2200);
     } catch {
@@ -396,11 +341,6 @@ export default function ClinicianShare({
       window.setTimeout(() => setPdfStatus('idle'), 2200);
     }
   }, [artifact, jobId]);
-
-  const handleNavigateBack = useCallback(() => {
-    cleanupPdfDownloadResources();
-    onNavigateBack?.();
-  }, [cleanupPdfDownloadResources, onNavigateBack]);
 
   const handleExportSummary = useCallback(() => {
     window.print();
@@ -413,11 +353,11 @@ export default function ClinicianShare({
         subtitle="Loading structured summary."
         rightSlot={<PillBadge tone="neutral">Secondary</PillBadge>}
       >
-        <SurfaceCard style={{ marginTop: '0.8rem', padding: '0.9rem' }}>
+        <SurfaceCard style={{ marginTop: '1rem', padding: '1.15rem' }}>
           <p
             style={{
               margin: 0,
-              fontSize: '0.9rem',
+              fontSize: '0.94rem',
               color: STITCH_COLORS.textSecondary,
             }}
           >
@@ -439,10 +379,12 @@ export default function ClinicianShare({
           role="alert"
           style={{
             ...pageCardStyle({
-              marginTop: '0.8rem',
-              padding: '0.9rem',
+              marginTop: '1rem',
+              padding: '1.15rem',
               backgroundColor: STITCH_COLORS.errorBg,
               color: STITCH_COLORS.errorText,
+              fontSize: '0.94rem',
+              lineHeight: 1.55,
             }),
           }}
         >
@@ -464,7 +406,7 @@ export default function ClinicianShare({
       }
       contentMaxWidth={1120}
     >
-      <div className="stitch-grid-two stitch-enter" style={{ marginTop: '0.65rem' }}>
+      <div className="stitch-grid-two stitch-enter" style={{ marginTop: '0.75rem' }}>
         <div className="stitch-flow">
           <section>
             <div
@@ -472,14 +414,14 @@ export default function ClinicianShare({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: '0.6rem',
-                marginBottom: '0.5rem',
+                gap: '0.7rem',
+                marginBottom: '0.6rem',
               }}
             >
               <h3
                 style={{
                   margin: 0,
-                  fontSize: '1rem',
+                  fontSize: '1.08rem',
                   fontWeight: 700,
                   color: STITCH_COLORS.textHeading,
                 }}
@@ -494,7 +436,7 @@ export default function ClinicianShare({
             </div>
 
             {displayFindings.length > 0 ? (
-              <div className="stitch-flow" style={{ gap: '0.55rem' }}>
+              <div className="stitch-flow" style={{ gap: '0.65rem' }}>
                 {displayFindings.map((finding) => {
                   const severityMeta = SEVERITY_META[finding.severityClass];
                   const nextStepMeta = finding.nextstepClass
@@ -503,7 +445,7 @@ export default function ClinicianShare({
                   const isExpanded = expandedFinding === finding.id;
 
                   return (
-                    <SurfaceCard key={finding.id} style={{ padding: '0.92rem' }}>
+                    <SurfaceCard key={finding.id} style={{ padding: '1.1rem' }}>
                       <button
                         type="button"
                         onClick={() =>
@@ -523,7 +465,7 @@ export default function ClinicianShare({
                           style={{
                             display: 'flex',
                             justifyContent: 'space-between',
-                            gap: '0.7rem',
+                            gap: '0.8rem',
                             alignItems: 'flex-start',
                           }}
                         >
@@ -531,7 +473,7 @@ export default function ClinicianShare({
                             <p
                               style={{
                                 margin: 0,
-                                fontSize: '0.72rem',
+                                fontSize: '0.76rem',
                                 fontWeight: 800,
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
@@ -543,8 +485,8 @@ export default function ClinicianShare({
                             </p>
                             <p
                               style={{
-                                margin: '0.24rem 0 0',
-                                fontSize: '1rem',
+                                margin: '0.28rem 0 0',
+                                fontSize: '1.08rem',
                                 fontWeight: 800,
                                 color: STITCH_COLORS.textHeading,
                                 lineHeight: 1.3,
@@ -558,8 +500,8 @@ export default function ClinicianShare({
                             style={{
                               color: STITCH_COLORS.textMuted,
                               fontSize: '0.88rem',
-                              width: 34,
-                              height: 34,
+                              width: 40,
+                              height: 40,
                               borderRadius: '50%',
                               backgroundColor: STITCH_COLORS.surfaceLow,
                               display: 'inline-flex',
@@ -572,16 +514,16 @@ export default function ClinicianShare({
                           </span>
                         </div>
 
-                        <div className="stitch-segment-row" style={{ marginTop: '0.6rem' }}>
+                        <div className="stitch-segment-row" style={{ marginTop: '0.7rem' }}>
                           <span
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              padding: '0.38rem 0.62rem',
+                              padding: '0.42rem 0.68rem',
                               borderRadius: STITCH_RADIUS.pill,
                               backgroundColor: severityMeta.bg,
                               color: severityMeta.color,
-                              fontSize: '0.76rem',
+                              fontSize: '0.8rem',
                               fontWeight: 700,
                               lineHeight: 1.4,
                             }}
@@ -593,11 +535,11 @@ export default function ClinicianShare({
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                padding: '0.38rem 0.62rem',
+                                padding: '0.42rem 0.68rem',
                                 borderRadius: STITCH_RADIUS.pill,
                                 backgroundColor: nextStepMeta.bg,
                                 color: nextStepMeta.color,
-                                fontSize: '0.76rem',
+                                fontSize: '0.8rem',
                                 fontWeight: 700,
                                 lineHeight: 1.4,
                               }}
@@ -609,12 +551,12 @@ export default function ClinicianShare({
                       </button>
 
                       {isExpanded && (
-                        <div className="stitch-compact-list" style={{ marginTop: '0.7rem' }}>
+                        <div className="stitch-compact-list" style={{ marginTop: '0.8rem' }}>
                           <p
                             style={{
                               margin: 0,
-                              fontSize: '0.82rem',
-                              lineHeight: 1.55,
+                              fontSize: '0.88rem',
+                              lineHeight: 1.6,
                               color: STITCH_COLORS.textSecondary,
                             }}
                           >
@@ -623,8 +565,8 @@ export default function ClinicianShare({
                           <p
                             style={{
                               margin: 0,
-                              fontSize: '0.82rem',
-                              lineHeight: 1.55,
+                              fontSize: '0.88rem',
+                              lineHeight: 1.6,
                               color: STITCH_COLORS.textSecondary,
                             }}
                           >
@@ -637,12 +579,12 @@ export default function ClinicianShare({
                 })}
               </div>
             ) : (
-              <SurfaceCard style={{ padding: '0.9rem' }}>
+              <SurfaceCard style={{ padding: '1.05rem' }}>
                 <p
                   style={{
                     margin: 0,
-                    fontSize: '0.86rem',
-                    lineHeight: 1.58,
+                    fontSize: '0.92rem',
+                    lineHeight: 1.6,
                     color: STITCH_COLORS.textSecondary,
                   }}
                 >
@@ -655,7 +597,7 @@ export default function ClinicianShare({
           <section>
             <SurfaceCard
               style={{
-                padding: '0.9rem',
+                padding: '1.05rem',
                 border: '2px dashed rgba(118, 118, 126, 0.22)',
                 boxShadow: 'none',
               }}
@@ -665,15 +607,15 @@ export default function ClinicianShare({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '0.6rem',
-                  marginBottom: '0.55rem',
+                  gap: '0.7rem',
+                  marginBottom: '0.65rem',
                 }}
               >
                 <div style={{ minWidth: 0 }}>
                   <h3
                     style={{
                       margin: 0,
-                      fontSize: '1rem',
+                      fontSize: '1.08rem',
                       fontWeight: 700,
                       color: STITCH_COLORS.textHeading,
                     }}
@@ -682,39 +624,39 @@ export default function ClinicianShare({
                   </h3>
                   <p
                     style={{
-                      margin: '0.18rem 0 0',
-                      fontSize: '0.82rem',
-                      lineHeight: 1.5,
+                      margin: '0.22rem 0 0',
+                      fontSize: '0.88rem',
+                      lineHeight: 1.55,
                       color: STITCH_COLORS.textSecondary,
                     }}
                   >
                     Unsupported items remain visible for honest handoff.
                   </p>
                 </div>
-                {notAssessed.length > 0 && (
+                {artifact.not_assessed.length > 0 && (
                   <PillBadge tone="neutral">
-                    {notAssessed.length} item
-                    {notAssessed.length > 1 ? 's' : ''}
+                    {artifact.not_assessed.length} item
+                    {artifact.not_assessed.length > 1 ? 's' : ''}
                   </PillBadge>
                 )}
               </div>
 
-              {notAssessed.length > 0 ? (
+              {artifact.not_assessed.length > 0 ? (
                 <ul
                   style={{
                     margin: 0,
-                    paddingLeft: '1.05rem',
+                    paddingLeft: '1.15rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.42rem',
+                    gap: '0.5rem',
                   }}
                 >
                   {visibleNotAssessed.map((item, index) => (
                     <li
                       key={`${item.raw_label}-${index}`}
                       style={{
-                        fontSize: '0.84rem',
-                        lineHeight: 1.55,
+                        fontSize: '0.9rem',
+                        lineHeight: 1.6,
                         color: STITCH_COLORS.textSecondary,
                       }}
                     >
@@ -729,8 +671,8 @@ export default function ClinicianShare({
                 <p
                   style={{
                     margin: 0,
-                    fontSize: '0.84rem',
-                    lineHeight: 1.55,
+                    fontSize: '0.9rem',
+                    lineHeight: 1.6,
                     color: STITCH_COLORS.textSecondary,
                   }}
                 >
@@ -738,24 +680,25 @@ export default function ClinicianShare({
                 </p>
               )}
 
-              {notAssessed.length > 2 && (
+              {artifact.not_assessed.length > 2 && (
                 <button
                   type="button"
                   onClick={() => setShowAllNotAssessed((prev) => !prev)}
                   style={{
-                    marginTop: '0.75rem',
+                    marginTop: '0.85rem',
                     border: 'none',
                     background: 'none',
                     padding: 0,
                     color: STITCH_COLORS.blue,
-                    fontSize: '0.82rem',
+                    fontSize: '0.88rem',
                     fontWeight: 700,
                     cursor: 'pointer',
+                    minHeight: 44,
                   }}
                 >
                   {showAllNotAssessed
                     ? 'Show fewer items'
-                    : `Show all ${notAssessed.length} items`}
+                    : `Show all ${artifact.not_assessed.length} items`}
                 </button>
               )}
             </SurfaceCard>
@@ -765,7 +708,7 @@ export default function ClinicianShare({
         <aside className="stitch-rail">
           <SurfaceCard
             style={{
-              padding: '1rem',
+              padding: '1.25rem 1.15rem',
               background:
                 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(255,246,248,0.94) 100%)',
             }}
@@ -774,8 +717,8 @@ export default function ClinicianShare({
               <div>
                 <p
                   style={{
-                    margin: '0 0 0.22rem',
-                    fontSize: '0.72rem',
+                    margin: '0 0 0.28rem',
+                    fontSize: '0.76rem',
                     fontWeight: 800,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
@@ -787,7 +730,7 @@ export default function ClinicianShare({
                 <p
                   style={{
                     margin: 0,
-                    fontSize: '1rem',
+                    fontSize: '1.08rem',
                     fontWeight: 700,
                     color: STITCH_COLORS.textHeading,
                   }}
@@ -805,14 +748,14 @@ export default function ClinicianShare({
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      padding: '4px 10px',
+                      padding: '5px 12px',
                       borderRadius: STITCH_RADIUS.pill,
                       backgroundColor:
                         trustMeta.tone === 'trusted'
                           ? STITCH_COLORS.trustedBg
                           : STITCH_COLORS.betaBg,
                       color: trustMeta.color,
-                      fontSize: '0.72rem',
+                      fontSize: '0.74rem',
                       fontWeight: 700,
                     }}
                   >
@@ -824,8 +767,8 @@ export default function ClinicianShare({
               <p
                 style={{
                   margin: 0,
-                  fontSize: '0.84rem',
-                  lineHeight: 1.55,
+                  fontSize: '0.9rem',
+                  lineHeight: 1.6,
                   color: STITCH_COLORS.textSecondary,
                 }}
               >
@@ -840,9 +783,9 @@ export default function ClinicianShare({
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '0.35rem',
+                    gap: '0.4rem',
                     color: STITCH_COLORS.blue,
-                    fontSize: '0.82rem',
+                    fontSize: '0.88rem',
                     fontWeight: 700,
                     textDecoration: 'none',
                   }}
@@ -853,7 +796,7 @@ export default function ClinicianShare({
 
               <div className="stitch-divider" />
 
-              <div className="stitch-flow" style={{ gap: '0.5rem' }}>
+              <div className="stitch-flow" style={{ gap: '0.6rem' }}>
                 {canShare() ? (
                   <PrimaryButton onClick={() => void handleShareSummary()}>
                     Share summary
@@ -882,7 +825,7 @@ export default function ClinicianShare({
                   Export summary
                 </SecondaryButton>
                 {onNavigateBack && (
-                  <SecondaryButton onClick={handleNavigateBack}>
+                  <SecondaryButton onClick={onNavigateBack}>
                     Back to patient summary
                   </SecondaryButton>
                 )}
@@ -892,8 +835,8 @@ export default function ClinicianShare({
                 <p
                   style={{
                     margin: 0,
-                    fontSize: '0.78rem',
-                    lineHeight: 1.45,
+                    fontSize: '0.82rem',
+                    lineHeight: 1.5,
                     color: STITCH_COLORS.errorText,
                   }}
                 >

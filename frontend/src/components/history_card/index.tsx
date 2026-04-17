@@ -1,28 +1,13 @@
+import type { ComparableHistory } from '../../types';
 import { SurfaceCard } from '../common';
 import { STITCH_COLORS, STITCH_RADIUS } from '../common/system';
 
-export interface HistoryObservation {
-  analyte_display: string;
-  current_value: string;
-  current_unit: string;
-  previous_value: string | null;
-  previous_unit: string | null;
-  previous_date: string | null;
-  direction: 'increased' | 'decreased' | 'similar' | 'trend_unavailable';
-  comparability_status:
-    | 'comparable'
-    | 'not_comparable'
-    | 'available'
-    | 'unavailable';
-  comparability_reason?: string | null;
-}
-
 interface Props {
-  observations?: HistoryObservation[] | HistoryObservation | null;
+  history: ComparableHistory | null;
 }
 
 const DIRECTION_META: Record<
-  HistoryObservation['direction'],
+  ComparableHistory['direction'],
   { label: string; icon: string; color: string; bg: string }
 > = {
   increased: {
@@ -51,16 +36,33 @@ const DIRECTION_META: Record<
   },
 };
 
-export default function HistoryCard({ observations }: Props) {
-  const rows = Array.isArray(observations)
-    ? observations
-    : observations
-      ? [observations]
-      : [];
+const COMPARABILITY_META: Record<
+  ComparableHistory['comparability_status'],
+  { label: string; color: string; bg: string }
+> = {
+  available: {
+    label: 'Available',
+    color: STITCH_COLORS.trustedText,
+    bg: STITCH_COLORS.trustedBg,
+  },
+  unavailable: {
+    label: 'Unavailable',
+    color: STITCH_COLORS.warningText,
+    bg: STITCH_COLORS.warningBg,
+  },
+};
 
+export default function HistoryCard({ history }: Props) {
   return (
     <SurfaceCard style={{ padding: '0.88rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', marginBottom: '0.65rem' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '0.6rem',
+          marginBottom: '0.65rem',
+        }}
+      >
         <div>
           <p
             style={{
@@ -87,104 +89,126 @@ export default function HistoryCard({ observations }: Props) {
         </div>
       </div>
 
-      {rows.length === 0 ? (
-        <p style={{ margin: 0, fontSize: '0.86rem', lineHeight: 1.5, color: STITCH_COLORS.textSecondary }}>
+      {!history ? (
+        <p
+          style={{
+            margin: 0,
+            fontSize: '0.86rem',
+            lineHeight: 1.5,
+            color: STITCH_COLORS.textSecondary,
+          }}
+        >
           No valid prior comparable observations are available.
         </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-          {rows.map((observation, index) => {
-            const meta = DIRECTION_META[observation.direction] ?? DIRECTION_META.trend_unavailable;
-            const notComparable =
-              observation.comparability_status === 'not_comparable' ||
-              observation.comparability_status === 'unavailable';
-
-            return (
-              <div
-                key={`${observation.analyte_display}-${index}`}
+        <div
+          style={{
+            borderRadius: STITCH_RADIUS.md,
+            backgroundColor:
+              history.comparability_status === 'unavailable'
+                ? '#FFF9ED'
+                : STITCH_COLORS.surfacePage,
+            padding: '0.78rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: '0.65rem',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <p
                 style={{
-                  borderRadius: STITCH_RADIUS.md,
-                  backgroundColor: notComparable
-                    ? '#FFF9ED'
-                    : STITCH_COLORS.surfacePage,
-                  padding: '0.78rem',
+                  margin: 0,
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  color: STITCH_COLORS.textHeading,
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    gap: '0.65rem',
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: '0.9rem',
-                        fontWeight: 700,
-                        color: STITCH_COLORS.textHeading,
-                      }}
-                    >
-                      {observation.analyte_display}
-                    </p>
-                    <p
-                      style={{
-                        margin: '0.28rem 0 0',
-                        fontSize: '0.84rem',
-                        lineHeight: 1.45,
-                        color: STITCH_COLORS.textSecondary,
-                      }}
-                    >
-                      {observation.current_value} {observation.current_unit}
-                    </p>
-                    <p
-                      style={{
-                        margin: '0.14rem 0 0',
-                        fontSize: '0.78rem',
-                        lineHeight: 1.45,
-                        color: STITCH_COLORS.textSecondary,
-                      }}
-                    >
-                      {observation.previous_value && observation.previous_date
-                        ? `Prev ${observation.previous_date}: ${observation.previous_value} ${observation.previous_unit ?? ''}`.trim()
-                        : 'No prior value'}
-                    </p>
-                  </div>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '4px 8px',
-                      borderRadius: STITCH_RADIUS.pill,
-                      backgroundColor: meta.bg,
-                      color: meta.color,
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    <span aria-hidden="true">{meta.icon}</span>
-                    {meta.label}
-                  </span>
-                </div>
-                {notComparable && observation.comparability_reason && (
-                  <p
-                    style={{
-                      margin: '0.45rem 0 0',
-                      fontSize: '0.78rem',
-                      lineHeight: 1.45,
-                      color: '#9A3412',
-                    }}
-                  >
-                    {observation.comparability_reason}
-                  </p>
-                )}
-              </div>
-            );
-          })}
+                {history.analyte_display}
+              </p>
+              <p
+                style={{
+                  margin: '0.22rem 0 0',
+                  fontSize: '0.84rem',
+                  lineHeight: 1.45,
+                  color: STITCH_COLORS.textSecondary,
+                }}
+              >
+                {history.current_date ? `Current ${history.current_date}` : 'Current result'}:{' '}
+                {history.current_value}{' '}
+                {history.current_unit}
+              </p>
+              <p
+                style={{
+                  margin: '0.14rem 0 0',
+                  fontSize: '0.78rem',
+                  lineHeight: 1.45,
+                  color: STITCH_COLORS.textSecondary,
+                }}
+              >
+                {history.previous_value && history.previous_date
+                  ? `Prev ${history.previous_date}: ${history.previous_value} ${
+                      history.previous_unit ?? ''
+                    }`.trim()
+                  : 'No prior value'}
+              </p>
+            </div>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 8px',
+                borderRadius: STITCH_RADIUS.pill,
+                backgroundColor:
+                  COMPARABILITY_META[history.comparability_status].bg,
+                color: COMPARABILITY_META[history.comparability_status].color,
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {COMPARABILITY_META[history.comparability_status].label}
+            </span>
+          </div>
+
+          <div style={{ marginTop: '0.6rem', display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 8px',
+                borderRadius: STITCH_RADIUS.pill,
+                backgroundColor: DIRECTION_META[history.direction].bg,
+                color: DIRECTION_META[history.direction].color,
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span aria-hidden="true">{DIRECTION_META[history.direction].icon}</span>
+              {DIRECTION_META[history.direction].label}
+            </span>
+          </div>
+
+          {history.comparability_status === 'unavailable' &&
+            history.comparability_reason && (
+              <p
+                style={{
+                  margin: '0.45rem 0 0',
+                  fontSize: '0.78rem',
+                  lineHeight: 1.45,
+                  color: '#9A3412',
+                }}
+              >
+                {history.comparability_reason}
+              </p>
+            )}
         </div>
       )}
     </SurfaceCard>
