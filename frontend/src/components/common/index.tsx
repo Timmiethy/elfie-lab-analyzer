@@ -104,10 +104,10 @@ export function PageChrome({
             position: 'absolute',
             left: 0,
             right: 0,
-            bottom: -26,
-            height: 52,
-            backgroundColor: STITCH_COLORS.navy,
-            clipPath: 'ellipse(140% 100% at 50% 0%)',
+            bottom: -1,
+            height: 24,
+            background: `linear-gradient(180deg, ${STITCH_COLORS.navy} 0%, transparent 100%)`,
+            pointerEvents: 'none',
           }}
         />
       </div>

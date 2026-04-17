@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getJobStatus } from '../../services/api';
 import type { JobStatus, LaneType } from '../../types';
 import {
@@ -94,6 +94,45 @@ export default function Processing({
 }: Props) {
   const [status, setStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [smoothProgress, setSmoothProgress] = useState(0);
+  const targetProgressRef = useRef(4);
+  const completedRef = useRef(false);
+
+  // Smooth tween loop. Eases toward target each frame so bar glides instead of jumping.
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(now - last, 80);
+      last = now;
+      setSmoothProgress((curr) => {
+        const target = targetProgressRef.current;
+        if (Math.abs(target - curr) < 0.05) return target;
+        // exponential ease; faster near the end when completed
+        const rate = completedRef.current ? 0.012 : 0.0028;
+        const next = curr + (target - curr) * (1 - Math.exp(-rate * dt));
+        return next;
+      });
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Fake forward creep independent of backend steps so bar always moves.
+  useEffect(() => {
+    const start = performance.now();
+    const id = window.setInterval(() => {
+      if (completedRef.current) return;
+      const elapsed = (performance.now() - start) / 1000;
+      // Asymptotic curve: ramps toward ~92% over ~45s, never stalls.
+      const creep = 92 * (1 - Math.exp(-elapsed / 18));
+      if (creep > targetProgressRef.current) {
+        targetProgressRef.current = creep;
+      }
+    }, 120);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let attemptsSoFar = 0;
@@ -117,10 +156,13 @@ export default function Processing({
         return;
       }
       finished = true;
+      completedRef.current = true;
+      targetProgressRef.current = 100;
       if (intervalId !== null) {
         window.clearInterval(intervalId);
       }
-      onCompleted();
+      // Let bar visually reach 100 before swapping view
+      window.setTimeout(() => onCompleted(), 420);
     };
 
     const poll = async () => {
@@ -191,13 +233,20 @@ export default function Processing({
   const currentStep = status?.step ?? '';
   const activeStageIndex = displayStageIndex(currentStep);
   const isImageBeta = laneType === 'image_beta';
-  const progressPercent = Math.round(
-    ((activeStageIndex + 1) / DISPLAY_STAGES.length) * 100,
-  );
+
+  // Backend stage sets a floor so bar at least reflects real progress.
+  useEffect(() => {
+    const floor = ((activeStageIndex + 1) / DISPLAY_STAGES.length) * 90;
+    if (floor > targetProgressRef.current && !completedRef.current) {
+      targetProgressRef.current = floor;
+    }
+  }, [activeStageIndex]);
+
+  const progressPercent = Math.min(100, Math.round(smoothProgress));
   const circleRadius = 92;
   const circumference = 2 * Math.PI * circleRadius;
   const dashOffset =
-    circumference - (Math.min(progressPercent, 100) / 100) * circumference;
+    circumference - (Math.min(smoothProgress, 100) / 100) * circumference;
   const backendLabel = currentStep
     ? BACKEND_STEP_LABELS[currentStep] ?? 'Running checks'
     : 'Running checks';
@@ -261,7 +310,12 @@ export default function Processing({
           >
             <svg
               viewBox="0 0 220 220"
-              style={{ width: '100%', height: '100%', display: 'block' }}
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'block',
+                animation: 'spin 6s linear infinite',
+              }}
             >
               <circle
                 cx="110"
@@ -284,7 +338,7 @@ export default function Processing({
                 style={{
                   transform: 'rotate(-90deg)',
                   transformOrigin: '50% 50%',
-                  transition: 'stroke-dashoffset 200ms ease',
+                  transition: 'stroke-dashoffset 120ms linear',
                 }}
               />
             </svg>

@@ -175,10 +175,9 @@ export default function AppHeader({ navItems = [], activeItemId }: AppHeaderProp
         top: 0,
         zIndex: 1000,
         padding: '10px 16px',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        backgroundColor: 'rgba(255, 246, 248, 0.86)',
+        backgroundColor: '#FFF6F8',
         borderBottom: `1px solid ${STITCH_COLORS.borderGhost}`,
+        boxShadow: '0 1px 0 rgba(18,26,51,0.04)',
       }}
     >
       {/* inline keyframes + focus-ring fallback so this file is self-contained */}
