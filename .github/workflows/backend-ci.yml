@@ -1,0 +1,93 @@
+name: backend-ci
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "contracts/**"
+      - "data/**"
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "contracts/**"
+      - "data/**"
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: elfie
+          POSTGRES_PASSWORD: elfie
+          POSTGRES_DB: elfie_labs
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U elfie -d elfie_labs"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      ELFIE_DATABASE_URL: postgresql+asyncpg://elfie:elfie@localhost:5432/elfie_labs
+      ELFIE_DATABASE_URL_SYNC: postgresql://elfie:elfie@localhost:5432/elfie_labs
+      ELFIE_QWEN_API_KEY: ci-placeholder
+      ELFIE_QWEN_BASE_URL: https://dashscope.aliyuncs.com/compatible-mode/v1
+      ELFIE_QWEN_MODEL: qwen3.5-plus
+      ELFIE_QWEN_VL_MODEL: qwen3-vl-flash-2026-01-22
+      ELFIE_IMAGE_BETA_ENABLED: "true"
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Seed terminology metadata fixture
+        run: |
+          mkdir -p ../data/loinc
+          cat > ../data/loinc/metadata.json <<'JSON'
+          {
+            "release": "ci-loinc-fixture",
+            "checksum": "sha256:ci-fixture"
+          }
+          JSON
+
+      - name: Apply migrations
+        run: alembic upgrade head
+
+      - name: Ruff
+        run: ruff check . --select ALL --ignore D,ANN,ERA,FIX,TD
+
+      - name: MyPy
+        run: mypy . --strict
+
+      - name: Unit tests
+        run: pytest tests/unit/ -q --tb=short --cov=app --cov-fail-under=75
+
+      - name: Integration tests
+        run: pytest tests/integration/ -q --tb=short

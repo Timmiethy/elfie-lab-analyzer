@@ -233,7 +233,7 @@ async def process_image_with_qwen(file_bytes: bytes) -> list[VLMRow]:
         _enforce_single_image_payload(payload)
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=120.0) as client:
                 response = await client.post(
                     f"{settings.qwen_base_url}/chat/completions",
                     headers=headers,
@@ -307,7 +307,7 @@ async def generate_text_with_qwen(
         payload["response_format"] = response_format
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 f"{settings.qwen_base_url}/chat/completions",
                 headers=headers,

@@ -41,6 +41,9 @@ class Settings(_BaseSettings):
 
     # Auth
     supabase_jwt_secret: str = ""
+    # Dev-only: bypass JWT validation and return mock UUID when auth header is
+    # missing, expired, or invalid. NEVER enable in production.
+    dev_auth_bypass: bool = False
 
     # Terminology
     loinc_path: Path = Path("data/loinc")

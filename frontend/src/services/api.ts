@@ -15,7 +15,11 @@ import {
 } from '../fixtures/stitchPreviewData';
 import type { JobStatus, UploadResponse } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// VITE_API_URL should be the backend origin (no trailing `/api`).
+// Locally unset → Vite proxy handles `/api`. In prod set to e.g.
+// `https://elfie-labs-backend.onrender.com`.
+const API_ORIGIN = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const BASE_URL = API_ORIGIN ? `${API_ORIGIN}/api` : '/api';
 
 const MOCK_DISABLED =
   typeof import.meta !== 'undefined' &&

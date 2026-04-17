@@ -6,18 +6,25 @@ dist/
 build/
 .venv/
 venv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
 
 # Node
 node_modules/
 frontend/dist/
+frontend/tsconfig.tsbuildinfo
 
 # IDE
 .vscode/
 .idea/
 *.swp
 
-# Environment
+# Environment / secrets
 .env
+.env.local
+.env.*.local
+*.original.md
 
 # Local agent workflow scratch files
 tasks/*
@@ -28,9 +35,10 @@ tasks/*
 # Data artifacts (LOINC not committed per license)
 data/loinc/*.csv
 data/loinc/*.zip
-artifacts/*.json
-artifacts/*.html
-artifacts/*.pdf
+
+# Generated artifacts (may contain PHI)
+artifacts/
+backend/artifacts/
 
 # Postgres
 pgdata/
@@ -39,20 +47,26 @@ pgdata/
 .DS_Store
 Thumbs.db
 
-#AI Agents
-.claw/*
-artifacts/*
-docs/orchestration/*
-scripts/orchestration/*
+# Runtime logs
+*.out.log
+*.err.log
+
+# Debug scratch
+debug_*.py
+debug_*.log
+backend/debug_labels.py
+backend/verify_labels.py
+backend/debug_loinc/
+
+# User PDFs (PHI)
+pdfs/
+/clin.json
+
+# AI agent directories
+.claw/
 .clawd-todos.json
-.claude/*
-.gemini/*
-.github/*
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-.venv/
-artifacts/uploads/*
-docs/*
-tasks/*
-pdfs/*
+.claude/
+.gemini/
+.github/workflows/scratch/
+docs/orchestration/
+scripts/orchestration/

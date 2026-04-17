@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -13,6 +14,11 @@ from app.services.data_paths import resolve_data_file
 from app.services.vlm_gateway import VLMAPIError, VLMParsingError, generate_text_with_qwen
 
 logger = logging.getLogger(__name__)
+
+_LLM_BATCH_SIZE = 15
+_LLM_RETRY_ATTEMPTS = 3
+_LLM_RETRY_BACKOFF_S = 2.0
+_TRAILING_FLAG_RE = re.compile(r"\s+[HL]$", re.IGNORECASE)
 
 _CONTEXT_TOKENS = {
     "blood",
@@ -226,12 +232,41 @@ class SemanticCleaner:
 
         if not settings.qwen_api_key:
             logger.debug("Skipping semantic cleaner LLM pass: Qwen API key is not configured")
-            # If skipping, just fall back to passing the rows through unmodified so downstream
-            # components can at least try, or fail them later.
             for _, r in unresolved_rows:
                 cleaned_rows.append(r)
             return cleaned_rows
 
+        # Batch unresolved rows to keep per-call latency low and parallelize.
+        batches = [
+            unresolved_rows[i : i + _LLM_BATCH_SIZE]
+            for i in range(0, len(unresolved_rows), _LLM_BATCH_SIZE)
+        ]
+        batch_results = await asyncio.gather(
+            *(self._resolve_batch(batch) for batch in batches),
+            return_exceptions=False,
+        )
+        combined: dict[int, dict[str, Any]] = {}
+        for result_map in batch_results:
+            combined.update(result_map)
+
+        for index, row in unresolved_rows:
+            llm_output = combined.get(index)
+            if llm_output is None:
+                # LLM failed for this row — keep raw so downstream can still try
+                cleaned_rows.append(row)
+                continue
+            if not bool(llm_output.get("is_valid_result", False)):
+                continue
+            normalized_name = str(llm_output.get("normalized_analyte_name") or "").strip()
+            if normalized_name:
+                row["raw_analyte_label"] = self._coerce_label(normalized_name)
+            cleaned_rows.append(row)
+        return cleaned_rows
+
+    async def _resolve_batch(
+        self, batch: list[tuple[int, dict[str, Any]]]
+    ) -> dict[int, dict[str, Any]]:
+        """Run LLM pass on a batch with retry + backoff. Returns empty dict on failure."""
         prompt_rows = [
             {
                 "index": index,
@@ -240,14 +275,9 @@ class SemanticCleaner:
                 "raw_value_string": row.get("raw_value_string", ""),
                 "raw_unit_string": row.get("raw_unit_string", ""),
             }
-            for index, row in unresolved_rows
+            for index, row in batch
         ]
-
-        # Use ALL canonical names
-        canonical_hint = ", ".join(self._canonical_names)
-        if not canonical_hint:
-            canonical_hint = "(canonical list unavailable)"
-
+        canonical_hint = ", ".join(self._canonical_names) or "(canonical list unavailable)"
         prompt = (
             "You are a clinical data cleaner matching lab report rows to standardized analyte "
             "names.\nTask: Evaluate each row. If the row does not contain a measured laboratory "
@@ -265,39 +295,30 @@ class SemanticCleaner:
             f"Here are the rows to evaluate:\n{json.dumps(prompt_rows, indent=2)}"
         )
 
-        try:
-            response_text = await generate_text_with_qwen(
-                prompt, response_format={"type": "json_object"}
-            )
-            llm_results = self._parse_llm_results(response_text)
-
-            for index, row in unresolved_rows:
-                llm_output = llm_results.get(index)
-                if llm_output is None:
-                    cleaned_rows.append(row)
+        last_exc: Exception | None = None
+        for attempt in range(1, _LLM_RETRY_ATTEMPTS + 1):
+            try:
+                response_text = await generate_text_with_qwen(prompt)
+                return self._parse_llm_results(response_text)
+            except (VLMAPIError, VLMParsingError, json.JSONDecodeError) as exc:
+                last_exc = exc
+                if attempt < _LLM_RETRY_ATTEMPTS:
+                    backoff = _LLM_RETRY_BACKOFF_S * attempt
+                    logger.warning(
+                        "Semantic cleaner batch attempt %d/%d failed (%s); retry in %.1fs",
+                        attempt,
+                        _LLM_RETRY_ATTEMPTS,
+                        exc,
+                        backoff,
+                    )
+                    await asyncio.sleep(backoff)
                     continue
-
-                if not bool(llm_output.get("is_valid_result", False)):
-                    continue
-
-                normalized_name = str(llm_output.get("normalized_analyte_name") or "").strip()
-                if normalized_name:
-                    row["raw_analyte_label"] = self._coerce_label(normalized_name)
-                cleaned_rows.append(row)
-            return cleaned_rows
-
-        except (VLMAPIError, VLMParsingError, json.JSONDecodeError) as exc:
-            logger.error(
-                "Semantic cleaner LLM pass failed, passing unresolved rows through unmodified: %s",
-                exc,
-            )
-            # Fall back: keep the unresolved rows as-is rather than silently
-            # dropping them. Downstream (AnalyteResolver) still gets a chance
-            # to map them, and losing real analyte rows to an LLM outage would
-            # make the report incomplete.
-            for _, r in unresolved_rows:
-                cleaned_rows.append(r)
-            return cleaned_rows
+        logger.error(
+            "Semantic cleaner batch failed after %d attempts, passing rows through unmodified: %s",
+            _LLM_RETRY_ATTEMPTS,
+            last_exc,
+        )
+        return {}
 
     def _parse_llm_results(self, response_text: str) -> dict[int, dict[str, Any]]:
         cleaned_response = response_text.strip()
@@ -325,6 +346,9 @@ class SemanticCleaner:
         raw_text = str(value or "").strip().lower()
         if not raw_text:
             return ""
+
+        # Strip trailing H/L flag (high/low) before alias match
+        raw_text = _TRAILING_FLAG_RE.sub("", raw_text).strip()
 
         folded = _ascii_fold(raw_text)
         normalized = re.sub(r"[^a-z0-9%]+", " ", folded)

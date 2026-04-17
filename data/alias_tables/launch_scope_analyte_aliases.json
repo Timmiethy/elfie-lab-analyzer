@@ -147,7 +147,12 @@
       ],
       "aliases": [
         "absolute neutrophils",
-        "neutrophils, absolute"
+        "neutrophils, absolute",
+        "neutrophils microscopic",
+        "neutrophil microscopic",
+        "neutrophils (microscopic)",
+        "neutrophil",
+        "neutrophils"
       ],
       "panel_key": "hematology",
       "threshold_used": 0.9
@@ -160,7 +165,12 @@
       ],
       "aliases": [
         "absolute lymphocytes",
-        "lymphocytes, absolute"
+        "lymphocytes, absolute",
+        "lymphocytes microscopic",
+        "lymphocyte microscopic",
+        "lymphocytes (microscopic)",
+        "lymphocyte",
+        "lymphocytes"
       ],
       "panel_key": "hematology",
       "threshold_used": 0.9
