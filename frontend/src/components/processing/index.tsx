@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getJobStatus } from '../../services/api';
 import type { JobStatus, LaneType } from '../../types';
 import {
@@ -14,16 +14,6 @@ import {
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 180;
-/** How often the client advances its synthetic progress bar when the backend
- *  doesn't emit fine-grained pipeline substeps (common in the trusted-PDF
- *  lane where `step` flips from `preflight` → `lineage_persist`). */
-const SYNTHETIC_TICK_MS = 400;
-/** Target duration of the synthetic progress animation between "pending"
- *  and "completed" for a real backend job. Backend now emits per-stage
- *  `step` updates (jobs.current_step), so synthetic progress is only a
- *  between-step smoother. Set long enough to avoid pegging at 95% while
- *  hard PDFs (2 min) finish. */
-const SYNTHETIC_TOTAL_MS = 45000;
 
 const BACKEND_STEP_LABELS: Record<string, string> = {
   preflight: 'Upload received',
@@ -73,6 +63,204 @@ const KNOWN_BACKEND_STEPS: Record<string, number> = {
   lineage_persist: 4,
 };
 
+const ProcessingStagesList = React.memo(({ activeStageIndex }: { activeStageIndex: number }) => {
+  return (
+    <div
+      className="stitch-flow"
+      style={{ gap: '0.45rem', textAlign: 'left', maxWidth: 420, margin: '0 auto' }}
+    >
+      {DISPLAY_STAGES.map((stage, index) => {
+        const isDone = index < activeStageIndex;
+        const isActive = index === activeStageIndex;
+        return (
+          <div
+            key={stage}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.85rem',
+              padding: '0.5rem 0.75rem',
+              borderRadius: STITCH_RADIUS.md,
+              backgroundColor: isActive
+                ? 'rgba(255, 21, 112, 0.06)'
+                : 'transparent',
+              color: isActive
+                ? STITCH_COLORS.textHeading
+                : STITCH_COLORS.textSecondary,
+              fontWeight: isActive ? 700 : 600,
+              fontSize: '0.9rem',
+            }}
+          >
+            <div
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: STITCH_RADIUS.pill,
+                backgroundColor: isDone
+                  ? '#6BFE9C'
+                  : isActive
+                    ? 'rgba(255, 21, 112, 0.12)'
+                    : STITCH_COLORS.surfaceLow,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isDone
+                  ? STITCH_COLORS.navy
+                  : isActive
+                    ? STITCH_COLORS.pink
+                    : STITCH_COLORS.textMuted,
+                flexShrink: 0,
+                fontSize: '0.78rem',
+              }}
+            >
+              {isDone ? (
+                <span aria-hidden="true">✓</span>
+              ) : isActive ? (
+                <span
+                  aria-hidden="true"
+                  className="stitch-spinner"
+                  style={{ color: STITCH_COLORS.pink }}
+                />
+              ) : (
+                <span aria-hidden="true">•</span>
+              )}
+            </div>
+            <span>{stage}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+});
+
+const ProgressRing = React.memo(({
+  activeStageIndex,
+  isCompleted,
+  backendLabel,
+  onVisualCompletion,
+}: {
+  activeStageIndex: number;
+  isCompleted: boolean;
+  backendLabel: string;
+  onVisualCompletion: () => void;
+}) => {
+  const [displayedPercent, setDisplayedPercent] = useState(0);
+  const [ringTarget, setRingTarget] = useState(0); // Start at 0 for CSS transition
+
+  const configTargetPercent = isCompleted
+    ? 100
+    : Math.min((activeStageIndex + 1) * 20, 99);
+
+  // Jump to actual target immediately after mount to trigger CSS transition
+  useEffect(() => {
+    setRingTarget(configTargetPercent);
+  }, [configTargetPercent]);
+
+  useEffect(() => {
+    if (displayedPercent >= ringTarget) {
+      if (isCompleted && displayedPercent === 100) {
+        // Leave a slight delay so they can read 100%
+        const delay = setTimeout(onVisualCompletion, 800);
+        return () => clearTimeout(delay);
+      }
+      return;
+    }
+
+    const diff = ringTarget - displayedPercent;
+    const stepSize = Math.max(1, Math.ceil(diff / 10));
+    const interval = setInterval(() => {
+      setDisplayedPercent((prev) => {
+        const next = Math.min(prev + stepSize, ringTarget);
+        if (next >= ringTarget) {
+          return ringTarget;
+        }
+        return next;
+      });
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [ringTarget, displayedPercent, isCompleted, onVisualCompletion]);
+
+  const circleRadius = 92;
+  const circumference = 2 * Math.PI * circleRadius;
+  const dashOffset =
+    circumference - (Math.min(ringTarget, 100) / 100) * circumference;
+
+  return (
+    <>
+      <div
+        style={{
+          position: 'relative',
+          width: 200,
+          height: 200,
+          margin: '0 auto 1.25rem',
+        }}
+      >
+        <svg
+          viewBox="0 0 220 220"
+          style={{ width: '100%', height: '100%', display: 'block' }}
+        >
+          <circle
+            cx="110"
+            cy="110"
+            r={circleRadius}
+            fill="none"
+            stroke={STITCH_COLORS.surfaceHigh}
+            strokeWidth="10"
+          />
+          <circle
+            cx="110"
+            cy="110"
+            r={circleRadius}
+            fill="none"
+            stroke={STITCH_COLORS.pink}
+            strokeWidth="12"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+            style={{
+              transform: 'rotate(-90deg)',
+              transformOrigin: '50% 50%',
+              transition: 'stroke-dashoffset 800ms ease',
+            }}
+          />
+        </svg>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <span
+            style={{
+              fontSize: '2.4rem',
+              fontWeight: 800,
+              color: STITCH_COLORS.textHeading,
+              letterSpacing: '-0.05em',
+            }}
+          >
+            {Math.round(displayedPercent)}%
+          </span>
+          <span
+            style={{
+              marginTop: 4,
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              color: STITCH_COLORS.pink,
+            }}
+          >
+            {backendLabel}
+          </span>
+        </div>
+      </div>
+    </>
+  );
+});
+
 /** Map a known backend step to a display-stage index. Returns null when the
  *  step is unknown (e.g. raw status strings like "running") so the caller
  *  can fall back to synthetic progress instead of snapping to the last
@@ -98,10 +286,28 @@ export default function Processing({
 }: Props) {
   const [status, setStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  /** Monotonic client-side synthetic progress in range [0, 1]. Used when
-   *  the backend does not expose fine-grained pipeline substeps. */
-  const [syntheticProgress, setSyntheticProgress] = useState(0);
-  const startedAtRef = useRef<number>(Date.now());
+  const [isCompleted, setCompleted] = useState(false);
+  const [chasedStageIndex, setChasedStageIndex] = useState(0);
+
+  const currentStep = status?.step ?? '';
+  const backendStageIndex = displayStageIndexFromStep(currentStep) ?? 0;
+
+  // Chaser effect to slowly tick up UI stages even if backend goes fast
+  useEffect(() => {
+    if (chasedStageIndex < backendStageIndex) {
+      const timer = setTimeout(() => {
+        setChasedStageIndex((prev) => prev + 1);
+      }, 500); // Wait 500ms before ticking the UI one more step
+      return () => clearTimeout(timer);
+    }
+    // If backend finishes instantly, still forces chasedStageIndex to max
+    if (isCompleted && chasedStageIndex < DISPLAY_STAGES.length - 1) {
+      const timer = setTimeout(() => {
+        setChasedStageIndex((prev) => prev + 1);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [backendStageIndex, chasedStageIndex, isCompleted]);
 
   useEffect(() => {
     let attemptsSoFar = 0;
@@ -128,8 +334,8 @@ export default function Processing({
       if (intervalId !== null) {
         window.clearInterval(intervalId);
       }
-      setSyntheticProgress(1);
-      onCompleted();
+      setCompleted(true);
+      // Wait for ProgressRing to reach 100% to call onCompleted.
     };
 
     const poll = async () => {
@@ -195,57 +401,13 @@ export default function Processing({
         window.clearInterval(intervalId);
       }
     };
-  }, [jobId, onCompleted, onFailed]);
+  }, [jobId, onFailed]);
 
-  // Synthetic progress ticker: drives the UI smoothly from 0 → ~0.95 over
-  // SYNTHETIC_TOTAL_MS even when the backend only emits coarse statuses
-  // ("pending" → "running" → "completed"). Capped below 1 until the poll
-  // loop confirms completion, so the UI never claims success prematurely.
-  useEffect(() => {
-    if (error) return undefined;
-    const tick = window.setInterval(() => {
-      const elapsed = Date.now() - startedAtRef.current;
-      // Ease-out cubic so early stages feel responsive and late stages slow
-      // down, mimicking real pipeline behavior where late phases are heavier.
-      const raw = Math.min(elapsed / SYNTHETIC_TOTAL_MS, 1);
-      const eased = 1 - Math.pow(1 - raw, 3);
-      // Keep capped at 0.95 until the backend confirms completion.
-      setSyntheticProgress((prev) => Math.max(prev, Math.min(eased, 0.95)));
-    }, SYNTHETIC_TICK_MS);
-    return () => window.clearInterval(tick);
-  }, [error]);
-
-  const currentStep = status?.step ?? '';
-  const backendStageIndex = displayStageIndexFromStep(currentStep);
-  const syntheticStageIndex = Math.min(
-    Math.floor(syntheticProgress * DISPLAY_STAGES.length),
-    DISPLAY_STAGES.length - 1,
-  );
-  // Prefer the backend step when it names a real pipeline stage; otherwise
-  // fall back to the synthetic ticker. Never regress the displayed stage.
-  const activeStageIndex = Math.max(
-    backendStageIndex ?? syntheticStageIndex,
-    syntheticStageIndex,
-  );
   const isImageBeta = laneType === 'image_beta';
-  // Progress percent blends the stage-based view (so it snaps cleanly
-  // when a known backend step arrives) with the synthetic ticker (so it
-  // moves between polls instead of freezing). Uses whichever is greater.
-  const stagePercent = Math.round(
-    ((activeStageIndex + 1) / DISPLAY_STAGES.length) * 100,
-  );
-  const syntheticPercent = Math.round(syntheticProgress * 100);
-  const progressPercent = Math.min(
-    100,
-    Math.max(stagePercent, syntheticPercent),
-  );
-  const circleRadius = 92;
-  const circumference = 2 * Math.PI * circleRadius;
-  const dashOffset =
-    circumference - (Math.min(progressPercent, 100) / 100) * circumference;
+
   const backendLabel = currentStep
-    ? BACKEND_STEP_LABELS[currentStep] ?? DISPLAY_STAGES[activeStageIndex]
-    : DISPLAY_STAGES[activeStageIndex];
+    ? BACKEND_STEP_LABELS[currentStep] ?? DISPLAY_STAGES[chasedStageIndex]
+    : DISPLAY_STAGES[chasedStageIndex];
 
   if (error) {
     return (
@@ -296,148 +458,13 @@ export default function Processing({
             textAlign: 'center',
           }}
         >
-          <div
-            style={{
-              position: 'relative',
-              width: 200,
-              height: 200,
-              margin: '0 auto 1.25rem',
-            }}
-          >
-            <svg
-              viewBox="0 0 220 220"
-              style={{ width: '100%', height: '100%', display: 'block' }}
-            >
-              <circle
-                cx="110"
-                cy="110"
-                r={circleRadius}
-                fill="none"
-                stroke={STITCH_COLORS.surfaceHigh}
-                strokeWidth="10"
-              />
-              <circle
-                cx="110"
-                cy="110"
-                r={circleRadius}
-                fill="none"
-                stroke={STITCH_COLORS.pink}
-                strokeWidth="12"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={dashOffset}
-                style={{
-                  transform: 'rotate(-90deg)',
-                  transformOrigin: '50% 50%',
-                  transition: 'stroke-dashoffset 200ms ease',
-                }}
-              />
-            </svg>
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '2.4rem',
-                  fontWeight: 800,
-                  color: STITCH_COLORS.textHeading,
-                  letterSpacing: '-0.05em',
-                }}
-              >
-                {progressPercent}%
-              </span>
-              <span
-                style={{
-                  marginTop: 4,
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  color: STITCH_COLORS.pink,
-                }}
-              >
-                {backendLabel}
-              </span>
-            </div>
-          </div>
-
-          <div
-            className="stitch-flow"
-            style={{ gap: '0.45rem', textAlign: 'left', maxWidth: 420, margin: '0 auto' }}
-          >
-            {DISPLAY_STAGES.map((stage, index) => {
-              const isDone = index < activeStageIndex;
-              const isActive = index === activeStageIndex;
-              return (
-                <div
-                  key={stage}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.85rem',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: STITCH_RADIUS.md,
-                    backgroundColor: isActive
-                      ? 'rgba(255, 21, 112, 0.06)'
-                      : 'transparent',
-                    color: isActive
-                      ? STITCH_COLORS.textHeading
-                      : STITCH_COLORS.textSecondary,
-                    fontWeight: isActive ? 700 : 600,
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: STITCH_RADIUS.pill,
-                      backgroundColor: isDone
-                        ? '#6BFE9C'
-                        : isActive
-                          ? 'rgba(255, 21, 112, 0.12)'
-                          : STITCH_COLORS.surfaceLow,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: isDone
-                        ? STITCH_COLORS.navy
-                        : isActive
-                          ? STITCH_COLORS.pink
-                          : STITCH_COLORS.textMuted,
-                      flexShrink: 0,
-                      fontSize: '0.78rem',
-                    }}
-                  >
-                    {isDone ? (
-                      <span aria-hidden="true">✓</span>
-                    ) : isActive ? (
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          width: 12,
-                          height: 12,
-                          borderRadius: '50%',
-                          border: `2px solid ${STITCH_COLORS.pink}`,
-                          borderTopColor: 'transparent',
-                          display: 'inline-block',
-                          animation: 'spin 900ms linear infinite',
-                        }}
-                      />
-                    ) : (
-                      <span aria-hidden="true">•</span>
-                    )}
-                  </div>
-                  <span>{stage}</span>
-                </div>
-              );
-            })}
-          </div>
+          <ProgressRing
+            activeStageIndex={chasedStageIndex}
+            isCompleted={isCompleted}
+            backendLabel={backendLabel}
+            onVisualCompletion={onCompleted}
+          />
+          <ProcessingStagesList activeStageIndex={chasedStageIndex} />
 
           <p
             style={{

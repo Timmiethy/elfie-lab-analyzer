@@ -276,6 +276,13 @@ async def _in_memory_upload_response(
 ) -> UploadResponse:
     job_id = uuid5(NAMESPACE_URL, f"upload:{classification['checksum']}")
 
+    # Pre-seed job run so polling gets status=pending immediately.
+    from app.workers.pipeline import _JOB_RUNS  # type: ignore
+    _JOB_RUNS[str(job_id)] = {
+        "status": "pending",
+        "lane_type": classification["lane_type"],
+    }
+
     async def _run() -> None:
         try:
             result = await pipeline.run(
@@ -290,7 +297,6 @@ async def _in_memory_upload_response(
         except Exception as exc:
             _LOGGER.error("in_memory_pipeline_failed job_id=%s err=%s", job_id, exc, exc_info=True)
             observability_metrics.record_job_outcome("failed")
-            from app.workers.pipeline import _JOB_RUNS  # type: ignore
             _JOB_RUNS[str(job_id)] = {
                 "status": "failed",
                 "lane_type": classification["lane_type"],

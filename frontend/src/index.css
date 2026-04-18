@@ -371,6 +371,19 @@ input::placeholder {
   }
 }
 
+.stitch-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  box-sizing: border-box;
+  animation: spin 800ms linear infinite;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0.92;
@@ -391,5 +404,10 @@ input::placeholder {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .stitch-spinner {
+    animation-duration: 800ms !important;
+    animation-iteration-count: infinite !important;
   }
 }

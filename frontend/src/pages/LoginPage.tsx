@@ -35,8 +35,8 @@ const labelStyle: React.CSSProperties = {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('test@elfie.co');
+  const [password, setPassword] = useState('elfietest');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

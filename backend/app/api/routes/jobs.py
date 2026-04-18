@@ -104,7 +104,7 @@ async def get_job(
         return persisted
 
     job = get_job_run(str(job_id))
-    if job is None:
+    if job is None or "status" not in job:
         raise HTTPException(status_code=404, detail="job_not_found")
 
     return _runtime_job_payload(job_id=str(job_id), job=job)
@@ -215,7 +215,7 @@ async def get_job_status(
         return persisted
 
     job = get_job_run(str(job_id))
-    if job is None:
+    if job is None or "status" not in job:
         raise HTTPException(status_code=404, detail="job_not_found")
 
     return {
