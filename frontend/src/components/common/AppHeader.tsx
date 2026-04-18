@@ -139,31 +139,33 @@ export default function AppHeader({ navItems = [], activeItemId }: AppHeaderProp
   };
 
   const triggerStyle: CSSProperties = {
-    width: 42,
     height: 42,
+    padding: '0 14px 0 12px',
     borderRadius: STITCH_RADIUS.pill,
-    border: `1px solid ${menuOpen ? STITCH_COLORS.pink : STITCH_COLORS.borderGhost}`,
-    backgroundColor: menuOpen
-      ? 'rgba(255, 21, 112, 0.08)'
-      : STITCH_COLORS.surfaceWhite,
-    color: menuOpen ? STITCH_COLORS.pink : STITCH_COLORS.navy,
+    border: 'none',
+    background: menuOpen
+      ? `linear-gradient(135deg, #E61168 0%, ${STITCH_COLORS.pink} 100%)`
+      : `linear-gradient(135deg, ${STITCH_COLORS.pink} 0%, #FF6FA1 100%)`,
+    color: STITCH_COLORS.surfaceWhite,
     cursor: 'pointer',
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '1.1rem',
+    gap: 8,
+    fontSize: '0.86rem',
+    fontWeight: 800,
+    letterSpacing: '-0.005em',
     boxShadow: triggerPressed
-      ? '0 1px 3px rgba(18,26,51,0.12)'
+      ? '0 2px 6px rgba(255,21,112,0.28)'
       : triggerHovered || menuOpen
-        ? '0 10px 24px rgba(255,21,112,0.26)'
-        : '0 2px 6px rgba(18,26,51,0.06)',
+        ? '0 14px 28px rgba(255,21,112,0.36)'
+        : '0 8px 18px rgba(255,21,112,0.24)',
     transform: triggerPressed
-      ? 'scale(0.92)'
+      ? 'scale(0.96)'
       : triggerHovered
-        ? 'translateY(-2px) scale(1.04)'
+        ? 'translateY(-2px) scale(1.03)'
         : 'none',
     transition:
-      'transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 260ms ease, background-color 220ms ease, color 220ms ease, border-color 220ms ease',
+      'transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 260ms ease, background 220ms ease',
     outline: 'none',
   };
 
@@ -175,9 +177,10 @@ export default function AppHeader({ navItems = [], activeItemId }: AppHeaderProp
         top: 0,
         zIndex: 1000,
         padding: '10px 16px',
-        backgroundColor: '#FFF6F8',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        backgroundColor: 'rgba(255, 246, 248, 0.86)',
         borderBottom: `1px solid ${STITCH_COLORS.borderGhost}`,
-        boxShadow: '0 1px 0 rgba(18,26,51,0.04)',
       }}
     >
       {/* inline keyframes + focus-ring fallback so this file is self-contained */}
@@ -233,13 +236,28 @@ export default function AppHeader({ navItems = [], activeItemId }: AppHeaderProp
 
         .stitch-header-gear {
           transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
-          display: inline-block;
         }
-        .stitch-header-trigger:hover .stitch-header-gear {
-          transform: rotate(90deg);
+        .stitch-menu-line {
+          transform-origin: center;
+          transition:
+            transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 180ms ease;
         }
-        .stitch-header-trigger[aria-expanded="true"] .stitch-header-gear {
-          transform: rotate(180deg);
+        .stitch-header-trigger[aria-expanded="true"] .stitch-menu-line--top {
+          transform: translateY(5px) rotate(45deg);
+        }
+        .stitch-header-trigger[aria-expanded="true"] .stitch-menu-line--mid {
+          opacity: 0;
+          transform: scaleX(0);
+        }
+        .stitch-header-trigger[aria-expanded="true"] .stitch-menu-line--bot {
+          transform: translateY(-5px) rotate(-45deg);
+        }
+        .stitch-header-trigger-label {
+          line-height: 1;
+        }
+        @media (max-width: 360px) {
+          .stitch-header-trigger-label { display: none !important; }
         }
 
         .stitch-header-chevron {
@@ -362,8 +380,63 @@ export default function AppHeader({ navItems = [], activeItemId }: AppHeaderProp
             onBlur={() => setTriggerPressed(false)}
             style={triggerStyle}
           >
-            <span aria-hidden="true" className="stitch-header-gear">
-              ⚙
+            <span
+              aria-hidden="true"
+              className="stitch-header-gear"
+              style={{
+                display: 'inline-flex',
+                width: 22,
+                height: 22,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <line
+                  x1="4"
+                  y1="7"
+                  x2="20"
+                  y2="7"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  className="stitch-menu-line stitch-menu-line--top"
+                />
+                <line
+                  x1="4"
+                  y1="12"
+                  x2="20"
+                  y2="12"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  className="stitch-menu-line stitch-menu-line--mid"
+                />
+                <line
+                  x1="4"
+                  y1="17"
+                  x2="20"
+                  y2="17"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  className="stitch-menu-line stitch-menu-line--bot"
+                />
+              </svg>
+            </span>
+            <span
+              style={{
+                display: 'inline-block',
+              }}
+              className="stitch-header-trigger-label"
+            >
+              Menu
             </span>
           </button>
 

@@ -14,6 +14,14 @@ import {
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 180;
+/** How often the client advances its synthetic progress bar when the backend
+ *  doesn't emit fine-grained pipeline substeps (common in the trusted-PDF
+ *  lane where `step` flips from `preflight` → `lineage_persist`). */
+const SYNTHETIC_TICK_MS = 400;
+/** Target duration of the synthetic progress animation between "pending"
+ *  and "completed" for a real backend job. Real jobs typically finish in
+ *  5–20s; this pacing keeps the UI feeling live without racing past. */
+const SYNTHETIC_TOTAL_MS = 14000;
 
 const BACKEND_STEP_LABELS: Record<string, string> = {
   preflight: 'Upload received',
@@ -43,40 +51,34 @@ const DISPLAY_STAGES = [
 const LANE_LABELS: Record<LaneType, string> = {
   trusted_pdf: 'Trusted PDF',
   image_beta: 'Image beta',
-  structured: 'Structured',
+  unsupported: 'Unsupported',
 };
 
-function displayStageIndex(step: string): number {
-  if (!step) {
-    return 0;
-  }
+const KNOWN_BACKEND_STEPS: Record<string, number> = {
+  preflight: 0,
+  lane_selection: 1,
+  extraction: 2,
+  extraction_qa: 2,
+  observation_build: 2,
+  analyte_mapping: 3,
+  ucum_conversion: 3,
+  panel_reconstruction: 3,
+  rule_evaluation: 3,
+  severity_assignment: 3,
+  nextstep_assignment: 3,
+  patient_artifact: 4,
+  clinician_artifact: 4,
+  lineage_persist: 4,
+};
 
-  if (step === 'preflight') {
-    return 0;
-  }
-
-  if (step === 'lane_selection') {
-    return 1;
-  }
-
-  if (['extraction', 'extraction_qa', 'observation_build'].includes(step)) {
-    return 2;
-  }
-
-  if (
-    [
-      'analyte_mapping',
-      'ucum_conversion',
-      'panel_reconstruction',
-      'rule_evaluation',
-      'severity_assignment',
-      'nextstep_assignment',
-    ].includes(step)
-  ) {
-    return 3;
-  }
-
-  return 4;
+/** Map a known backend step to a display-stage index. Returns null when the
+ *  step is unknown (e.g. raw status strings like "running") so the caller
+ *  can fall back to synthetic progress instead of snapping to the last
+ *  stage like the previous implementation did. */
+function displayStageIndexFromStep(step: string): number | null {
+  if (!step) return null;
+  const idx = KNOWN_BACKEND_STEPS[step];
+  return idx === undefined ? null : idx;
 }
 
 interface Props {
@@ -94,45 +96,10 @@ export default function Processing({
 }: Props) {
   const [status, setStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [smoothProgress, setSmoothProgress] = useState(0);
-  const targetProgressRef = useRef(4);
-  const completedRef = useRef(false);
-
-  // Smooth tween loop. Eases toward target each frame so bar glides instead of jumping.
-  useEffect(() => {
-    let raf = 0;
-    let last = performance.now();
-    const tick = (now: number) => {
-      const dt = Math.min(now - last, 80);
-      last = now;
-      setSmoothProgress((curr) => {
-        const target = targetProgressRef.current;
-        if (Math.abs(target - curr) < 0.05) return target;
-        // exponential ease; faster near the end when completed
-        const rate = completedRef.current ? 0.012 : 0.0028;
-        const next = curr + (target - curr) * (1 - Math.exp(-rate * dt));
-        return next;
-      });
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  // Fake forward creep independent of backend steps so bar always moves.
-  useEffect(() => {
-    const start = performance.now();
-    const id = window.setInterval(() => {
-      if (completedRef.current) return;
-      const elapsed = (performance.now() - start) / 1000;
-      // Asymptotic curve: ramps toward ~92% over ~45s, never stalls.
-      const creep = 92 * (1 - Math.exp(-elapsed / 18));
-      if (creep > targetProgressRef.current) {
-        targetProgressRef.current = creep;
-      }
-    }, 120);
-    return () => window.clearInterval(id);
-  }, []);
+  /** Monotonic client-side synthetic progress in range [0, 1]. Used when
+   *  the backend does not expose fine-grained pipeline substeps. */
+  const [syntheticProgress, setSyntheticProgress] = useState(0);
+  const startedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
     let attemptsSoFar = 0;
@@ -156,13 +123,11 @@ export default function Processing({
         return;
       }
       finished = true;
-      completedRef.current = true;
-      targetProgressRef.current = 100;
       if (intervalId !== null) {
         window.clearInterval(intervalId);
       }
-      // Let bar visually reach 100 before swapping view
-      window.setTimeout(() => onCompleted(), 420);
+      setSyntheticProgress(1);
+      onCompleted();
     };
 
     const poll = async () => {
@@ -230,26 +195,55 @@ export default function Processing({
     };
   }, [jobId, onCompleted, onFailed]);
 
-  const currentStep = status?.step ?? '';
-  const activeStageIndex = displayStageIndex(currentStep);
-  const isImageBeta = laneType === 'image_beta';
-
-  // Backend stage sets a floor so bar at least reflects real progress.
+  // Synthetic progress ticker: drives the UI smoothly from 0 → ~0.95 over
+  // SYNTHETIC_TOTAL_MS even when the backend only emits coarse statuses
+  // ("pending" → "running" → "completed"). Capped below 1 until the poll
+  // loop confirms completion, so the UI never claims success prematurely.
   useEffect(() => {
-    const floor = ((activeStageIndex + 1) / DISPLAY_STAGES.length) * 90;
-    if (floor > targetProgressRef.current && !completedRef.current) {
-      targetProgressRef.current = floor;
-    }
-  }, [activeStageIndex]);
+    if (error) return undefined;
+    const tick = window.setInterval(() => {
+      const elapsed = Date.now() - startedAtRef.current;
+      // Ease-out cubic so early stages feel responsive and late stages slow
+      // down, mimicking real pipeline behavior where late phases are heavier.
+      const raw = Math.min(elapsed / SYNTHETIC_TOTAL_MS, 1);
+      const eased = 1 - Math.pow(1 - raw, 3);
+      // Keep capped at 0.95 until the backend confirms completion.
+      setSyntheticProgress((prev) => Math.max(prev, Math.min(eased, 0.95)));
+    }, SYNTHETIC_TICK_MS);
+    return () => window.clearInterval(tick);
+  }, [error]);
 
-  const progressPercent = Math.min(100, Math.round(smoothProgress));
+  const currentStep = status?.step ?? '';
+  const backendStageIndex = displayStageIndexFromStep(currentStep);
+  const syntheticStageIndex = Math.min(
+    Math.floor(syntheticProgress * DISPLAY_STAGES.length),
+    DISPLAY_STAGES.length - 1,
+  );
+  // Prefer the backend step when it names a real pipeline stage; otherwise
+  // fall back to the synthetic ticker. Never regress the displayed stage.
+  const activeStageIndex = Math.max(
+    backendStageIndex ?? syntheticStageIndex,
+    syntheticStageIndex,
+  );
+  const isImageBeta = laneType === 'image_beta';
+  // Progress percent blends the stage-based view (so it snaps cleanly
+  // when a known backend step arrives) with the synthetic ticker (so it
+  // moves between polls instead of freezing). Uses whichever is greater.
+  const stagePercent = Math.round(
+    ((activeStageIndex + 1) / DISPLAY_STAGES.length) * 100,
+  );
+  const syntheticPercent = Math.round(syntheticProgress * 100);
+  const progressPercent = Math.min(
+    100,
+    Math.max(stagePercent, syntheticPercent),
+  );
   const circleRadius = 92;
   const circumference = 2 * Math.PI * circleRadius;
   const dashOffset =
-    circumference - (Math.min(smoothProgress, 100) / 100) * circumference;
+    circumference - (Math.min(progressPercent, 100) / 100) * circumference;
   const backendLabel = currentStep
-    ? BACKEND_STEP_LABELS[currentStep] ?? 'Running checks'
-    : 'Running checks';
+    ? BACKEND_STEP_LABELS[currentStep] ?? DISPLAY_STAGES[activeStageIndex]
+    : DISPLAY_STAGES[activeStageIndex];
 
   if (error) {
     return (
@@ -310,12 +304,7 @@ export default function Processing({
           >
             <svg
               viewBox="0 0 220 220"
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'block',
-                animation: 'spin 6s linear infinite',
-              }}
+              style={{ width: '100%', height: '100%', display: 'block' }}
             >
               <circle
                 cx="110"
@@ -338,7 +327,7 @@ export default function Processing({
                 style={{
                   transform: 'rotate(-90deg)',
                   transformOrigin: '50% 50%',
-                  transition: 'stroke-dashoffset 120ms linear',
+                  transition: 'stroke-dashoffset 200ms ease',
                 }}
               />
             </svg>

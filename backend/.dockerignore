@@ -1,0 +1,19 @@
+# Backend Dockerfile context — keep image small.
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+.venv
+venv
+.devlogs
+artifacts
+tests
+*.md
+docs
+benchmarks
+notebooks
+.env
+.env.*
+!pyproject.toml

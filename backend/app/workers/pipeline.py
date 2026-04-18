@@ -94,7 +94,16 @@ _TEXT_LAYER_ROW_RE = re.compile(
     r"^(?P<label>[A-Za-z][A-Za-z0-9 /\-().,]+?)"
     r"(?:\s+[^\x00-\x7F]+)?"
     r"\s+(?P<value>[<>]?=?\s*-?\d+(?:\.\d+)?)\s*%?"
-    r"\s*(?P<unit>%|mmol/L|umol/L|mg/L|mg/dL|mmol/mol|U/L|mL/min/1\.73m2?|mg Alb/mmol)"
+    r"\s*(?P<unit>%|"
+    r"mmol/L|mmol/l|umol/L|umol/l|micromol/L|"
+    r"mg/L|mg/l|mg/dL|mg/dl|g/dL|g/dl|g/L|g/l|"
+    r"ng/mL|ng/ml|ng/dL|ng/dl|pg/mL|pg/ml|"
+    r"mmol/mol|U/L|u/l|IU/L|iu/l|IU/mL|iu/ml|microIU/mL|uIU/mL|"
+    r"mL/min/1\.73m2?|mL/min|"
+    r"mg\s*Alb/mmol|mg/g|"
+    r"/cmm|/uL|/mm3|10\^3/uL|10\^6/uL|10\*3/uL|"
+    r"fL|fl|pg|ratio"
+    r")"
     r"\s*(?P<ref>.*)$",
     re.IGNORECASE,
 )
@@ -610,31 +619,97 @@ async def _extract_rows(
         observations = payload.get("observations")
         return _validate_structured_observations(observations, document_id=job_uuid)
 
-    # Trusted PDF lane: try deterministic text-layer extraction first. VLM is
-    # stochastic and routinely misses analytes (Urea, AST, ALT, ACR in our eval
-    # set) that a simple regex pass finds reliably from the PDF's own text. If
-    # the text pass finds enough rows we use them; otherwise fall back to VLM.
+    # Trusted PDF lane: run VLM first (Qwen-VL reads the whole page, catches
+    # units/analytes the regex whitelist misses). Text-layer regex is a
+    # deterministic fallback only — it is blind to analytes whose unit string
+    # is not in its narrow whitelist (g/dL, /cmm, 10^3/uL, fL, pg, ng/mL, etc.)
+    # and therefore silently under-extracts multi-page panels. Running it
+    # first short-circuited the VLM and produced artifacts with 1/50 analytes.
+    text_rows_fallback: list[dict] = []
     if lane_type == "trusted_pdf" and file_bytes.startswith(b"%PDF"):
-        text_rows = _extract_rows_from_text_layer(file_bytes, document_id=job_uuid)
-        _LOGGER.info(
-            "text_layer_extraction job=%s rows=%d", job_uuid, len(text_rows)
-        )
-        if len(text_rows) >= 5:
-            return text_rows
+        try:
+            text_rows_fallback = _extract_rows_from_text_layer(file_bytes, document_id=job_uuid)
+            _LOGGER.info(
+                "text_layer_extraction job=%s rows=%d", job_uuid, len(text_rows_fallback)
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            _LOGGER.warning("text_layer_extraction_failed job=%s err=%s", job_uuid, exc)
 
     adapter = MineruAdapter(mode="ocr" if lane_type == "image_beta" else "auto")
-    mineru_output = await adapter.execute(file_bytes)
+    try:
+        mineru_output = await adapter.execute(file_bytes)
+    except Exception as exc:
+        _LOGGER.warning("vlm_extraction_raised job=%s err=%s", job_uuid, exc)
+        mineru_output = {"status": "error", "error_message": str(exc), "content": {"blocks": []}}
 
+    vlm_rows: list[dict] = []
     if mineru_output.get("status") == "error":
         err_msg = mineru_output.get("error_message", "mineru_pipeline_failed")
-        # Pass through specific infrastructure exceptions
         if "page_count_limit_exceeded" in err_msg:
             raise ValueError("page_count_limit_exceeded")
-        raise ValueError("mineru_pipeline_failed")
+        if "pdf_render_bytes_limit_exceeded" in err_msg:
+            raise ValueError("pdf_render_bytes_limit_exceeded")
+        _LOGGER.warning(
+            "vlm_extraction_error job=%s err=%s (falling back to text layer)",
+            job_uuid, err_msg,
+        )
+    else:
+        vlm_rows = LabNormalizer().normalize(
+            mineru_output["content"].get("blocks", []), document_id=job_uuid
+        )
 
-    return LabNormalizer().normalize(
-        mineru_output["content"].get("blocks", []), document_id=job_uuid
+    # Merge VLM rows + text-layer rows. VLM wins on overlap (richer context),
+    # but text-layer fills gaps for rows VLM missed (happens routinely for
+    # Urea/AST/ALT/ACR on some report formats).
+    merged = _merge_extraction_rows(vlm_rows, text_rows_fallback)
+    _LOGGER.info(
+        "extraction_merged job=%s vlm=%d text=%d merged=%d",
+        job_uuid, len(vlm_rows), len(text_rows_fallback), len(merged),
     )
+    if not merged and lane_type == "trusted_pdf":
+        # Both paths failed — raise so caller records the job as failed
+        # instead of silently producing an empty artifact.
+        raise ValueError("extraction_empty")
+    return merged
+
+
+def _merge_extraction_rows(
+    vlm_rows: list[dict],
+    text_rows: list[dict],
+) -> list[dict]:
+    """Union VLM + text-layer rows, keyed by (normalized label, page, value).
+
+    VLM wins on conflict because it supplies bbox + confidence. Text-layer
+    fills in rows VLM omitted (typically present but missed by the model).
+    Row-hash + row indices are re-stamped so downstream stable-ids remain
+    collision-free.
+    """
+
+    def _key(row: dict) -> tuple[str, int, str]:
+        label = str(row.get("raw_analyte_label") or "").strip().lower()
+        page = int(row.get("source_page") or 0)
+        value = str(row.get("raw_value_string") or "").strip().lower()
+        return (label, page, value)
+
+    seen: set[tuple[str, int, str]] = set()
+    merged: list[dict] = []
+    for row in list(vlm_rows) + list(text_rows):
+        if not row.get("raw_analyte_label"):
+            continue
+        key = _key(row)
+        if key[0] == "":
+            # Keep unlabeled rows (cannot dedupe) — rare path.
+            merged.append(row)
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(row)
+
+    # Re-stamp row_hash so every row has a distinct stable id.
+    for idx, row in enumerate(merged):
+        row["row_hash"] = f"row-{idx}"
+    return merged
 
 
 def _extract_rows_from_text_layer(

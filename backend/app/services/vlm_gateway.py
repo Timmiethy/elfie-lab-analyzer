@@ -3,6 +3,7 @@ import base64
 import io
 import json
 import logging
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -70,6 +71,50 @@ class VLMAPIError(VLMGatewayError):
     """Raised when the VLM API call fails."""
 
 
+def _parse_vlm_json(content: str) -> dict[str, Any]:
+    """Parse VLM JSON with lenient recovery.
+
+    The model occasionally emits JSON with unescaped inner quotes,
+    trailing commas, or stray backticks. Try strict first; if that
+    fails, apply common fixes and try again. Finally, fall back to
+    extracting individual row objects by regex so a single malformed
+    row does not drop all 20+ rows on a page.
+    """
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    cleaned = content
+    # Strip stray code fences.
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned.strip())
+    cleaned = re.sub(r"```\s*$", "", cleaned)
+    # Trailing commas before ] or }.
+    cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # Last-resort row harvesting: extract every top-level object that
+    # contains an analyte_name key.
+    rows: list[dict[str, Any]] = []
+    for match in re.finditer(
+        r"\{[^{}]*?\"analyte_name\"[^{}]*?\}",
+        cleaned,
+        flags=re.DOTALL,
+    ):
+        snippet = re.sub(r",\s*([}\]])", r"\1", match.group(0))
+        try:
+            rows.append(json.loads(snippet))
+        except json.JSONDecodeError:
+            continue
+    if rows:
+        return {"rows": rows}
+    # Give up.
+    raise json.JSONDecodeError("unrecoverable VLM JSON", content, 0)
+
+
 def _enforce_single_image_payload(payload: dict[str, Any]) -> None:
     """Ensure exactly one image is attached for each VLM call."""
 
@@ -106,54 +151,89 @@ async def process_image_with_qwen(file_bytes: bytes) -> list[VLMRow]:
     # Check magic bytes for PDF
     if file_bytes.startswith(b"%PDF"):
         loop = asyncio.get_event_loop()
-        try:
-            pdf = await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: pdfplumber.open(io.BytesIO(file_bytes))),
-                timeout=settings.pdf_render_timeout_s,
-            )
-            rendered_bytes = 0
-            with pdf:
+
+        def _render_pdf_sync(pdf_bytes: bytes) -> tuple[list[str], int]:
+            """Render all pages to base64 JPEGs serially.
+
+            pdfplumber + PIL/ghostscript are not thread-safe — concurrent
+            `page.to_image()` on a shared Pdf handle produces OSError on
+            multi-page documents. Serialize inside a single executor call.
+            Try pymupdf (fitz) first for speed + thread-safety; fall back
+            to pdfplumber if fitz is unavailable or fails.
+            """
+            images: list[str] = []
+            total_bytes = 0
+
+            # Fast path: pymupdf
+            try:
+                import pymupdf  # type: ignore
+                doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+                try:
+                    if doc.page_count > settings.max_pdf_pages:
+                        raise VLMParsingError("page_count_limit_exceeded")
+                    # Zoom maps dpi: PDF default is 72 DPI.
+                    zoom = max(1.0, settings.pdf_render_dpi / 72.0)
+                    matrix = pymupdf.Matrix(zoom, zoom)
+                    for page in doc:
+                        pix = page.get_pixmap(matrix=matrix, alpha=False)
+                        jpeg_bytes = pix.tobytes("jpeg")
+                        total_bytes += len(jpeg_bytes)
+                        if total_bytes > settings.max_pdf_render_bytes:
+                            raise VLMParsingError("pdf_render_bytes_limit_exceeded")
+                        b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
+                        images.append(f"data:image/jpeg;base64,{b64}")
+                    return images, total_bytes
+                finally:
+                    doc.close()
+            except VLMParsingError:
+                raise
+            except ImportError:
+                pass
+            except Exception as fitz_err:  # fall through to pdfplumber
+                logger.warning(
+                    "pymupdf render failed, falling back to pdfplumber: %s",
+                    type(fitz_err).__name__,
+                )
+
+            # Fallback: pdfplumber (serial)
+            images = []
+            total_bytes = 0
+            with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
                 if len(pdf.pages) > settings.max_pdf_pages:
                     raise VLMParsingError("page_count_limit_exceeded")
-                semaphore = asyncio.Semaphore(max(1, settings.pdf_render_concurrency))
-                bytes_lock = asyncio.Lock()
-
-                async def _render_page(_page: Any) -> str:
-                    nonlocal rendered_bytes
-
-                    async with semaphore:
-                        rendered = await asyncio.wait_for(
-                            loop.run_in_executor(
-                                None,
-                                lambda p=_page: p.to_image(resolution=settings.pdf_render_dpi),
-                            ),
-                            timeout=settings.pdf_render_timeout_s,
-                        )
-
+                for page in pdf.pages:
+                    rendered = page.to_image(resolution=settings.pdf_render_dpi)
                     with io.BytesIO() as buffer:
                         rendered.original.convert("RGB").save(buffer, format="JPEG")
                         jpeg_bytes = buffer.getvalue()
+                    total_bytes += len(jpeg_bytes)
+                    if total_bytes > settings.max_pdf_render_bytes:
+                        raise VLMParsingError("pdf_render_bytes_limit_exceeded")
+                    b64 = base64.b64encode(jpeg_bytes).decode("utf-8")
+                    images.append(f"data:image/jpeg;base64,{b64}")
+            return images, total_bytes
 
-                    async with bytes_lock:
-                        rendered_bytes += len(jpeg_bytes)
-                        if rendered_bytes > settings.max_pdf_render_bytes:
-                            raise VLMParsingError("pdf_render_bytes_limit_exceeded")
-
-                    base64_image = base64.b64encode(jpeg_bytes).decode("utf-8")
-                    return f"data:image/jpeg;base64,{base64_image}"
-
-                page_tasks = [_render_page(page) for page in pdf.pages]
-                images_formats.extend(await asyncio.gather(*page_tasks))
+        try:
+            # Scale timeout with page count — 19 pages @ 96dpi takes ~20s on CPU.
+            render_timeout = max(
+                settings.pdf_render_timeout_s,
+                settings.pdf_render_timeout_s * 3,
+                60.0,
+            )
+            images_formats, _ = await asyncio.wait_for(
+                loop.run_in_executor(None, _render_pdf_sync, file_bytes),
+                timeout=render_timeout,
+            )
         except TimeoutError as e:
             logger.error(
                 "Failed to parse PDF bytes: error_type=TimeoutError timeout_s=%s",
-                settings.pdf_render_timeout_s,
+                render_timeout,
             )
             raise VLMParsingError("pdf_render_timeout") from e
         except VLMParsingError:
             raise
         except Exception as e:
-            logger.error("Failed to parse PDF bytes: error_type=%s", type(e).__name__)
+            logger.error("Failed to parse PDF bytes: error_type=%s msg=%s", type(e).__name__, e)
             raise VLMParsingError("Invalid PDF bytes") from e
     else:
         # Assume it's a valid image (JPEG/PNG/etc)
@@ -216,6 +296,9 @@ async def process_image_with_qwen(file_bytes: bytes) -> list[VLMRow]:
 
     all_rows = []
 
+    _MAX_RETRIES = 5
+    _BASE_BACKOFF_S = 2.0
+
     for page_index, img_data in enumerate(images_formats, start=1):
         payload = {
             "model": settings.qwen_vl_model,
@@ -232,15 +315,50 @@ async def process_image_with_qwen(file_bytes: bytes) -> list[VLMRow]:
         }
         _enforce_single_image_payload(payload)
 
-        try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
-                    f"{settings.qwen_base_url}/chat/completions",
-                    headers=headers,
-                    json=payload,
-                )
-                response.raise_for_status()
-        except httpx.HTTPError as e:
+        response = None
+        last_exc: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                async with httpx.AsyncClient(timeout=120.0) as client:
+                    response = await client.post(
+                        f"{settings.qwen_base_url}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                    )
+                    # Retry on rate-limit + transient 5xx.
+                    if response.status_code in (408, 425, 429, 500, 502, 503, 504):
+                        raise httpx.HTTPStatusError(
+                            f"transient_status_{response.status_code}",
+                            request=response.request,
+                            response=response,
+                        )
+                    response.raise_for_status()
+                last_exc = None
+                break
+            except httpx.HTTPError as e:
+                last_exc = e
+                status_code = getattr(getattr(e, "response", None), "status_code", None)
+                if attempt < _MAX_RETRIES - 1 and status_code in (
+                    408, 425, 429, 500, 502, 503, 504, None
+                ):
+                    sleep_s = _BASE_BACKOFF_S * (2 ** attempt)
+                    # Honor server Retry-After header when present.
+                    try:
+                        ra = e.response.headers.get("retry-after") if e.response is not None else None
+                        if ra:
+                            sleep_s = max(sleep_s, float(ra))
+                    except Exception:
+                        pass
+                    logger.warning(
+                        "VLM retry page=%d attempt=%d/%d status=%s sleep=%.1fs",
+                        page_index, attempt + 1, _MAX_RETRIES, status_code, sleep_s,
+                    )
+                    await asyncio.sleep(sleep_s)
+                    continue
+                break
+
+        if last_exc is not None:
+            e = last_exc
             try:
                 response_obj = e.response
             except Exception:
@@ -269,14 +387,24 @@ async def process_image_with_qwen(file_bytes: bytes) -> list[VLMRow]:
             if content.endswith("```"):
                 content = content[:-3]
 
-            parsed_data = json.loads(content)
+            parsed_data = _parse_vlm_json(content)
             validated_response = VLMResponse.model_validate(parsed_data)
             for row in validated_response.rows:
                 row.source_page = page_index
             all_rows.extend(validated_response.rows)
         except (KeyError, IndexError, json.JSONDecodeError, ValidationError) as e:
-            logger.error("Failed to parse VLM response: %s", e)
-            raise VLMParsingError("Invalid structured output from VLM") from e
+            # Don't abort the whole PDF on one bad page — log + skip.
+            # Multi-page reports routinely have one page where the model
+            # emits malformed JSON (unescaped quote, truncation). Losing
+            # 50+ analytes because of one page is the real failure mode.
+            logger.warning(
+                "vlm_page_parse_failed page=%d err=%s: skipping page",
+                page_index, e,
+            )
+
+        # Inter-page pacing to keep under DashScope QPS cap on multi-page PDFs.
+        if page_index < len(images_formats):
+            await asyncio.sleep(0.6)
 
     # Filter out low-confidence extractions to reduce garbage downstream.
     min_conf = settings.min_vlm_confidence

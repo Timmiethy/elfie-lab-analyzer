@@ -279,26 +279,65 @@ class SemanticCleaner:
         ]
         canonical_hint = ", ".join(self._canonical_names) or "(canonical list unavailable)"
         prompt = (
-            "You are a clinical data cleaner matching lab report rows to standardized analyte "
-            "names.\nTask: Evaluate each row. If the row does not contain a measured laboratory "
-            "test result\n(e.g., if it is a header, clinic address, phone number, date stamp, "
-            "or comment noise),\nmark 'is_valid_result' as false.\n"
-            "If it is a valid lab result, normalize the test name to English and provide it in\n"
-            "'normalized_analyte_name'. If possible, match it exactly to one of the canonical "
-            "names\n"
-            f"in this list: {canonical_hint}.\n"
-            "Respond in JSON format with a single key 'results' containing a list of objects. "
-            "Each\n"
-            "object must correspond to an input row and have: 'index' (integer matching input "
-            "index),\n"
-            "'is_valid_result' (boolean), and 'normalized_analyte_name' (string or null).\n"
-            f"Here are the rows to evaluate:\n{json.dumps(prompt_rows, indent=2)}"
+            "ROLE: You are a clinical laboratory data normalizer. Your output drives a patient-"
+            "facing health report; precision matters more than recall.\n\n"
+            "INPUT: A batch of rows extracted from one or more lab reports. Each row has a raw "
+            "label (the printed analyte name, possibly bilingual, abbreviated, OCR-noisy, or "
+            "padded with method/specimen qualifiers), a raw value, a raw unit, and the surrounding "
+            "raw line text.\n\n"
+            "TASK PER ROW:\n"
+            "1. CLASSIFY: Decide whether this row reports a measured laboratory analyte result.\n"
+            "   - Set is_valid_result=true ONLY if the row clearly carries a result for a clinical "
+            "lab analyte (numeric, ratio, comparator like '<0.1' or '>90', enumerated qualitative "
+            "like 'Positive'/'Negative'/'Reactive'/'Non Reactive'/'Absent'/'Present (+)'/"
+            "'Trace'/'Nil'/'Pale Yellow'/'Clear'/'Normochromic Normocytic', or descriptive "
+            "morphology rows that ARE the analyte's reported result).\n"
+            "   - Set is_valid_result=false for ANY of: report headers, lab/clinic name, address, "
+            "phone, fax, accession/specimen ID, patient demographics, doctor/physician name, "
+            "collection or report timestamps, page numbers, footers, methodology disclaimers, "
+            "interpretation tables that list category cutoffs (e.g. 'Desirable: <200; Borderline: "
+            "200-239'), reference-range legends without a measured value, signatures, "
+            "advertisements, regulatory text, or duplicate trace lines from instrument output.\n\n"
+            "2. NORMALIZE NAME (only when valid): Produce 'normalized_analyte_name' as the "
+            "canonical English clinical name.\n"
+            "   - Translate non-English labels (Vietnamese, Chinese, Spanish, French, Portuguese, "
+            "Indonesian, Malay, Thai, Hindi, etc.) to standard English clinical terminology. "
+            "Examples: 'Cholestérol total' -> 'Total Cholesterol'; "
+            "'血红蛋白' -> 'Hemoglobin'; 'Glucose à jeun' -> 'Glucose, fasting'; "
+            "'Hồng cầu' -> 'Red Blood Cell Count'; 'Đường huyết lúc đói' -> 'Glucose, fasting'.\n"
+            "   - Strip method/specimen suffixes that don't change identity: 'IFCC', 'DCCT', "
+            "'CKD-EPI', 'serum', 'plasma', 'whole blood', 'calc', 'calculated', 'enzymatic', "
+            "'kinetic', '(S)', '(P)', '(WB)'.\n"
+            "   - Expand standard abbreviations: BUN -> Blood Urea Nitrogen; AST/SGOT -> AST; "
+            "ALT/SGPT -> ALT; HbA1c (% DCCT) and HbA1c (mmol/mol IFCC) BOTH stay as 'HbA1c' "
+            "(units distinguish them downstream).\n"
+            "   - Differentiate percentage vs absolute count differentials (e.g. 'Neutrophils' "
+            "for percentage row vs 'Absolute Neutrophil Count' for /uL row) by inspecting the "
+            "raw_unit_string.\n"
+            "   - PREFER an exact match against the canonical list when one exists; otherwise "
+            "emit the standard English name a clinician would write. Casing should be Title Case.\n"
+            "   - Never invent an analyte not present in the input; never copy patient names or "
+            "PHI into normalized_analyte_name.\n\n"
+            "3. UNCERTAIN: If you cannot confidently identify the analyte (gibberish, severe OCR "
+            "corruption, ambiguous), set is_valid_result=false rather than guessing. Garbage in "
+            "the patient artifact is worse than a missed row.\n\n"
+            f"CANONICAL LIST (prefer these names verbatim): {canonical_hint}\n\n"
+            "OUTPUT FORMAT: Return a JSON object with a single key 'results' whose value is a "
+            "list of objects. Each object MUST contain exactly these keys:\n"
+            "  - index: integer matching the input row index\n"
+            "  - is_valid_result: boolean\n"
+            "  - normalized_analyte_name: string (canonical English name) or null when "
+            "is_valid_result is false\n"
+            "Do not include explanation, commentary, code fences, or extra keys.\n\n"
+            f"INPUT ROWS:\n{json.dumps(prompt_rows, ensure_ascii=False, indent=2)}"
         )
 
         last_exc: Exception | None = None
         for attempt in range(1, _LLM_RETRY_ATTEMPTS + 1):
             try:
-                response_text = await generate_text_with_qwen(prompt)
+                response_text = await generate_text_with_qwen(
+                    prompt, response_format={"type": "json_object"}
+                )
                 return self._parse_llm_results(response_text)
             except (VLMAPIError, VLMParsingError, json.JSONDecodeError) as exc:
                 last_exc = exc
@@ -322,15 +361,36 @@ class SemanticCleaner:
 
     def _parse_llm_results(self, response_text: str) -> dict[int, dict[str, Any]]:
         cleaned_response = response_text.strip()
-        if cleaned_response.startswith("```json"):
-            cleaned_response = cleaned_response[7:]
-        if cleaned_response.endswith("```"):
-            cleaned_response = cleaned_response[:-3]
+        # Strip code fences the model sometimes emits despite json_object mode.
+        cleaned_response = re.sub(r"^```(?:json)?\s*", "", cleaned_response)
+        cleaned_response = re.sub(r"```\s*$", "", cleaned_response)
+        # Strip trailing commas.
+        cleaned_response = re.sub(r",\s*([}\]])", r"\1", cleaned_response)
 
-        payload = json.loads(cleaned_response)
-        results = payload.get("results", [])
+        try:
+            payload = json.loads(cleaned_response)
+        except json.JSONDecodeError:
+            # Regex-harvest individual result objects so one malformed row
+            # does not drop the entire batch.
+            items: list[dict[str, Any]] = []
+            for match in re.finditer(
+                r"\{[^{}]*?\"index\"[^{}]*?\}",
+                cleaned_response,
+                flags=re.DOTALL,
+            ):
+                snippet = re.sub(r",\s*([}\]])", r"\1", match.group(0))
+                try:
+                    items.append(json.loads(snippet))
+                except json.JSONDecodeError:
+                    continue
+            if not items:
+                return {}
+            payload = {"results": items}
+
+        results = payload.get("results")
         if not isinstance(results, list):
-            return {}
+            # Some models wrap under 'data' or omit the key.
+            results = payload if isinstance(payload, list) else []
 
         parsed_results: dict[int, dict[str, Any]] = {}
         for item in results:

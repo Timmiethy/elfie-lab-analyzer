@@ -1,13 +1,16 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.auth import CurrentUserId
 from app.api.deps import get_session_factory
 from app.db import TopLevelLifecycleStore
+from app.services.clinician_pdf import build_clinician_pdf_bytes
 from app.services.observability import observability_metrics
+from app.services.patient_pdf import build_patient_pdf_bytes
 from app.workers.pipeline import get_job_run
 
 router = APIRouter()
@@ -53,6 +56,58 @@ async def get_clinician_artifact(
     if job is None:
         raise HTTPException(status_code=404, detail="job_not_found")
     return job["clinician_artifact"]
+
+
+@router.get("/{job_id}/patient/pdf")
+async def get_patient_artifact_pdf(
+    job_id: UUID,
+    user_id: CurrentUserId,
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+) -> Response:
+    """Render the patient artifact as a professional PDF (server-side)."""
+    artifact = await _get_persisted_patient_artifact(
+        str(job_id), session_factory, user_id=user_id
+    )
+    if artifact is None:
+        job = get_job_run(str(job_id))
+        if job is None:
+            raise HTTPException(status_code=404, detail="job_not_found")
+        artifact = job["patient_artifact"]
+    pdf_bytes = build_patient_pdf_bytes(artifact)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="elfie-lab-summary-{job_id}.pdf"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@router.get("/{job_id}/clinician/pdf")
+async def get_clinician_artifact_pdf(
+    job_id: UUID,
+    user_id: CurrentUserId,
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
+) -> Response:
+    """Render the clinician artifact as a professional PDF (server-side)."""
+    artifact = await _get_persisted_clinician_artifact(
+        str(job_id), session_factory, user_id=user_id
+    )
+    if artifact is None:
+        job = get_job_run(str(job_id))
+        if job is None:
+            raise HTTPException(status_code=404, detail="job_not_found")
+        artifact = job["clinician_artifact"]
+    pdf_bytes = build_clinician_pdf_bytes(artifact)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="elfie-clinician-summary-{job_id}.pdf"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 async def _get_persisted_patient_artifact(

@@ -78,7 +78,7 @@ class Settings(_BaseSettings):
     # VLM quality gate — rows with confidence below this are discarded
     min_vlm_confidence: int = 20
 
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="ELFIE_")
+    model_config = SettingsConfigDict(env_file=".env", env_prefix="ELFIE_", extra="ignore")
 
 
 settings = Settings()

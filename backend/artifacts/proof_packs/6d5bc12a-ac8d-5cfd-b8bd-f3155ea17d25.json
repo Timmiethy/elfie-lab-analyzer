@@ -6,11 +6,11 @@
     "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
   },
   "benchmark_contract_version": "benchmark-contract-v1",
-  "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+  "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
   "contract_version": "benchmark-proof-pack-v1",
   "lineage": {
     "build_commit": "local-dev",
-    "id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+    "id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
     "job_id": "6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25",
     "mapping_threshold_config": {
       "default": 0.9
@@ -26,14 +26,17 @@
     "terminology_release": "seeded-demo-2026-04-10",
     "unit_engine_version": "ucum-v1"
   },
-  "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+  "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
   "metrics": {
     "clean_rows": 1,
     "extracted_rows": 1,
     "extraction_ms": 13,
     "findings": 1,
+    "normalize_ms": 0,
     "panels": 1,
-    "processing_ms": 14
+    "persist_ms": 0,
+    "processing_ms": 14,
+    "rules_ms": 0
   },
   "regression_tags": [],
   "report_type": "truth_engine_seeded_pipeline",
@@ -45,12 +48,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -67,7 +70,7 @@
         "report_type": "truth_engine_seeded_pipeline"
       },
       "report_name": "ablation_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     },
     "clinician_scan_report.json": {
       "artifact_refs": {
@@ -76,12 +79,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -97,7 +100,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "clinician_scan_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     },
     "coverage_report.json": {
       "artifact_refs": {
@@ -106,12 +109,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -133,7 +136,7 @@
         "regressed_metrics": []
       },
       "report_name": "coverage_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     },
     "explanation_report.json": {
       "artifact_refs": {
@@ -142,12 +145,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -164,7 +167,7 @@
         "template_version": "templates-v1"
       },
       "report_name": "explanation_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     },
     "mapping_report.json": {
       "artifact_refs": {
@@ -173,12 +176,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -199,12 +202,15 @@
           "extracted_rows": 1,
           "extraction_ms": 13,
           "findings": 1,
+          "normalize_ms": 0,
           "panels": 1,
-          "processing_ms": 14
+          "persist_ms": 0,
+          "processing_ms": 14,
+          "rules_ms": 0
         }
       },
       "report_name": "mapping_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     },
     "parser_report.json": {
       "artifact_refs": {
@@ -213,12 +219,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -234,11 +240,14 @@
         "regression_tags": [],
         "timing": {
           "extraction_ms": 13,
-          "processing_ms": 14
+          "normalize_ms": 0,
+          "persist_ms": 0,
+          "processing_ms": 14,
+          "rules_ms": 0
         }
       },
       "report_name": "parser_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     },
     "partial_support_report.json": {
       "artifact_refs": {
@@ -247,12 +256,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -271,7 +280,7 @@
         }
       },
       "report_name": "partial_support_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     },
     "patient_comprehension_report.json": {
       "artifact_refs": {
@@ -280,12 +289,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -301,7 +310,7 @@
         "evaluation_status": "pending_person_b_validation"
       },
       "report_name": "patient_comprehension_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     },
     "policy_report.json": {
       "artifact_refs": {
@@ -310,12 +319,12 @@
         "patient_artifact": "/api/artifacts/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/patient",
         "proof_pack": "/api/jobs/6d5bc12a-ac8d-5cfd-b8bd-f3155ea17d25/proof-pack"
       },
-      "benchmark_id": "50d38dd7-030c-5f7b-a4b1-ba26f3fab06b",
+      "benchmark_id": "aa6aa3d1-fc6d-50ac-9565-47a6e0256fbc",
       "build_commit": "local-dev",
       "corpus_id": "seeded-launch-corpus-v1",
       "lane_id": "trusted_pdf",
       "language_id": "en",
-      "lineage_id": "fe3f99bb-3136-5f3a-a27f-a680178e2b53",
+      "lineage_id": "badc9c33-81ff-5f17-bef5-15e8417e3c00",
       "lineage_version_ids": {
         "model_version": null,
         "nextstep_policy_version": "nextstep-v1",
@@ -334,7 +343,7 @@
         "severity_policy_version": "severity-v1"
       },
       "report_name": "policy_report.json",
-      "timestamp": "2026-04-17T11:42:02.551176Z"
+      "timestamp": "2026-04-17T19:17:04.561724Z"
     }
   },
   "summary": {
@@ -349,7 +358,10 @@
     "regression_tags": [],
     "timing": {
       "extraction_ms": 13,
-      "processing_ms": 14
+      "normalize_ms": 0,
+      "persist_ms": 0,
+      "processing_ms": 14,
+      "rules_ms": 0
     }
   }
 }

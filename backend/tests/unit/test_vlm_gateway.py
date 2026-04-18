@@ -91,9 +91,11 @@ async def test_process_image_with_qwen_parsing_failure(mock_post, image_bytes):
     mock_response.json.return_value = mock_response_data
     mock_post.return_value = mock_response
 
-    # When we process the image, it fails closed with VLMParsingError
-    with pytest.raises(VLMParsingError, match="Invalid structured output from VLM"):
-        await process_image_with_qwen(image_bytes)
+    # Contract: per-page parse failures are now skipped (not fatal) so the
+    # rest of a multi-page PDF still yields rows. Single-image input with an
+    # unparseable response therefore returns [] rather than raising.
+    rows = await process_image_with_qwen(image_bytes)
+    assert rows == []
 
 
 @pytest.mark.asyncio
@@ -109,7 +111,7 @@ async def test_process_image_with_qwen_schema_validation_failure(mock_post, imag
     mock_response.json.return_value = mock_response_data
     mock_post.return_value = mock_response
 
-    # When we process the image, it fails closed with VLMParsingError
-    # due to validation error
-    with pytest.raises(VLMParsingError, match="Invalid structured output from VLM"):
-        await process_image_with_qwen(image_bytes)
+    # Same contract as parsing failure: schema validation errors per page
+    # are logged and skipped instead of aborting the entire extraction.
+    rows = await process_image_with_qwen(image_bytes)
+    assert rows == []
