@@ -235,16 +235,18 @@ class TopLevelLifecycleStore:
         self,
         job_id: UUID | str,
         *,
-        status: str,
+        status: str | None = None,
         retry_count: int | None = None,
         dead_letter: bool | None = None,
         operator_note: str | None = None,
+        current_step: str | None = None,
     ) -> Job:
         job = await self.get_job(job_id)
         if job is None:
             raise LookupError("job_not_found")
 
-        job.status = status
+        if status is not None:
+            job.status = status
         job.updated_at = utc_now()
         if retry_count is not None:
             job.retry_count = retry_count
@@ -252,6 +254,8 @@ class TopLevelLifecycleStore:
             job.dead_letter = dead_letter
         if operator_note is not None:
             job.operator_note = operator_note
+        if current_step is not None:
+            job.current_step = current_step
 
         await self.session.flush()
         return job

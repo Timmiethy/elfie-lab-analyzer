@@ -294,6 +294,45 @@ def _build_proof_pack(
 class PipelineOrchestrator:
     """Orchestrate the full processing pipeline for a job."""
 
+    async def _emit_progress(
+        self,
+        job_id: str,
+        job_uuid: UUID,
+        step: str,
+        *,
+        db_session: AsyncSession | None,
+    ) -> None:
+        """Record current pipeline step so polling clients see granular progress.
+
+        Persists to jobs.current_step + mirrors into the in-memory _JOB_RUNS
+        dict (for the no-DB fallback lane). Best-effort: never raises. Uses a
+        fresh session so a commit here doesn't disturb the pipeline's own
+        transactional scope.
+        """
+        try:
+            run = _JOB_RUNS.setdefault(str(job_uuid), {})
+            run["current_step"] = step
+            _JOB_RUNS[job_id] = run
+        except Exception:
+            pass
+        if db_session is None:
+            return
+        try:
+            from app.db.session import async_session_factory as factory  # type: ignore
+        except Exception:
+            factory = None  # type: ignore
+        try:
+            if factory is not None:
+                async with factory() as s:  # type: ignore
+                    store = TopLevelLifecycleStore(s)
+                    try:
+                        await store.update_job_status(job_uuid, current_step=step)
+                        await s.commit()
+                    except LookupError:
+                        pass
+        except Exception as exc:  # pragma: no cover - best-effort
+            _LOGGER.debug("progress_emit_failed job=%s step=%s err=%s", job_id, step, exc)
+
     async def run(
         self,
         job_id: str,
@@ -348,6 +387,9 @@ class PipelineOrchestrator:
             if selected_lane == "unsupported_pdf":
                 raise ValueError("unsupported_pdf")
 
+            await self._emit_progress(job_id, job_uuid, "preflight", db_session=db_session)
+            await self._emit_progress(job_id, job_uuid, "lane_selection", db_session=db_session)
+            await self._emit_progress(job_id, job_uuid, "extraction", db_session=db_session)
             with span("stage.extract") as extract_span:
                 extracted_rows = await _extract_rows(
                     job_uuid,
@@ -371,6 +413,7 @@ class PipelineOrchestrator:
             extraction_ms = int(extract_span.get("elapsed_ms", 0))
 
             qa_result = {"passed": True, "clean_rows": extracted_rows}
+            await self._emit_progress(job_id, job_uuid, "observation_build", db_session=db_session)
             with span("stage.normalize") as normalize_span:
                 observations = observation_builder.build(extracted_rows)
                 normalized_observations = _normalize_observations(
@@ -380,13 +423,29 @@ class PipelineOrchestrator:
                     metric_resolver=metric_resolver,
                     patient_context=patient_context,
                 )
+                await self._emit_progress(
+                    job_id, job_uuid, "analyte_mapping", db_session=db_session
+                )
+                await self._emit_progress(
+                    job_id, job_uuid, "ucum_conversion", db_session=db_session
+                )
+                await self._emit_progress(
+                    job_id, job_uuid, "panel_reconstruction", db_session=db_session
+                )
                 panels = panel_reconstructor.reconstruct(normalized_observations)
 
             normalize_ms = int(normalize_span.get("elapsed_ms", 0))
 
+            await self._emit_progress(job_id, job_uuid, "rule_evaluation", db_session=db_session)
             with span("stage.rules") as rules_span:
                 findings = rule_engine.evaluate(normalized_observations, patient_context)
+                await self._emit_progress(
+                    job_id, job_uuid, "severity_assignment", db_session=db_session
+                )
                 findings = severity_policy.assign(findings, patient_context)
+                await self._emit_progress(
+                    job_id, job_uuid, "nextstep_assignment", db_session=db_session
+                )
                 findings = nextstep_policy.assign(findings, patient_context)
 
             rules_ms = int(rules_span.get("elapsed_ms", 0))
@@ -407,6 +466,7 @@ class PipelineOrchestrator:
             if selected_lane == "image_beta":
                 render_context["trust_status"] = TrustStatus.NON_TRUSTED_BETA
 
+            await self._emit_progress(job_id, job_uuid, "patient_artifact", db_session=db_session)
             patient_artifact = artifact_renderer.render_patient(
                 findings,
                 render_context,
@@ -440,6 +500,7 @@ class PipelineOrchestrator:
                 render_context,
                 observations=normalized_observations,
             )
+            await self._emit_progress(job_id, job_uuid, "clinician_artifact", db_session=db_session)
             snapshot_metadata = get_loaded_snapshot_metadata()
             terminology_release = (
                 snapshot_metadata.get("release", _TERMINOLOGY_RELEASE_DEFAULT)
@@ -452,6 +513,7 @@ class PipelineOrchestrator:
                 terminology_release=terminology_release,
             )
             lineage = lineage_logger.record(str(job_uuid), lineage_payload)
+            await self._emit_progress(job_id, job_uuid, "lineage_persist", db_session=db_session)
 
             persisted_rows: dict[str, int] | None = None
             store: TopLevelLifecycleStore | None = None

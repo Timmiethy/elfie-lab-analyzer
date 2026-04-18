@@ -19,9 +19,11 @@ const MAX_POLL_ATTEMPTS = 180;
  *  lane where `step` flips from `preflight` → `lineage_persist`). */
 const SYNTHETIC_TICK_MS = 400;
 /** Target duration of the synthetic progress animation between "pending"
- *  and "completed" for a real backend job. Real jobs typically finish in
- *  5–20s; this pacing keeps the UI feeling live without racing past. */
-const SYNTHETIC_TOTAL_MS = 14000;
+ *  and "completed" for a real backend job. Backend now emits per-stage
+ *  `step` updates (jobs.current_step), so synthetic progress is only a
+ *  between-step smoother. Set long enough to avoid pegging at 95% while
+ *  hard PDFs (2 min) finish. */
+const SYNTHETIC_TOTAL_MS = 45000;
 
 const BACKEND_STEP_LABELS: Record<string, string> = {
   preflight: 'Upload received',

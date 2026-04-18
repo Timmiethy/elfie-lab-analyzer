@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.exc import IntegrityError, InterfaceError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -31,17 +31,18 @@ _PAYLOAD_LIMIT_ERRORS = {
 @router.post("")
 async def upload_lab_report(
     user_id: CurrentUserId,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     age_years: float | None = Form(None),
     sex: str | None = Form(None),
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> UploadResponse:
-    """Accept a lab report file and create a job.
+    """Accept a lab report file, create a pending job, schedule processing in background.
 
-    When Postgres is reachable, the route persists the document and job first,
-    then runs the current orchestration path and stores top-level outputs.
-    When Postgres is unavailable, it falls back to the in-memory orchestration
-    path so the working local scaffold remains usable.
+    HTTP returns as soon as the job row is committed so the frontend polling
+    screen renders immediately. The 14-stage pipeline runs asynchronously via
+    FastAPI BackgroundTasks using its own DB session; per-stage progress is
+    surfaced through jobs.current_step (polled by the UI).
     """
 
     gateway = InputGateway()
@@ -73,6 +74,7 @@ async def upload_lab_report(
             user_id=user_id,
             age_years=age_years,
             sex=sex,
+            background_tasks=background_tasks,
         )
     except (InterfaceError, OperationalError, OSError):
         observability_metrics.record_persistence_fallback()
@@ -82,6 +84,7 @@ async def upload_lab_report(
             pipeline=pipeline,
             age_years=age_years,
             sex=sex,
+            background_tasks=background_tasks,
         )
 
 
@@ -94,13 +97,14 @@ async def _persisted_upload_response(
     user_id: UUID,
     age_years: float | None = None,
     sex: str | None = None,
+    background_tasks: BackgroundTasks,
 ) -> UploadResponse:
     idempotency_key = f"upload:{classification['checksum']}"
 
-    # Single session spans idempotency check → document/job create → pipeline run.
-    # No pre-pipeline commit: if the pipeline raises, the document/job rows are
-    # rolled back so we never leave orphan persisted state. Job-failed bookkeeping
-    # uses a *fresh* session afterwards so the failure record survives the rollback.
+    # Commit the job row up-front so the frontend polling screen can see
+    # status=pending + job_id immediately. Pipeline runs asynchronously in a
+    # BackgroundTask using its own session; failures mark the job via a fresh
+    # session inside the background runner.
     try:
         async with session_factory() as session:
             store = TopLevelLifecycleStore(session)
@@ -139,8 +143,6 @@ async def _persisted_upload_response(
                 storage_path=storage_path.as_posix(),
                 user_id=user_id,
             )
-            # Flush (not commit) so pipeline can see the row via FK without
-            # persisting past a later rollback.
             await session.flush()
 
             create_job_on_conflict = getattr(store, "create_job_on_conflict_do_nothing", None)
@@ -154,7 +156,6 @@ async def _persisted_upload_response(
                     user_id=user_id,
                 )
                 if job is None:
-                    # Another request won the idempotency race.
                     await session.rollback()
                     existing_job = await store.get_job_by_idempotency_key(
                         idempotency_key,
@@ -179,7 +180,6 @@ async def _persisted_upload_response(
                         user_id=user_id,
                     )
                 except IntegrityError:
-                    # Compatibility path when store lacks ON CONFLICT helper.
                     await session.rollback()
                     existing_job = await store.get_job_by_idempotency_key(
                         idempotency_key,
@@ -194,53 +194,75 @@ async def _persisted_upload_response(
                         message="Upload already exists and was not reprocessed.",
                     )
 
-            await session.flush()
+            await session.commit()
             job_id = job.id
             document_id = document.id
+    except (InterfaceError, OperationalError, OSError):
+        raise
 
+    background_tasks.add_task(
+        _run_pipeline_background,
+        job_id=str(job_id),
+        file_bytes=file_bytes,
+        lane_type=classification["lane_type"],
+        document_id=str(document_id),
+        source_checksum=classification["checksum"],
+        age_years=age_years,
+        sex=sex,
+        session_factory=session_factory,
+    )
+
+    return UploadResponse(
+        job_id=job_id,
+        status="pending",
+        lane_type=classification["lane_type"],
+        message="Upload accepted — processing in background.",
+    )
+
+
+async def _run_pipeline_background(
+    *,
+    job_id: str,
+    file_bytes: bytes,
+    lane_type: str,
+    document_id: str,
+    source_checksum: str,
+    age_years: float | None,
+    sex: str | None,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Run the orchestrator outside the request scope.
+
+    Uses a dedicated session so commits (incl. per-stage progress) are visible
+    to polling reads. On exception, marks the job failed via a fresh session.
+    """
+    pipeline = PipelineOrchestrator()
+    try:
+        async with session_factory() as session:
             result = await pipeline.run(
-                str(job_id),
+                job_id,
                 file_bytes=file_bytes,
-                lane_type=classification["lane_type"],
+                lane_type=lane_type,
                 db_session=session,
                 document_id=document_id,
-                source_checksum=classification["checksum"],
+                source_checksum=source_checksum,
                 age_years=age_years,
                 sex=sex,
             )
             await session.commit()
-    except (InterfaceError, OperationalError, OSError):
-        # Bubble DB connectivity errors to the caller (in-memory fallback path).
-        raise
+        observability_metrics.record_job_outcome(str(result["status"]))
     except Exception as exc:
-        _LOGGER.error(
-            "upload_processing_failed error=%s", exc, exc_info=True
-        )
-        # The single-session block above already rolled back on exit. Record the
-        # failure in a fresh session so it survives.
-        failed_job_id = locals().get("job_id")
-        if failed_job_id is not None:
+        _LOGGER.error("background_pipeline_failed job_id=%s err=%s", job_id, exc, exc_info=True)
+        try:
             await _update_job_status_in_fresh_session(
-                str(failed_job_id),
+                job_id,
                 status="failed",
                 operator_note=str(exc),
                 session_factory=session_factory,
             )
+        except Exception:
+            pass
         observability_metrics.record_job_outcome("failed")
-        if str(exc) in _PAYLOAD_LIMIT_ERRORS:
-            raise HTTPException(status_code=413, detail=str(exc)) from exc
-        raise HTTPException(
-            status_code=422,
-            detail=_PROCESSING_FAILED_DETAIL,
-        ) from exc
-
-    observability_metrics.record_job_outcome(str(result["status"]))
-    return UploadResponse(
-        job_id=job_id,
-        status=result["status"],
-        lane_type=classification["lane_type"],
-        message="Upload persisted and processed.",
-    )
 
 
 async def _in_memory_upload_response(
@@ -250,33 +272,38 @@ async def _in_memory_upload_response(
     pipeline: PipelineOrchestrator,
     age_years: float | None = None,
     sex: str | None = None,
+    background_tasks: BackgroundTasks,
 ) -> UploadResponse:
     job_id = uuid5(NAMESPACE_URL, f"upload:{classification['checksum']}")
-    try:
-        result = await pipeline.run(
-            str(job_id),
-            file_bytes=file_bytes,
-            lane_type=classification["lane_type"],
-            source_checksum=classification["checksum"],
-            age_years=age_years,
-            sex=sex,
-        )
-    except Exception as exc:
-        observability_metrics.record_job_outcome("failed")
-        if str(exc) in _PAYLOAD_LIMIT_ERRORS:
-            raise HTTPException(status_code=413, detail=str(exc)) from exc
-        raise HTTPException(
-            status_code=422,
-            detail=_PROCESSING_FAILED_DETAIL,
-        ) from exc
 
-    observability_metrics.record_job_outcome(str(result["status"]))
+    async def _run() -> None:
+        try:
+            result = await pipeline.run(
+                str(job_id),
+                file_bytes=file_bytes,
+                lane_type=classification["lane_type"],
+                source_checksum=classification["checksum"],
+                age_years=age_years,
+                sex=sex,
+            )
+            observability_metrics.record_job_outcome(str(result["status"]))
+        except Exception as exc:
+            _LOGGER.error("in_memory_pipeline_failed job_id=%s err=%s", job_id, exc, exc_info=True)
+            observability_metrics.record_job_outcome("failed")
+            from app.workers.pipeline import _JOB_RUNS  # type: ignore
+            _JOB_RUNS[str(job_id)] = {
+                "status": "failed",
+                "lane_type": classification["lane_type"],
+                "operator_note": str(exc),
+            }
+
+    background_tasks.add_task(_run)
 
     return UploadResponse(
         job_id=job_id,
-        status=result["status"],
+        status="pending",
         lane_type=classification["lane_type"],
-        message="Upload processed in memory because persistence is unavailable.",
+        message="Upload accepted (in-memory) — processing in background.",
     )
 
 

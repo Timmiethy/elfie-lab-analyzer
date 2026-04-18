@@ -222,6 +222,7 @@ async def get_job_status(
         "job_id": str(job_id),
         "status": job["status"],
         "lane_type": job.get("lane_type"),
+        "step": job.get("current_step"),
     }
 
 
@@ -270,6 +271,7 @@ async def _get_persisted_job_status(
                 "job_id": str(job.id),
                 "status": job.status,
                 "lane_type": job.lane_type,
+                "step": getattr(job, "current_step", None),
             }
     except (InterfaceError, OperationalError, OSError):
         observability_metrics.record_persistence_fallback()
@@ -282,6 +284,7 @@ def _job_payload_from_model(*, job_id: str, job, lineage_count: int, lineage) ->
         "job_id": job_id,
         "status": job.status,
         "lane_type": job.lane_type,
+        "step": getattr(job, "current_step", None),
         "qa": None,
         "findings": [],
         "lineage": None if lineage is None else {"id": str(lineage.id)},
@@ -300,6 +303,7 @@ def _runtime_job_payload(*, job_id: str, job: dict) -> dict:
         "job_id": job_id,
         "status": job["status"],
         "lane_type": job.get("lane_type"),
+        "step": job.get("current_step"),
         "qa": job.get("qa"),
         "findings": job.get("findings", []),
         "lineage": lineage,

@@ -70,3 +70,10 @@ pdfs/
 .github/workflows/scratch/
 docs/orchestration/
 scripts/orchestration/
+id_ed25519.pub
+.gitignore
+id_ed25519
+
+.vercel
+.env*.local
+*.log

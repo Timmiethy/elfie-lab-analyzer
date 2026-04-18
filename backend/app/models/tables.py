@@ -50,6 +50,7 @@ class Job(Base):
     input_checksum: Mapped[str] = mapped_column(String(128), nullable=False)
     lane_type: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    current_step: Mapped[str | None] = mapped_column(String(64))
     retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     dead_letter: Mapped[bool] = mapped_column(default=False)
     operator_note: Mapped[str | None] = mapped_column(Text)

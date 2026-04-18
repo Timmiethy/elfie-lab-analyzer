@@ -1,19 +1,14 @@
-# Elfie backend reverse proxy.
-# Replace api.example.com with your real domain. Auto-TLS via Let's Encrypt.
-
-api.example.com {
+139-162-9-224.sslip.io {
     encode zstd gzip
     request_body {
         max_size 25MB
     }
 
-    # CORS preflight is handled by FastAPI; just forward.
     reverse_proxy backend:8000 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
-        # Slow VLM extraction can take 90s+ on long PDFs.
         transport http {
             read_timeout 300s
             write_timeout 300s
