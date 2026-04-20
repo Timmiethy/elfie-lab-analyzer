@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Elfie · Lab Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700;9..144,900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --navy:#121a33;
+    --ink:#0b1026;
+    --pink:#ff1570;
+    --pink-soft:#ff4d91;
+    --blue:#1d4ed8;
+    --page:#f8f9fe;
+    --warm:#fff6f8;
+    --muted:#76767e;
+    --heading:#191c1f;
+    --text:#252833;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--text);
+    font-family:'Be Vietnam Pro','Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .serif{font-family:'Fraunces',Georgia,serif;font-weight:500;letter-spacing:-0.02em}
+
+  /* deck */
+  .deck{position:fixed;inset:0;overflow:hidden}
+  .slide{position:absolute;inset:0;display:grid;place-items:center;
+    opacity:0;transform:translateY(24px) scale(.992);
+    transition:opacity 620ms cubic-bezier(.22,1,.36,1),
+               transform 780ms cubic-bezier(.22,1,.36,1);
+    pointer-events:none;padding:clamp(32px,5vw,96px)}
+  .slide.active{opacity:1;transform:none;pointer-events:auto}
+  .slide-inner{width:100%;max-width:1400px}
+
+  /* surfaces */
+  .bg-light{background:
+    radial-gradient(1000px 600px at 88% 6%,rgba(255,21,112,.10),transparent 55%),
+    radial-gradient(900px 600px at 6% 0%,rgba(29,78,216,.10),transparent 52%),
+    linear-gradient(180deg,var(--page) 0%,var(--warm) 100%);
+    color:var(--text)}
+  .bg-dark{background:
+    radial-gradient(900px 600px at 82% 12%,rgba(255,255,255,.10),transparent 40%),
+    radial-gradient(1100px 700px at 8% 0%,rgba(255,21,112,.22),transparent 44%),
+    linear-gradient(135deg,#10172f 0%,#182142 54%,#243056 100%);
+    color:#f3f4ff}
+  .bg-pink{background:
+    radial-gradient(800px 520px at 20% 10%,rgba(255,255,255,.22),transparent 50%),
+    linear-gradient(135deg,#ff1570 0%,#e61168 60%,#b90d54 100%);
+    color:#fff}
+  .bg-ink{background:
+    radial-gradient(1200px 700px at 50% 120%,rgba(255,21,112,.28),transparent 55%),
+    #0b1026;color:#f3f4ff}
+
+  /* typography */
+  h1,h2,h3{color:inherit;letter-spacing:-0.03em;line-height:.95}
+  .eyebrow{font-size:clamp(12px,.95vw,14px);font-weight:700;
+    letter-spacing:.22em;text-transform:uppercase;opacity:.7;margin-bottom:1.4rem}
+  .mega{font-family:'Fraunces',Georgia,serif;font-weight:500;
+    font-size:clamp(64px,11vw,188px);line-height:.92;letter-spacing:-0.035em}
+  .big{font-family:'Fraunces',Georgia,serif;font-weight:500;
+    font-size:clamp(44px,7.2vw,128px);line-height:.98;letter-spacing:-0.03em}
+  .med{font-size:clamp(28px,3.6vw,58px);font-weight:600;line-height:1.08;letter-spacing:-0.02em}
+  .lead{font-size:clamp(18px,1.6vw,26px);line-height:1.45;opacity:.78;max-width:44ch}
+  .tag{display:inline-flex;align-items:center;gap:.55rem;
+    padding:.45rem .9rem;border-radius:999px;
+    font-size:clamp(11px,.9vw,13px);font-weight:600;letter-spacing:.12em;
+    text-transform:uppercase;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18)}
+  .bg-light .tag{background:rgba(18,26,51,.06);border-color:rgba(18,26,51,.1);color:var(--navy)}
+  .tag .dot{width:8px;height:8px;border-radius:50%;background:var(--pink);box-shadow:0 0 0 4px rgba(255,21,112,.18)}
+
+  .accent{color:var(--pink)}
+  .bg-dark .accent, .bg-ink .accent{color:var(--pink-soft)}
+  .mute{opacity:.62}
+
+  /* decorative heart-ish mark (circle + off-shape) */
+  .mark{width:clamp(36px,4vw,56px);height:clamp(36px,4vw,56px);border-radius:50%;
+    background:var(--pink);display:inline-block;position:relative;
+    box-shadow:0 0 0 10px rgba(255,21,112,.12)}
+  .mark::after{content:'';position:absolute;inset:auto -14% -14% auto;
+    width:46%;height:46%;border-radius:50%;background:var(--navy)}
+
+  /* brand lockup */
+  .brand{display:flex;align-items:center;gap:.8rem;font-weight:800;letter-spacing:-.02em;
+    font-size:clamp(18px,1.4vw,22px)}
+  .brand .m{width:22px;height:22px;border-radius:50%;background:var(--pink);
+    box-shadow:0 0 0 5px rgba(255,21,112,.18)}
+
+  /* chrome */
+  .chrome{position:fixed;inset:0;pointer-events:none;z-index:20}
+  .chrome .top,.chrome .bot{position:absolute;left:clamp(24px,4vw,56px);right:clamp(24px,4vw,56px);
+    display:flex;justify-content:space-between;align-items:center;gap:1rem;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:.7}
+  .chrome .top{top:clamp(20px,3vw,36px)}
+  .chrome .bot{bottom:clamp(20px,3vw,36px)}
+  .chrome-dark{color:#e7e9ff}
+  .chrome-light{color:#303344}
+
+  /* progress */
+  .progress{position:fixed;left:0;right:0;bottom:0;height:3px;
+    background:rgba(255,255,255,.08);z-index:30}
+  .progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--pink),var(--pink-soft));
+    width:0;transition:width 480ms cubic-bezier(.22,1,.36,1)}
+
+  /* layouts */
+  .split{display:grid;gap:clamp(24px,3vw,56px);align-items:center}
+  @media(min-width:960px){.split{grid-template-columns:1.15fr .85fr}}
+  .stack{display:flex;flex-direction:column;gap:clamp(14px,1.6vw,26px)}
+  .row{display:flex;flex-wrap:wrap;gap:clamp(12px,1.2vw,22px)}
+
+  /* cards */
+  .card{padding:clamp(22px,2.2vw,34px);border-radius:22px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04);backdrop-filter:blur(12px)}
+  .bg-light .card{background:#fff;border-color:rgba(18,26,51,.08);
+    box-shadow:0 20px 48px rgba(18,26,51,.08)}
+  .card h3{font-size:clamp(22px,2vw,32px);margin-bottom:.5rem;letter-spacing:-.02em}
+  .card p{font-size:clamp(15px,1.1vw,18px);line-height:1.55;opacity:.78}
+  .card .k{font-family:'Fraunces',serif;font-size:clamp(44px,4.8vw,72px);
+    line-height:1;color:var(--pink);letter-spacing:-.02em}
+  .bg-dark .card .k, .bg-ink .card .k{color:var(--pink-soft)}
+
+  /* pipeline */
+  .pipe{display:grid;gap:8px;grid-template-columns:repeat(11,minmax(0,1fr))}
+  .pipe .step{padding:14px 10px;border-radius:12px;background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.1);font-size:11px;font-weight:600;
+    letter-spacing:.08em;text-transform:uppercase;text-align:center;opacity:.85}
+  .pipe .step.hot{background:linear-gradient(180deg,rgba(255,21,112,.22),rgba(255,21,112,.08));
+    border-color:rgba(255,21,112,.45);color:#fff;opacity:1}
+  @media(max-width:900px){.pipe{grid-template-columns:repeat(2,1fr)}}
+
+  /* eval table */
+  .grid4{display:grid;gap:clamp(14px,1.4vw,22px);grid-template-columns:repeat(5,1fr)}
+  @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr)}}
+  .grid4 .card{padding:clamp(18px,1.6vw,26px)}
+  .grid4 h4{font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(22px,1.7vw,28px);margin-bottom:.4rem;letter-spacing:-.02em}
+  .grid4 p{font-size:clamp(13px,.95vw,15px);line-height:1.5;opacity:.8}
+
+  /* navigation hint */
+  .hint{font-size:11px;letter-spacing:.24em;text-transform:uppercase;opacity:.55}
+
+  .kbd{padding:2px 8px;border-radius:6px;border:1px solid currentColor;
+    font-size:10px;opacity:.7;letter-spacing:.1em;font-weight:700}
+
+  /* lines & strokes */
+  .rule{height:1px;background:linear-gradient(90deg,currentColor,transparent);opacity:.22}
+
+  /* slide 1 hero motion */
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  .float{animation:floaty 6s ease-in-out infinite}
+
+  /* reveal words */
+  .reveal span{display:inline-block;opacity:0;transform:translateY(16px);
+    transition:opacity 520ms ease,transform 620ms cubic-bezier(.22,1,.36,1)}
+  .slide.active .reveal span{opacity:1;transform:none}
+  .slide.active .reveal span:nth-child(1){transition-delay:80ms}
+  .slide.active .reveal span:nth-child(2){transition-delay:180ms}
+  .slide.active .reveal span:nth-child(3){transition-delay:280ms}
+  .slide.active .reveal span:nth-child(4){transition-delay:380ms}
+  .slide.active .reveal span:nth-child(5){transition-delay:480ms}
+  .slide.active .reveal span:nth-child(6){transition-delay:580ms}
+
+  /* number bullets */
+  .num{font-family:'Fraunces',serif;font-size:clamp(40px,4vw,64px);
+    color:var(--pink);line-height:1;margin-bottom:.4rem}
+  .bg-light .num{color:var(--pink)}
+  .bg-pink .num{color:#fff}
+
+  /* pill row */
+  .pills{display:flex;flex-wrap:wrap;gap:10px}
+  .pill{padding:10px 16px;border-radius:999px;font-weight:600;
+    font-size:clamp(13px,1vw,15px);letter-spacing:.02em;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+  .bg-light .pill{background:#fff;border-color:rgba(18,26,51,.08);color:var(--navy);
+    box-shadow:0 8px 18px rgba(18,26,51,.06)}
+
+  /* diagrams */
+  .diagram{width:100%;height:auto;display:block}
+  .diagram text{font-family:'Be Vietnam Pro',sans-serif;fill:currentColor}
+  .diagram .mono{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace}
+  .diagram .node{fill:rgba(255,255,255,.06);stroke:rgba(255,255,255,.22);stroke-width:1.2}
+  .bg-light .diagram .node{fill:#fff;stroke:rgba(18,26,51,.14)}
+  .diagram .node.hot{fill:rgba(255,21,112,.14);stroke:rgba(255,21,112,.55)}
+  .diagram .node.ok{fill:rgba(29,78,216,.12);stroke:rgba(29,78,216,.5)}
+  .diagram .edge{fill:none;stroke:currentColor;stroke-width:1.4;opacity:.55;marker-end:url(#arrow)}
+  .diagram .edge.hot{stroke:#ff1570;opacity:.9}
+  .diagram .label{font-size:13px;font-weight:600}
+  .diagram .small{font-size:11px;opacity:.7;letter-spacing:.06em;text-transform:uppercase}
+  .diagram .mega-num{font-family:'Fraunces',serif;font-size:28px;fill:#ff1570}
+
+  .two-col{display:grid;gap:clamp(20px,2vw,34px);grid-template-columns:.9fr 1.1fr;align-items:center}
+  @media(max-width:960px){.two-col{grid-template-columns:1fr}}
+
+  .code{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;
+    background:rgba(0,0,0,.35);padding:clamp(14px,1.4vw,22px);border-radius:14px;
+    font-size:clamp(12px,1vw,15px);line-height:1.55;
+    border:1px solid rgba(255,255,255,.12);white-space:pre;overflow:auto}
+  .bg-light .code{background:#0b1026;color:#e7e9ff}
+  .code .c{color:#76767e}
+  .code .k{color:#ff4d91}
+  .code .s{color:#a3e635}
+  .code .n{color:#60a5fa}
+
+  .stat{display:flex;flex-direction:column;gap:.3rem}
+  .stat b{font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(48px,5.2vw,82px);line-height:1;color:var(--pink);letter-spacing:-.02em}
+  .bg-dark .stat b,.bg-ink .stat b{color:var(--pink-soft)}
+  .stat span{font-size:clamp(13px,1vw,15px);opacity:.72;letter-spacing:.02em}
+
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(18px,2vw,32px)}
+  @media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+
+  /* last slide huge */
+  .oneline{font-family:'Fraunces',serif;font-weight:500;
+    font-size:clamp(34px,4.8vw,82px);line-height:1.02;letter-spacing:-.03em}
+  .oneline small{display:block;font-family:'Be Vietnam Pro',sans-serif;
+    font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+    font-size:clamp(11px,.9vw,13px);opacity:.55;margin-bottom:.7rem}
+
+  /* arrow */
+  .arrow{display:inline-block;width:1.2em;text-align:center;opacity:.6}
+
+  /* footer nav dots */
+  .dots{position:fixed;right:clamp(20px,3vw,36px);top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:10px;z-index:25}
+  .dots i{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.25;
+    transition:opacity 200ms,transform 200ms;cursor:pointer}
+  .dots i.on{opacity:1;transform:scale(1.4);background:var(--pink)}
+  .dots-dark i{color:#fff}
+  .dots-light i{color:#121a33}
+</style>
+</head>
+<body>
+
+<div class="chrome" id="chrome">
+  <div class="top">
+    <div class="brand"><span class="m"></span><span>elfie</span></div>
+    <div><span id="slideNum">01</span> <span class="mute">/</span> <span id="slideTotal">12</span></div>
+  </div>
+  <div class="bot">
+    <div class="hint">Lab Analyzer · MVP Pitch</div>
+    <div class="hint"><span class="kbd">←</span> <span class="kbd">→</span> · <span class="kbd">SPACE</span></div>
+  </div>
+</div>
+
+<div class="dots" id="dots"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 · HERO -->
+  <section class="slide bg-ink" data-chrome="dark">
+    <div class="slide-inner" style="text-align:center">
+      <div class="tag" style="margin-bottom:2rem"><span class="dot"></span> Elfie · Lab Analyzer</div>
+      <h1 class="mega reveal">
+        <span>Labs,</span> <span class="accent">decoded.</span>
+      </h1>
+      <p class="lead" style="margin:2rem auto 0">
+        A deterministic pipeline that turns any lab report into a patient-friendly answer — and a clinician-grade artifact.
+      </p>
+      <div style="margin-top:3rem" class="float"><span class="mark"></span></div>
+    </div>
+  </section>
+
+  <!-- 2 · PROBLEM -->
+  <section class="slide bg-light" data-chrome="light">
+    <div class="slide-inner">
+      <div class="eyebrow accent">The problem</div>
+      <h2 class="big reveal">
+        <span>A PDF</span> <span>full of</span> <span class="accent">numbers.</span>
+        <span>Zero</span> <span>context.</span>
+      </h2>
+      <p class="lead" style="margin-top:2rem">
+        Patients receive the most common medical artifact in healthcare — and can't read it.
+        Anxiety, Google spirals, delayed calls to a clinician.
+      </p>
+    </div>
+  </section>
+
+  <!-- 3 · ANSWER -->
+  <section class="slide bg-pink" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow">Our answer</div>
+      <h2 class="mega reveal">
+        <span>One</span> <span>upload.</span><br>
+        <span>Two</span> <span>audiences.</span>
+      </h2>
+      <div class="row" style="margin-top:3rem;gap:20px">
+        <div class="pill" style="background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff">Patient artifact · plain language</div>
+        <div class="pill" style="background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3);color:#fff">Clinician artifact · full lineage</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · NOT A PROMPT -->
+  <section class="slide bg-dark" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">Why it's different</div>
+      <h2 class="big reveal">
+        <span>Not</span> <span>a</span> <span class="accent">prompt.</span><br>
+        <span>An</span> <span>engine.</span>
+      </h2>
+      <p class="lead" style="margin-top:2rem">
+        Most "AI health" demos = one LLM call in a wrapper.
+        We built an <strong>11-stage typed pipeline</strong> where the model is one tool, not the system.
+      </p>
+    </div>
+  </section>
+
+  <!-- 5 · PIPELINE -->
+  <section class="slide bg-ink" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">The pipeline · architecture</div>
+      <h2 class="med" style="margin-bottom:1.6rem">Eleven typed stages. One contract per boundary.</h2>
+
+      <svg class="diagram" viewBox="0 0 1280 360" style="color:#e7e9ff">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#ff1570"/>
+          </marker>
+        </defs>
+
+        <!-- lane 1: ingestion -->
+        <text x="20" y="40" class="small">Ingestion</text>
+        <rect class="node" x="20" y="60" width="180" height="80" rx="12"/>
+        <text x="110" y="95" class="label" text-anchor="middle">PDF / Image</text>
+        <text x="110" y="118" class="small" text-anchor="middle">upload</text>
+
+        <rect class="node hot" x="240" y="60" width="200" height="80" rx="12"/>
+        <text x="340" y="88" class="label" text-anchor="middle">InputGateway</text>
+        <text x="340" y="108" class="small" text-anchor="middle">classify lane</text>
+        <text x="340" y="126" class="small" text-anchor="middle">Mineru · VLM</text>
+
+        <!-- lane 2: normalization (core) -->
+        <text x="480" y="40" class="small" style="fill:#ff4d91">Deterministic core</text>
+        <rect class="node hot" x="480" y="60" width="170" height="80" rx="12"/>
+        <text x="565" y="88" class="label" text-anchor="middle">Observation</text>
+        <text x="565" y="108" class="small" text-anchor="middle">raw triplet</text>
+        <text x="565" y="126" class="small" text-anchor="middle">label·value·unit</text>
+
+        <rect class="node hot" x="690" y="60" width="170" height="80" rx="12"/>
+        <text x="775" y="88" class="label" text-anchor="middle">AnalyteResolver</text>
+        <text x="775" y="108" class="small" text-anchor="middle">alias → LOINC</text>
+
+        <rect class="node hot" x="900" y="60" width="170" height="80" rx="12"/>
+        <text x="985" y="88" class="label" text-anchor="middle">UcumEngine</text>
+        <text x="985" y="108" class="small" text-anchor="middle">unit validate</text>
+
+        <rect class="node hot" x="1100" y="60" width="160" height="80" rx="12"/>
+        <text x="1180" y="88" class="label" text-anchor="middle">Panels</text>
+        <text x="1180" y="108" class="small" text-anchor="middle">reconstruct</text>
+
+        <!-- lane 3: clinical eval -->
+        <text x="20" y="200" class="small">Clinical reasoning</text>
+        <rect class="node ok" x="20" y="220" width="160" height="80" rx="12"/>
+        <text x="100" y="248" class="label" text-anchor="middle">RuleEngine</text>
+        <text x="100" y="268" class="small" text-anchor="middle">YAML policy</text>
+
+        <rect class="node ok" x="210" y="220" width="160" height="80" rx="12"/>
+        <text x="290" y="248" class="label" text-anchor="middle">Severity</text>
+        <text x="290" y="268" class="small" text-anchor="middle">normal→critical</text>
+
+        <rect class="node ok" x="400" y="220" width="160" height="80" rx="12"/>
+        <text x="480" y="248" class="label" text-anchor="middle">NextStep</text>
+        <text x="480" y="268" class="small" text-anchor="middle">actionable</text>
+
+        <!-- lane 4: output -->
+        <text x="600" y="200" class="small">Output</text>
+        <rect class="node" x="600" y="220" width="180" height="80" rx="12"/>
+        <text x="690" y="248" class="label" text-anchor="middle">Patient artifact</text>
+        <text x="690" y="268" class="small" text-anchor="middle">plain language</text>
+
+        <rect class="node" x="810" y="220" width="180" height="80" rx="12"/>
+        <text x="900" y="248" class="label" text-anchor="middle">Clinician artifact</text>
+        <text x="900" y="268" class="small" text-anchor="middle">full structured</text>
+
+        <rect class="node" x="1020" y="220" width="240" height="80" rx="12" style="fill:rgba(255,21,112,.08);stroke:rgba(255,21,112,.4)"/>
+        <text x="1140" y="248" class="label" text-anchor="middle">Lineage Store</text>
+        <text x="1140" y="268" class="small" text-anchor="middle">provenance · audit</text>
+
+        <!-- edges top row -->
+        <path class="edge" d="M200 100 L240 100"/>
+        <path class="edge hot" d="M440 100 L480 100"/>
+        <path class="edge hot" d="M650 100 L690 100"/>
+        <path class="edge hot" d="M860 100 L900 100"/>
+        <path class="edge hot" d="M1070 100 L1100 100"/>
+
+        <!-- drop to row 2 -->
+        <path class="edge" d="M1180 140 C1180 180, 100 180, 100 220"/>
+        <path class="edge" d="M180 260 L210 260"/>
+        <path class="edge" d="M370 260 L400 260"/>
+        <path class="edge" d="M560 260 L600 260"/>
+        <path class="edge" d="M780 260 L810 260"/>
+
+        <!-- lineage dotted feeds from every stage -->
+        <path class="edge" stroke-dasharray="3 4" d="M990 260 L1020 260"/>
+        <path class="edge" stroke-dasharray="3 4" d="M1180 140 L1180 220"/>
+      </svg>
+
+      <p class="lead" style="margin-top:1.4rem">
+        Pink = deterministic core. Blue = rule-driven. Dotted = lineage tap on every stage.
+      </p>
+    </div>
+  </section>
+
+  <!-- 5b · PDF INGESTION -->
+  <section class="slide bg-dark" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">Stage 1 · Ingestion</div>
+      <h2 class="big reveal" style="margin-bottom:1.4rem"><span>Two</span> <span>lanes.</span> <span>One</span> <span class="accent">contract.</span></h2>
+
+      <div class="two-col">
+        <svg class="diagram" viewBox="0 0 560 420" style="color:#e7e9ff">
+          <defs>
+            <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#ff1570"/>
+            </marker>
+          </defs>
+
+          <rect class="node" x="200" y="10" width="160" height="60" rx="12"/>
+          <text x="280" y="38" class="label" text-anchor="middle">Upload</text>
+          <text x="280" y="56" class="small" text-anchor="middle">PDF · PNG · JPG</text>
+
+          <rect class="node hot" x="180" y="100" width="200" height="64" rx="12"/>
+          <text x="280" y="128" class="label" text-anchor="middle">InputGateway</text>
+          <text x="280" y="148" class="small" text-anchor="middle">classify · checksum · size</text>
+
+          <!-- left lane: PDF -->
+          <rect class="node ok" x="20" y="200" width="220" height="70" rx="12"/>
+          <text x="130" y="226" class="label" text-anchor="middle">Mineru lane</text>
+          <text x="130" y="246" class="small" text-anchor="middle">structured PDF</text>
+          <text x="130" y="262" class="small" text-anchor="middle">layout · tables · spans</text>
+
+          <!-- right lane: VLM -->
+          <rect class="node ok" x="320" y="200" width="220" height="70" rx="12"/>
+          <text x="430" y="226" class="label" text-anchor="middle">VLM lane (Qwen)</text>
+          <text x="430" y="246" class="small" text-anchor="middle">photo · scan</text>
+          <text x="430" y="262" class="small" text-anchor="middle">feature-flagged</text>
+
+          <!-- merge -->
+          <rect class="node hot" x="140" y="310" width="280" height="70" rx="12" style="stroke-width:2"/>
+          <text x="280" y="338" class="label" text-anchor="middle">ObservationBuilder</text>
+          <text x="280" y="358" class="small" text-anchor="middle">unified schema: {label, value, unit, span}</text>
+
+          <path class="edge" d="M280 70 L280 100" marker-end="url(#arrow2)"/>
+          <path class="edge" d="M240 164 L130 200" marker-end="url(#arrow2)"/>
+          <path class="edge" d="M320 164 L430 200" marker-end="url(#arrow2)"/>
+          <path class="edge hot" d="M130 270 L230 310" marker-end="url(#arrow2)"/>
+          <path class="edge hot" d="M430 270 L330 310" marker-end="url(#arrow2)"/>
+        </svg>
+
+        <div class="stack">
+          <div class="card"><h3>Same Pydantic contract</h3><p>Both lanes emit <span class="mono" style="color:#ff4d91">Observation(label, value, unit, span, source)</span>. Downstream doesn't care where it came from.</p></div>
+          <div class="card"><h3>Failure isolation</h3><p>VLM flake = lane skipped, not pipeline crash. PDF OCR miss = surfaced as <span class="mono" style="color:#ff4d91">support_state=unsupported</span>, never hallucinated.</p></div>
+          <div class="card"><h3>Source preserved</h3><p>Every observation carries its OCR span. Lineage can replay the pixel back to the patient sentence.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5c · NORMALIZATION DEEP DIVE -->
+  <section class="slide bg-ink" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">Stage 3 · Rule-based normalization</div>
+      <h2 class="med" style="margin-bottom:1.2rem">One raw label → LOINC code. Zero inference.</h2>
+
+      <svg class="diagram" viewBox="0 0 1280 320" style="color:#e7e9ff">
+        <defs>
+          <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#ff1570"/>
+          </marker>
+        </defs>
+
+        <rect class="node" x="20" y="120" width="200" height="80" rx="12"/>
+        <text x="120" y="150" class="label mono" text-anchor="middle">"WBC Count"</text>
+        <text x="120" y="172" class="small" text-anchor="middle">raw OCR label</text>
+
+        <rect class="node hot" x="260" y="120" width="180" height="80" rx="12"/>
+        <text x="350" y="150" class="label" text-anchor="middle">lowercase · strip</text>
+        <text x="350" y="170" class="small" text-anchor="middle">context tokens</text>
+        <text x="350" y="186" class="small mono" text-anchor="middle">"wbc count"</text>
+
+        <rect class="node hot" x="480" y="120" width="180" height="80" rx="12"/>
+        <text x="570" y="150" class="label" text-anchor="middle">shortcut expand</text>
+        <text x="570" y="170" class="small" text-anchor="middle">wbc → white blood</text>
+        <text x="570" y="186" class="small" text-anchor="middle">cell count</text>
+
+        <rect class="node hot" x="700" y="120" width="180" height="80" rx="12"/>
+        <text x="790" y="150" class="label" text-anchor="middle">alias lookup</text>
+        <text x="790" y="170" class="small" text-anchor="middle">JSON table</text>
+        <text x="790" y="186" class="small" text-anchor="middle">5-10 variants each</text>
+
+        <rect class="node hot" x="920" y="120" width="180" height="80" rx="12"/>
+        <text x="1010" y="150" class="label" text-anchor="middle">token signature</text>
+        <text x="1010" y="170" class="small" text-anchor="middle">sorted set fallback</text>
+
+        <rect class="node ok" x="1140" y="120" width="120" height="80" rx="12" style="stroke-width:2"/>
+        <text x="1200" y="148" class="label mono" text-anchor="middle">6690-2</text>
+        <text x="1200" y="170" class="small" text-anchor="middle">LOINC</text>
+        <text x="1200" y="186" class="small" text-anchor="middle">Leukocytes</text>
+
+        <path class="edge hot" d="M220 160 L260 160" marker-end="url(#arrow3)"/>
+        <path class="edge hot" d="M440 160 L480 160" marker-end="url(#arrow3)"/>
+        <path class="edge hot" d="M660 160 L700 160" marker-end="url(#arrow3)"/>
+        <path class="edge hot" d="M880 160 L920 160" marker-end="url(#arrow3)"/>
+        <path class="edge hot" d="M1100 160 L1140 160" marker-end="url(#arrow3)"/>
+
+        <!-- fail-closed branch -->
+        <rect class="node" x="920" y="240" width="340" height="60" rx="12" style="fill:rgba(118,118,126,.12);stroke-dasharray:4 4"/>
+        <text x="1090" y="266" class="label" text-anchor="middle">no match → support_state=unsupported</text>
+        <text x="1090" y="286" class="small" text-anchor="middle">surfaced explicitly · severity SX · never dropped</text>
+        <path class="edge" stroke-dasharray="3 4" d="M1010 200 L1010 240"/>
+      </svg>
+
+      <p class="lead" style="margin-top:1rem">
+        Five deterministic layers. If all fail, we say <em>unsupported</em> — we do <strong>not</strong> guess.
+      </p>
+    </div>
+  </section>
+
+  <!-- 5d · DETERMINISTIC CORE (code) -->
+  <section class="slide bg-dark" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">The deterministic core</div>
+      <h2 class="big reveal" style="margin-bottom:1.4rem"><span>Same</span> <span>input</span> <span class="accent">=</span> <span>same</span> <span>output.</span> <span>Always.</span></h2>
+
+      <div class="two-col">
+        <div class="code"><span class="c"># stage contract — every stage of 11</span>
+<span class="k">class</span> <span class="n">Observation</span>(BaseModel):
+    raw_label: <span class="n">str</span>
+    value: <span class="n">Decimal</span>
+    unit: <span class="n">str</span>
+    span: <span class="n">OCRSpan</span>
+    source: <span class="n">Lane</span>
+
+<span class="k">class</span> <span class="n">ResolvedAnalyte</span>(BaseModel):
+    loinc: <span class="n">str</span>
+    analyte_id: <span class="n">str</span>
+    support_state: <span class="n">Literal</span>[<span class="s">"supported"</span>,
+                            <span class="s">"unsupported"</span>]
+    match_path: <span class="n">list</span>[<span class="n">str</span>]  <span class="c"># audit trail</span>
+
+<span class="c"># no step optional. no step infers. each</span>
+<span class="c"># emits typed Pydantic → validated → next.</span></div>
+
+        <div class="stack">
+          <div class="card"><h3>mypy --strict</h3><p>Every boundary typed. No <span class="mono" style="color:#ff4d91">Any</span>, no <span class="mono" style="color:#ff4d91">dict[str, Any]</span> smuggled between stages.</p></div>
+          <div class="card"><h3>Pydantic at every edge</h3><p>Bad data fails at stage boundary, not 3 stages later. Loud errors over silent corruption.</p></div>
+          <div class="card"><h3>Rules as data</h3><p>Severity thresholds, panel defs, next-step logic = <span class="mono" style="color:#ff4d91">policy_tables/*.yaml</span>. Clinicians edit. No deploy.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5e · LINEAGE GRAPH -->
+  <section class="slide bg-light" data-chrome="light">
+    <div class="slide-inner">
+      <div class="eyebrow accent">Provenance · every sentence</div>
+      <h2 class="big reveal" style="margin-bottom:1.6rem"><span>"Why</span> <span>does</span> <span>it</span> <span>say</span> <span class="accent">that?"</span></h2>
+
+      <svg class="diagram" viewBox="0 0 1280 280" style="color:#191c1f">
+        <defs>
+          <marker id="arrow4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#ff1570"/>
+          </marker>
+        </defs>
+
+        <rect class="node" x="20" y="100" width="200" height="90" rx="14"/>
+        <text x="120" y="130" class="label mono" text-anchor="middle">OCR span</text>
+        <text x="120" y="152" class="small" text-anchor="middle">page 2, line 14</text>
+        <text x="120" y="170" class="small mono" text-anchor="middle">"K   3.2  mmol/L"</text>
+
+        <rect class="node" x="260" y="100" width="180" height="90" rx="14"/>
+        <text x="350" y="130" class="label" text-anchor="middle">Alias hit</text>
+        <text x="350" y="152" class="small mono" text-anchor="middle">"k" → potassium</text>
+        <text x="350" y="170" class="small" text-anchor="middle">table row 47</text>
+
+        <rect class="node" x="480" y="100" width="180" height="90" rx="14"/>
+        <text x="570" y="130" class="label mono" text-anchor="middle">LOINC 2823-3</text>
+        <text x="570" y="152" class="small" text-anchor="middle">Potassium [Moles/vol]</text>
+        <text x="570" y="170" class="small" text-anchor="middle">in Serum/Plasma</text>
+
+        <rect class="node" x="700" y="100" width="180" height="90" rx="14"/>
+        <text x="790" y="130" class="label mono" text-anchor="middle">UCUM mmol/L</text>
+        <text x="790" y="152" class="small" text-anchor="middle">validated</text>
+        <text x="790" y="170" class="small" text-anchor="middle">no conversion</text>
+
+        <rect class="node" x="920" y="100" width="180" height="90" rx="14"/>
+        <text x="1010" y="130" class="label mono" text-anchor="middle">Rule K-LOW-3</text>
+        <text x="1010" y="152" class="small" text-anchor="middle">3.2 &lt; 3.5</text>
+        <text x="1010" y="170" class="small" text-anchor="middle">policy v2.4</text>
+
+        <rect class="node hot" x="1140" y="100" width="120" height="90" rx="14"/>
+        <text x="1200" y="130" class="label" text-anchor="middle">Severity</text>
+        <text x="1200" y="152" class="mega-num" text-anchor="middle">LOW</text>
+        <text x="1200" y="178" class="small" text-anchor="middle">moderate</text>
+
+        <path class="edge hot" d="M220 145 L260 145" marker-end="url(#arrow4)"/>
+        <path class="edge hot" d="M440 145 L480 145" marker-end="url(#arrow4)"/>
+        <path class="edge hot" d="M660 145 L700 145" marker-end="url(#arrow4)"/>
+        <path class="edge hot" d="M880 145 L920 145" marker-end="url(#arrow4)"/>
+        <path class="edge hot" d="M1100 145 L1140 145" marker-end="url(#arrow4)"/>
+      </svg>
+
+      <p class="lead" style="margin-top:1.2rem" align="center">
+        Click any finding → full chain. Pixel to rule. <strong>No black box.</strong>
+      </p>
+    </div>
+  </section>
+
+  <!-- 5f · 80/20 IMPACT -->
+  <section class="slide bg-ink" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">The 20% that delivers 80%</div>
+      <h2 class="med" style="margin-bottom:2rem">Where we invested — and what it buys.</h2>
+
+      <div class="stats-row">
+        <div class="stat"><b>11</b><span>typed pipeline stages</span></div>
+        <div class="stat"><b>5×</b><span>alias variants per analyte</span></div>
+        <div class="stat"><b>100%</b><span>findings carry lineage</span></div>
+        <div class="stat"><b>0</b><span>hallucinated clinical values</span></div>
+      </div>
+
+      <div style="margin-top:2.4rem" class="grid4" style="grid-template-columns:repeat(3,1fr)">
+        <div class="card"><div class="num">1</div><h4>Alias table expansion</h4><p>OCR emits 5-10 variants per analyte. We added them all. Biggest single lift to support rate.</p></div>
+        <div class="card"><div class="num">2</div><h4>UCUM before rules</h4><p>Unit validated before any threshold fires. Catches mg/dL ↔ mmol/L before severity is computed.</p></div>
+        <div class="card"><div class="num">3</div><h4>Fail-closed default</h4><p>Unknown → explicit <span class="mono" style="color:#ff4d91">unsupported</span>. Audit never shows a fabricated number.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · DETERMINISM -->
+  <section class="slide bg-light" data-chrome="light">
+    <div class="slide-inner" style="text-align:center">
+      <div class="eyebrow accent">The principle</div>
+      <h2 class="mega reveal">
+        <span>Determinism</span><br>
+        <span>is a</span> <span class="accent">feature.</span>
+      </h2>
+      <p class="lead" style="margin:2.4rem auto 0">
+        If a value is unsupported, we say so. We don't hallucinate clinical numbers.
+        <br><em>Fail closed, not confidently wrong.</em>
+      </p>
+    </div>
+  </section>
+
+  <!-- 7 · HARD PARTS -->
+  <section class="slide bg-dark" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">The hard parts we solved</div>
+      <div class="grid4" style="grid-template-columns:repeat(5,1fr)">
+        <div class="card"><div class="num">01</div><h4>Heterogeneous inputs</h4><p>PDF + image lanes. Mineru for structured PDFs. VLM for photographed reports.</p></div>
+        <div class="card"><div class="num">02</div><h4>Analyte identity</h4><p>"WBC" = "white blood cell count" = "leukocytes". Alias table → token signature → LOINC.</p></div>
+        <div class="card"><div class="num">03</div><h4>Unit safety</h4><p>mg/dL vs mmol/L = coma. UCUM validates and converts before any rule fires.</p></div>
+        <div class="card"><div class="num">04</div><h4>Rules as data</h4><p>Severity, panels, next-steps live in versioned YAML policy packs. No deploy to update.</p></div>
+        <div class="card"><div class="num">05</div><h4>Lineage everywhere</h4><p>Every field carries its provenance chain. No black box. Fully auditable.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · STACK -->
+  <section class="slide bg-light" data-chrome="light">
+    <div class="slide-inner">
+      <div class="eyebrow accent">The stack</div>
+      <h2 class="big reveal" style="margin-bottom:2rem"><span>Boring</span> <span>where</span> <span>it</span> <span>counts.</span></h2>
+      <div class="pills">
+        <span class="pill">Python 3 · FastAPI</span>
+        <span class="pill">async SQLAlchemy</span>
+        <span class="pill">PostgreSQL · Alembic</span>
+        <span class="pill">React 19 · TypeScript · Vite</span>
+        <span class="pill">Pydantic at every boundary</span>
+        <span class="pill">mypy --strict</span>
+        <span class="pill">LOINC · UCUM · YAML policy packs</span>
+      </div>
+      <p class="lead" style="margin-top:2.4rem">
+        Typed contracts at every stage. Async workers. Correlation IDs end-to-end. Full-stack validation harness on a golden set.
+      </p>
+    </div>
+  </section>
+
+  <!-- 9 · EVAL MAPPING -->
+  <section class="slide bg-ink" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">How we win the evaluation</div>
+      <div class="grid4">
+        <div class="card"><h4>Clinical correctness</h4><p>LOINC + UCUM + curated policy packs against reference ranges.</p></div>
+        <div class="card"><h4>Severity accuracy</h4><p>Dedicated engine. Policy-driven. Not inferred.</p></div>
+        <div class="card"><h4>Completeness</h4><p>Panel reconstruction. Unsupported items surfaced, never dropped.</p></div>
+        <div class="card"><h4>Actionability</h4><p>Next-step engine tied to severity and analyte.</p></div>
+        <div class="card"><h4>UX clarity</h4><p>Two artifacts. Same source of truth. Different audiences.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · OWNERSHIP -->
+  <section class="slide bg-pink" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow">Technology ownership</div>
+      <h2 class="big reveal">
+        <span>Swap</span> <span>the</span> <span>model.</span><br>
+        <span>Pipeline</span> <span>stays.</span>
+      </h2>
+      <p class="lead" style="margin-top:2rem;color:rgba(255,255,255,.88)">
+        We do not bet the company on a single vendor.
+        OCR, VLM, LLM — all replaceable. The stages, the contracts, the lineage stay.
+      </p>
+    </div>
+  </section>
+
+  <!-- 11 · WHAT'S NEXT -->
+  <section class="slide bg-dark" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">This MVP is the substrate</div>
+      <h2 class="big reveal" style="margin-bottom:2rem"><span>Built</span> <span>to</span> <span>extend.</span></h2>
+      <div class="pills">
+        <span class="pill">Longitudinal trends</span>
+        <span class="pill">Multi-report fusion</span>
+        <span class="pill">EHR ingestion</span>
+        <span class="pill">Multilingual patient artifacts</span>
+        <span class="pill">Clinician-in-the-loop review</span>
+      </div>
+      <p class="lead" style="margin-top:2.4rem">
+        Every addition = a new stage or a new policy pack. No re-architecture.
+      </p>
+    </div>
+  </section>
+
+  <!-- 12 · CLOSE -->
+  <section class="slide bg-ink" data-chrome="dark">
+    <div class="slide-inner">
+      <div class="eyebrow accent">One line</div>
+
+      <div class="stack" style="gap:clamp(22px,2.4vw,38px)">
+        <div class="oneline">
+          <small>For executives</small>
+          The most opaque document in healthcare — now <span class="accent">deterministic,</span> auditable, two-audience.
+        </div>
+        <div class="rule"></div>
+        <div class="oneline">
+          <small>For engineers</small>
+          11 typed stages. LOINC + UCUM. Full lineage. <span class="accent">Fail closed.</span>
+        </div>
+        <div class="rule"></div>
+        <div class="oneline">
+          <small>For clinicians</small>
+          Every sentence traces to a code, a unit, a threshold, a <span class="accent">rule.</span>
+        </div>
+      </div>
+
+      <div style="margin-top:3rem" class="brand"><span class="m"></span><span>elfie · labs, decoded.</span></div>
+    </div>
+  </section>
+
+</div>
+
+<div class="progress"><i id="bar"></i></div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  const dotsEl=document.getElementById('dots');
+  const bar=document.getElementById('bar');
+  const chrome=document.getElementById('chrome');
+  const numEl=document.getElementById('slideNum');
+  const totEl=document.getElementById('slideTotal');
+  let i=0;
+
+  totEl.textContent=String(slides.length).padStart(2,'0');
+
+  // dots
+  slides.forEach((s,idx)=>{
+    const d=document.createElement('i');
+    d.addEventListener('click',()=>go(idx));
+    dotsEl.appendChild(d);
+  });
+  const dots=[...dotsEl.children];
+
+  function applyChrome(){
+    const mode=slides[i].dataset.chrome||'dark';
+    chrome.querySelector('.top').className='top chrome-'+mode;
+    chrome.querySelector('.bot').className='bot chrome-'+mode;
+    dotsEl.className='dots dots-'+mode;
+  }
+
+  function render(){
+    slides.forEach((s,idx)=>s.classList.toggle('active',idx===i));
+    dots.forEach((d,idx)=>d.classList.toggle('on',idx===i));
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    numEl.textContent=String(i+1).padStart(2,'0');
+    applyChrome();
+  }
+
+  function go(n){i=Math.max(0,Math.min(slides.length-1,n));render()}
+  function next(){go(i+1)}
+  function prev(){go(i-1)}
+
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();next()}
+    else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prev()}
+    else if(e.key==='Home'){go(0)}
+    else if(e.key==='End'){go(slides.length-1)}
+    else if(e.key==='f'||e.key==='F'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+  });
+
+  // swipe
+  let tx=0;
+  document.addEventListener('touchstart',e=>{tx=e.changedTouches[0].clientX});
+  document.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-tx;
+    if(Math.abs(dx)>60){dx<0?next():prev()}
+  });
+
+  // click edges
+  document.addEventListener('click',e=>{
+    if(e.target.closest('.dots, .chrome'))return;
+    const w=window.innerWidth;
+    if(e.clientX>w*0.6)next();
+    else if(e.clientX<w*0.4)prev();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -46,7 +46,7 @@ const COPY: Record<Language, Record<string, string>> = {
     back_aria: 'Back',
     thinking: 'Elfie is thinking',
     unconfigured:
-      'Chat is unavailable — VITE_QWEN_API_KEY is not set in frontend/.env.',
+      'Chat is temporarily unavailable. Please try again in a moment.',
     error_prefix: "Couldn't reach the model. ",
     footer_note: 'Wellness support only. No diagnosis or medication advice.',
   },
@@ -66,7 +66,7 @@ const COPY: Record<Language, Record<string, string>> = {
     back_aria: 'Quay lại',
     thinking: 'Elfie đang suy nghĩ',
     unconfigured:
-      'Trò chuyện không khả dụng — chưa đặt VITE_QWEN_API_KEY.',
+      'Trò chuyện tạm thời không khả dụng. Vui lòng thử lại sau.',
     error_prefix: 'Không kết nối được mô hình. ',
     footer_note: 'Chỉ hỗ trợ sức khỏe. Không chẩn đoán hay đổi thuốc.',
   },
