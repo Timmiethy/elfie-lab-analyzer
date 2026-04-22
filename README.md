@@ -1,72 +1,119 @@
 # Elfie Labs Analyzer
 
-Elfie Labs Analyzer is a full-stack lab report understanding system. It accepts PDF/image lab reports, extracts structured observations, maps analytes to LOINC concepts, runs clinical rule evaluation, and produces both patient-friendly and clinician-share artifacts.
+![Python 3.11](https://img.shields.io/badge/Python-3.11-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?logo=postgresql&logoColor=white)
+![License MIT](https://img.shields.io/badge/License-MIT-green)
 
-## What This Repository Contains
+**Elfie Labs Analyzer** is an open-source, full-stack lab report understanding system. Upload a PDF or image of a lab report and get back structured clinical findings — mapped to LOINC codes, evaluated against clinical rules, with both patient-friendly and clinician-ready artifacts.
 
-- **Backend (`backend/`)**: FastAPI service + async SQLAlchemy + Alembic migrations + analysis pipeline orchestration.
-- **Frontend (`frontend/`)**: Vite + React + TypeScript web app.
-- **Terminology and mapping data (`data/`)**: LOINC and related mapping inputs.
-- **Generated artifacts (`artifacts/`)**: Output files created by analysis jobs.
-- **Docs and design references (`docs/`, `labs_analyzer_v10_*.md`)**: Product and architecture guidance.
+---
 
-## Core Pipeline (High Level)
+## Features
 
-1. Parse/OCR the uploaded document.
-2. Normalize extracted observations.
-3. Resolve analytes to terminology targets.
-4. Evaluate rules/severity and next-step policies.
-5. Generate explanation + lineage/provenance.
-6. Render patient and clinician artifacts.
+- **Universal ingestion** — PDF, PNG, and JPG lab reports
+- **OCR + VLM extraction** — Mineru-based OCR with optional vision-language model lane
+- **LOINC mapping** — Analyte resolver with alias tables and fuzzy normalization
+- **UCUM unit validation** — Strict unit normalization against the UCUM standard
+- **Panel reconstruction** — Groups related analytes into standard panels (CMP, CBC, etc.)
+- **Clinical rule evaluation** — Configurable rule engine with policy packs
+- **Severity + next-step assignment** — Per-finding severity classes and recommended actions
+- **Dual artifacts** — Separate patient-friendly and clinician-detail outputs
+- **Full lineage/provenance** — Every finding traces back to its source extraction
 
-This stage separation is intentional and should be preserved unless a change explicitly reshapes architecture.
+---
+
+## Architecture
+
+### 11-Stage Pipeline
+
+Each stage is isolated and independently testable. Outputs feed the next stage only.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Lab Report Upload                       │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+       ┌───────────────────────▼────────────────────────┐
+  [1]  │  EXTRACTION          InputGateway + Mineru/OCR  │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+  [2]  │  OBSERVATION_BUILD   ObservationBuilder         │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+  [3]  │  ANALYTE_MAPPING     AnalyteResolver → LOINC    │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+  [4]  │  UCUM_CONVERSION     UcumEngine unit validation │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+  [5]  │  PANEL_RECONSTRUCTION PanelReconstructor        │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+  [6]  │  RULE_EVALUATION     RuleEngine                 │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+  [7]  │  SEVERITY_ASSIGNMENT SeverityPolicyEngine       │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+  [8]  │  NEXTSTEP_ASSIGNMENT NextStepPolicyEngine       │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+  [9]  │  PATIENT_ARTIFACT    ArtifactRenderer           │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+ [10]  │  CLINICIAN_ARTIFACT  ArtifactRenderer           │
+       └───────────────────────┬────────────────────────┘
+       ┌───────────────────────▼────────────────────────┐
+ [11]  │  LINEAGE_PERSIST     LineageLogger              │
+       └────────────────────────────────────────────────┘
+```
+
+---
 
 ## Prerequisites
 
-- Python **3.11**
-- Node.js (LTS recommended)
-- npm
-- PostgreSQL (unless using Docker Compose setup)
+- **Python 3.11**
+- **Node.js** (LTS recommended) + **npm**
+- **PostgreSQL 15+** (or Docker)
+
+---
 
 ## Quick Start
 
-### 1) Configure Environment
-
-From repo root:
+### 1. Configure Environment
 
 ```bash
 cp .env.example .env
 ```
 
-All runtime settings use the `ELFIE_` prefix (see `backend/app/config.py`).
+Edit `.env` to set at minimum `ELFIE_DATABASE_URL`. See [Environment Variables](#environment-variables) below.
 
-### 2) Start Dependencies (Optional Docker Path)
+### 2. Start PostgreSQL
 
-From repo root:
+**Via Docker Compose (recommended):**
 
 ```bash
 docker compose up
 ```
 
-This starts Postgres and backend services with mounted `data/` and `artifacts/`.
+**Or** point `ELFIE_DATABASE_URL` at an existing Postgres instance.
 
-### 3) Run Backend Locally
+### 3. Run the Backend
 
 ```bash
 cd backend
 pip install -e ".[dev]"
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Backend default URL: `http://localhost:8000`
+Backend runs at `http://localhost:8000`.
 
-If working with image-beta OCR lane:
+> **Image/VLM lane:** install with `pip install -e ".[dev,image-beta]"` and set `ELFIE_IMAGE_BETA_ENABLED=true`.
 
-```bash
-pip install -e ".[dev,image-beta]"
-```
-
-### 4) Run Frontend Locally
+### 4. Run the Frontend
 
 ```bash
 cd frontend
@@ -74,92 +121,146 @@ npm install
 npm run dev
 ```
 
-Frontend default URL: `http://localhost:5173`
-
-## Development Commands
-
-### Backend (`backend/`)
-
-```bash
-pytest
-pytest tests/unit/
-pytest tests/integration/
-ruff check .
-ruff format .
-mypy .
-alembic upgrade head
-```
-
-### Fast Validation Loop (Strict Full Stack)
-
-Use these when iterating on parser/mapping/rules so runs fail fast if DB/backend readiness is degraded:
-
-```powershell
-# One-file smoke (starts db+backend, waits for ready checks, fail-fast on first failure)
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1 --max-files 1 --tiers easy
-
-# Full corpus (same strict readiness gate)
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1
-```
-
-Advanced options can be passed through to `scripts/validation/run_backend_corpus_validation.py`, for example:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1 --fail-fast --tiers easy medium
-```
-
-### Frontend (`frontend/`)
-
-```bash
-npm run lint
-npm run build
-npm run preview
-```
-
-## Repository Layout
-
-```text
-backend/
-  app/
-    api/routes/         # /api routes (health, upload, jobs, artifacts)
-    services/           # parsing, OCR, mapping, rules, rendering, lineage
-    workers/pipeline.py # orchestration entrypoint
-  tests/
-frontend/
-  src/components/       # feature-oriented UI components
-  src/services/api.ts   # frontend API client
-data/                   # terminology inputs
-artifacts/              # generated outputs
-docs/                   # design and reference docs
-scripts/                # local helper scripts
-contracts/              # contract examples and freeze docs
-```
-
-## Environment Variables (Common)
-
-- `ELFIE_DATABASE_URL`
-- `ELFIE_DATABASE_URL_SYNC`
-- `ELFIE_QWEN_API_KEY`
-- `ELFIE_QWEN_BASE_URL`
-- `ELFIE_QWEN_MODEL`
-- `ELFIE_QWEN_VL_MODEL`
-- `ELFIE_IMAGE_BETA_ENABLED`
-
-Do not commit secrets, real patient data, or generated sensitive artifacts.
-
-## API/Contract Notes
-
-If you change API contracts, keep backend schemas/routes and frontend `src/services/api.ts` in sync.
-
-Contract examples are available in `contracts/examples/` and companion notes in `contracts/README.md`.
-
-## Contribution Guidance
-
-- Keep changes minimal and scoped.
-- Preserve pipeline boundaries where possible.
-- Add/update tests near impacted backend behavior.
-- Use existing naming conventions tied to lab domain concepts (`observation`, `artifact`, `lineage`, etc.).
+Frontend runs at `http://localhost:5173`.
 
 ---
 
-If you're making larger architectural/product changes, review the design references in `docs/` and `labs_analyzer_v10_*.md` before implementation.
+## Development
+
+### Backend
+
+```bash
+cd backend
+
+# Tests
+pytest                          # All tests
+pytest tests/unit/ -xvs         # Unit tests, fail-fast + verbose
+pytest tests/integration/       # Integration tests (requires live DB)
+
+# A single test
+pytest tests/unit/test_analyte_resolver_strict_alias.py::test_strict_matching -xvs
+
+# Lint & format
+ruff check .
+ruff format .
+
+# Type check
+mypy .
+
+# Database migrations
+alembic upgrade head            # Apply pending migrations
+alembic current                 # Show current revision
+alembic downgrade -1            # Revert one migration
+```
+
+### Frontend
+
+```bash
+cd frontend
+
+npm run lint      # ESLint
+npm run build     # Production build
+npm run preview   # Preview production build
+```
+
+### Full-Stack Validation (Windows)
+
+Run the full pipeline against sample lab files with strict readiness checks:
+
+```powershell
+# Smoke test — one file, easy tier
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1 --max-files 1 --tiers easy
+
+# Full corpus
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validation/run_full_stack_validation.ps1 --fail-fast --tiers easy medium
+```
+
+---
+
+## API Reference
+
+All endpoints return JSON. See `contracts/` for full schema examples.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/upload` | Upload a lab report (PDF/PNG/JPG). Form fields: `file`, `age_years?`, `sex?`. Returns `{ job_id, lane, status }`. |
+| `GET` | `/api/jobs/{job_id}` | Poll job status. Returns `{ id, status, message }`. |
+| `GET` | `/api/artifacts/{job_id}/patient` | Patient-friendly artifact with findings and plain-language explanations. |
+| `GET` | `/api/artifacts/{job_id}/clinician` | Clinician artifact with full clinical data, severity, and next steps. |
+| `GET` | `/api/health` | Health check. Returns `{ status: "healthy" }`. |
+
+---
+
+## Environment Variables
+
+All variables use the `ELFIE_` prefix. See `backend/app/config.py` for the full list.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ELFIE_DATABASE_URL` | ✅ | — | Async PostgreSQL URL (`postgresql+asyncpg://...`) |
+| `ELFIE_CORS_ORIGINS` | — | `http://localhost:5173` | Comma-separated allowed CORS origins |
+| `ELFIE_IMAGE_BETA_ENABLED` | — | `false` | Enable VLM image processing lane |
+| `ELFIE_QWEN_API_KEY` | — | — | API key for VLM lane (required if image beta enabled) |
+| `ELFIE_MAX_UPLOAD_SIZE_MB` | — | `20` | Maximum upload file size in MB |
+
+> ⚠️ Never commit secrets, real patient data, or generated artifacts.
+
+---
+
+## Project Structure
+
+```
+elfie-lab-analyzer/
+├── backend/
+│   ├── app/
+│   │   ├── api/routes/         # API endpoints (upload, jobs, artifacts, health)
+│   │   ├── services/           # Pipeline services (resolver, renderer, rules, etc.)
+│   │   ├── workers/
+│   │   │   └── pipeline.py     # PipelineOrchestrator — main entrypoint
+│   │   ├── models/tables.py    # SQLAlchemy ORM models
+│   │   ├── schemas/            # Pydantic request/response schemas
+│   │   ├── migrations/         # Alembic migration versions
+│   │   └── config.py           # Environment-driven configuration
+│   ├── tests/
+│   │   ├── unit/               # Fast isolated tests
+│   │   └── integration/        # Full async pipeline tests
+│   └── pyproject.toml
+├── frontend/
+│   ├── src/
+│   │   ├── components/         # React feature components
+│   │   └── services/api.ts     # Typed API client
+│   └── package.json
+├── data/
+│   ├── loinc/                  # LOINC mapping snapshots
+│   ├── alias_tables/           # Analyte alias/synonym tables
+│   └── ucum/                   # UCUM unit definitions
+├── artifacts/                  # Generated report outputs (gitignored)
+├── contracts/                  # API contract examples and docs
+├── scripts/                    # Validation and utility scripts
+├── docs/                       # Design and reference documentation
+└── docker-compose.yml
+```
+
+---
+
+## Contributing
+
+Contributions are welcome! A few guidelines:
+
+1. **Preserve pipeline boundaries** — each stage in `pipeline.py` is intentionally isolated. Avoid merging stages.
+2. **Type hints everywhere** — the backend is checked with `mypy --strict`.
+3. **Tests near behavior** — add or update unit tests in `tests/unit/` for any service changes.
+4. **Sync API contracts** — if you change backend schemas or routes, update `frontend/src/services/api.ts` and `contracts/` accordingly.
+5. **No secrets or patient data** — never commit `.env` files, API keys, or real lab data.
+
+```bash
+# Before submitting a PR
+cd backend && ruff check . && ruff format . && mypy . && pytest tests/unit/
+cd frontend && npm run lint && npm run build
+```
+
+---
+
+## License
+
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
